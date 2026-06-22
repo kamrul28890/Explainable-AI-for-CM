@@ -1,11 +1,21 @@
 """Region utilities: IoU, masking, and grid fallback for explanation regions."""
 
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
 from PIL import Image, ImageFilter
 
 Box = tuple[float, float, float, float]
+
+
+@dataclass
+class Region:
+    """One candidate explanation region, ranked by standardize_regions."""
+
+    box: Box
+    source: Literal["model", "grid"]
+    label: str = ""
 
 
 def iou(box_a: Box, box_b: Box) -> float:
@@ -85,3 +95,31 @@ def all_boxes_covered(
         any(boxes_overlap_or_close(s, r, distance_threshold=distance_threshold) for r in reference_boxes)
         for s in subject_boxes
     )
+
+
+def _box_area(box: Box) -> float:
+    x0, y0, x1, y1 = box
+    return max(0.0, x1 - x0) * max(0.0, y1 - y0)
+
+
+def standardize_regions(
+    boxes: list[Box],
+    labels: list[str],
+    image_size: tuple[int, int],
+    grid: tuple[int, int] = (4, 4),
+) -> list[Region]:
+    """Rank candidate explanation regions for one sample.
+
+    Florence-2 gives no attention/saliency map for these grounding-based
+    answers, so there is no real per-region importance score to rank by.
+    Model-returned boxes are ranked by area (descending) as the best
+    available stand-in -- a larger detection is assumed more salient than a
+    sliver -- and are always preferred over the grid. Only when the model
+    returned zero boxes (rule_id wasn't grounded at all) do we fall back to
+    an unranked 4x4 grid, so every sample still has *some* candidate region
+    to mask for Day 5's descriptive-accuracy test.
+    """
+    if boxes:
+        paired = sorted(zip(boxes, labels), key=lambda bl: _box_area(bl[0]), reverse=True)
+        return [Region(box=b, source="model", label=l) for b, l in paired]
+    return [Region(box=b, source="grid", label="grid") for b in grid_fallback_regions(image_size, grid)]

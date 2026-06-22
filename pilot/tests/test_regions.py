@@ -7,6 +7,7 @@ from xai_pilot.regions import (
     grid_fallback_regions,
     iou,
     mask_region,
+    standardize_regions,
 )
 
 
@@ -79,3 +80,23 @@ def test_all_boxes_covered_false_when_no_reference_boxes():
 
 def test_all_boxes_covered_vacuously_true_when_no_subject_boxes():
     assert all_boxes_covered([], [(0, 0, 10, 10)])
+
+
+def test_standardize_regions_ranks_model_boxes_by_area_descending():
+    boxes = [(0, 0, 10, 10), (0, 0, 100, 100), (0, 0, 5, 5)]
+    labels = ["small", "big", "tiny"]
+    regions = standardize_regions(boxes, labels, image_size=(200, 200))
+    assert [r.label for r in regions] == ["big", "small", "tiny"]
+    assert all(r.source == "model" for r in regions)
+
+
+def test_standardize_regions_falls_back_to_grid_when_no_boxes():
+    regions = standardize_regions([], [], image_size=(100, 80), grid=(4, 4))
+    assert len(regions) == 16
+    assert all(r.source == "grid" for r in regions)
+
+
+def test_standardize_regions_grid_fallback_matches_grid_fallback_regions():
+    regions = standardize_regions([], [], image_size=(100, 80), grid=(2, 2))
+    expected = grid_fallback_regions((100, 80), grid=(2, 2))
+    assert [r.box for r in regions] == expected
