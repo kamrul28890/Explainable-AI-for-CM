@@ -17,3 +17,6 @@ __pycache__/
 # Pilot project (created during the technical pilot)
 pilot/.venv/
 pilot/data/
+
+# Claude Code internal state (not a project artifact)
+.claude/
