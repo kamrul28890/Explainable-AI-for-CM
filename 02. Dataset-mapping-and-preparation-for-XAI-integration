@@ -1,0 +1,39 @@
+Objective: We are preparing a research pitch for collaboration with Professor Mustafa Abdallah. His expertise is in evaluating the trustworthiness of AI models using White-Box and Black-Box Explainable AI (XAI) metrics
+. While he tests his XAI frameworks on tabular network intrusion datasets, our domain is construction management. Your task is to select our best multimodal construction datasets and explicitly map their structures to his cybersecurity frameworks so we can prove his 6-metric E-XAI pipeline
+ can be applied to our Vision-Language Models (VLMs).
+Please execute the following steps to ensure our data foundation meets top-tier journal standards.
+1. Select 2-3 High-Quality Construction Datasets
+Professor Abdallah validates his work across multiple datasets to prove model-agnostic capabilities (specifically NSL-KDD, CICIDS-2017, and RoEduNet-SIMARGL2021)
+. We must do the same. Review our literature and select 2 to 3 datasets that represent different complexities in construction monitoring. Ensure you cover both spatial and temporal data.
+Recommended Options to look at: SODA or ACID (for zero-shot tool/material tracking)
+, ConDenseCap (for semantic hazard identification)
+, or the VisualSiteDiary (VSD) dataset (for dynamic progress logging)
+.
+Output Required: Document the size, modality (images vs. sequential video frames), and the specific spatiotemporal tasks these datasets support
+.
+2. Map "Network Intrusions" to "Construction Anomalies"
+Professor Abdallah evaluates XAI based on how well it explains different classes of network attacks (e.g., Denial of Service, PortScan, Brute Force vs. "Normal" traffic)
+.
+Instruction: Create a direct mapping of his intrusion classes to our safety/progress classes. Define what constitutes our "Normal" traffic (e.g., safe behaviors, proper PPE, idle equipment) versus our "Attacks/Anomalies" (e.g., fall hazards, missing hardhats, struck-by risks, anomalous equipment movement).
+Output Required: A classification table that establishes the ground-truth labels our VLM will be predicting.
+3. Map Tabular Features to Multimodal Features (The "Semantic Gap")
+This is the most critical step. Abdallah’s XAI methods (like SHAP, LIME, or DeepLift) calculate "importance scores" for discrete network features like Flow Duration or Destination Port
+. Our VLMs do not use tabular data; they use pixels and text prompts
+.
+Instruction: Define exactly what our "features" are for the XAI to evaluate. You must divide this into two streams:
+Visual Features: Bounding boxes, pixel clusters, or spatiotemporal motion vectors
+.
+Semantic/Textual Features: The specific safety rule prompts or ontological queries fed into the VLM (e.g., "Is the worker tied off?")
+.
+Output Required: A clear explanation of how we will extract these multimodal features so Abdallah's algorithms can assign importance scores to them.
+4. Prepare Data for the 6 E-XAI Metrics
+To publish in a top journal, our dataset mapping must prove that we can successfully test Abdallah’s 6 core metrics (Descriptive Accuracy, Sparsity, Stability, Efficiency, Robustness, and Completeness)
+.
+Instruction: Review the selected datasets and confirm they contain the right data to test Robustness and Completeness (the two hardest metrics):
+For Robustness: Do the datasets contain natural "environmental noise" (e.g., harsh lighting, occlusions, bad weather)
+? Can we intentionally insert adversarial perturbations (like a fake safety harness sticker) into these images to see if the VLM’s explanation gets tricked
+?
+For Completeness: Identify highly complex, "corner-case" images in the datasets (e.g., complex overlapping worker-equipment interactions) to ensure the XAI can explain edge cases
+.
+Deliverable
+Please compile your findings into a 2-page structured mapping document. It must include a side-by-side comparison table showing Abdallah's Network Datasets/Features next to our chosen Construction Datasets/Multimodal Features. The tone should be highly technical and ready to be integrated into our collaborative pitch document for the Professor.

@@ -1,0 +1,19 @@
+# Scratch / render byproducts
+tmp/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+
+# Office lock files
+~$*
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Pilot project (created during the technical pilot)
+pilot/.venv/
+pilot/data/

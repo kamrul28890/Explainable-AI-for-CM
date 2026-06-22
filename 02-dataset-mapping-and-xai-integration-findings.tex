@@ -1,0 +1,183 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=0.7in]{geometry}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xurl}
+\usepackage{xcolor}
+\usepackage{titlesec}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlist[itemize]{leftmargin=1.2em,itemsep=1pt,topsep=2pt}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=1pt,topsep=2pt}
+\Urlmuskip=0mu plus 1mu
+\titlespacing*{\section}{0pt}{7pt}{3pt}
+\titlespacing*{\subsection}{0pt}{5pt}{2pt}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{\vspace{-1.5em}Dataset Mapping and Preparation for XAI Integration\\
+\large Translating Professor Abdallah's E-XAI Framework to Construction VLMs}
+\author{Prepared for research-pitch development}
+\date{June 22, 2026}
+
+\begin{document}
+\maketitle
+\vspace{-1.2em}
+
+\section{Purpose}
+Professor Mustafa Abdallah's recent work evaluates explainable AI (XAI) methods for network intrusion detection using six measurable explanation-quality metrics: descriptive accuracy, sparsity, stability, efficiency, robustness, and completeness. The construction-management research opportunity is to translate that evaluation logic from tabular network traffic to multimodal construction-site data, where Vision-Language Models (VLMs) make safety and monitoring decisions from images, captions, visual questions, grounding regions, and safety-rule prompts.
+
+The central dataset requirement is therefore not simply ``construction images.'' The selected datasets must support: (1) a prediction target analogous to normal-versus-attack traffic, (2) feature units that can receive attribution scores, (3) perturbation tests for robustness, and (4) corner cases for completeness.
+
+\section{Recommended Dataset Stack}
+The best dataset stack is ConstructionSite 10k as the primary VLM safety benchmark, SODA as a large-scale object-grounding and clutter benchmark, and either CMA or VisualSiteDiary depending on whether the proposal emphasizes temporal safety behavior or construction progress reporting.
+
+\begin{longtable}{L{0.18\linewidth} L{0.24\linewidth} L{0.18\linewidth} L{0.30\linewidth}}
+\toprule
+\textbf{Role} & \textbf{Dataset} & \textbf{Modality / Size} & \textbf{Why it fits the E-XAI proposal} \\
+\midrule
+\endhead
+Primary safety VLM benchmark & ConstructionSite 10k & 10,013 construction-site images; captions; safety-rule VQA; visual grounding; object boxes; image attributes. & Best direct match for this proposal. It already frames construction safety inspection as captioning, VQA, and grounding. Its annotations allow VLM predictions to be linked to regions and safety-rule questions. \\
+\midrule
+Spatial object and clutter benchmark & SODA: Site Object Detection dAtaset & 19,846 images and 286,201 annotated objects across 15 construction object classes. & Strong for object-level feature attribution, visual-region masking, clutter sensitivity, and robustness to different sites, weather, phases, viewpoints, machines, workers, materials, and layouts. \\
+\midrule
+Temporal safety behavior option & Construction Meta Action (CMA) / Construction Action Recognition & 1,595 video clips over seven construction worker actions. & Adds true temporal evidence: motion, action sequence, unsafe behavior, and low-resolution robustness. This is the better third dataset if the proposal emphasizes dynamic safety monitoring. \\
+\midrule
+Progress-reporting option & VisualSiteDiary / VSD & Construction photolog image-captioning dataset for daily reports and retrieval. & Adds construction-management relevance beyond safety: progress logs, work activities, and daily-report captions. This is the better third dataset if the proposal should stay close to project controls and site reporting. \\
+\midrule
+Supporting option, not primary & ACID dataset suite & Object detection, instance segmentation, and image captioning datasets for construction AI. & Credible and useful, but less directly aligned with VLM safety-rule VQA than ConstructionSite 10k. Keep as backup or supporting evidence. \\
+\midrule
+Supporting option, not primary & ConDenseCap & Dense captioning and hazard-identification code; image data requires author contact. & Methodologically relevant for caption-grounded hazard identification, but dataset access friction makes it weaker for a fast pilot pitch. \\
+\bottomrule
+\end{longtable}
+
+\textbf{Recommended choice for the professor pitch:} ConstructionSite 10k + SODA + CMA if the work is framed as explainable construction safety monitoring. Use ConstructionSite 10k + SODA + VisualSiteDiary if the work is framed more broadly as explainable construction monitoring and daily reporting.
+
+\section{Mapping Network Intrusions to Construction Anomalies}
+\begin{longtable}{L{0.20\linewidth} L{0.30\linewidth} L{0.40\linewidth}}
+\toprule
+\textbf{Abdallah IDS concept} & \textbf{Construction equivalent} & \textbf{Ground-truth prediction target} \\
+\midrule
+\endhead
+Normal traffic & Safe or compliant site state & Workers wearing required PPE; safe worker-equipment separation; no fall exposure; orderly access paths; equipment idle or operating within expected zone; normal progress state. \\
+\midrule
+Denial of Service / abnormal traffic volume & Severe site obstruction or unsafe congestion & Blocked access/egress, overcrowded work zone, material pile obstructing path, equipment crowding workers. \\
+\midrule
+PortScan / probing behavior & Risk-seeking movement or boundary violation & Worker entering restricted equipment swing radius, approaching unprotected edge, entering exclusion zone, unsafe ladder/scaffold approach. \\
+\midrule
+Brute Force / repeated malicious attempt & Repeated unsafe action over time & Repeated climbing, repeated missing PPE, repeated close-proximity interaction, repeated equipment misuse across video frames or photolog sequence. \\
+\midrule
+Botnet / coordinated abnormal behavior & Multi-agent unsafe interaction & Multiple workers/equipment interacting unsafely, group exposure to struck-by or caught-between hazard, simultaneous rule violations. \\
+\midrule
+Infiltration / hidden attack & Visually subtle or disguised safety violation & Harness present but not tied off; helmet present but not worn; worker partly occluded; unsafe condition masked by lighting, dust, distance, or clutter. \\
+\bottomrule
+\end{longtable}
+
+For a first pilot, the classification label set should be deliberately narrow: \textit{normal/compliant}, \textit{PPE violation}, \textit{fall hazard}, \textit{struck-by/caught-between risk}, and \textit{unsafe action or unsafe proximity}. This avoids overpromising while still providing enough classes to mirror Abdallah's normal-versus-attack evaluation logic.
+
+\section{Mapping Tabular IDS Features to Multimodal VLM Features}
+Abdallah's XAI framework assigns importance scores to tabular network features such as flow duration, destination port, packet length, and protocol type. In construction VLMs, the equivalent features must be defined at two levels.
+
+\subsection{Visual Features}
+\begin{itemize}
+  \item \textbf{Object-level features:} bounding boxes for worker, hardhat, vest, harness, ladder, scaffold, excavator, rebar, trench, edge, barrier, and other site elements.
+  \item \textbf{Region-level features:} segmentation masks, dense-caption regions, or object-interaction zones such as worker-near-excavator, worker-at-edge, or worker-on-ladder.
+  \item \textbf{Patch-level features:} ViT image patches or superpixels used for attribution when object boxes are unavailable.
+  \item \textbf{Temporal features:} frame-level motion vectors, action clips, object trajectories, and repeated rule states across a video or photolog sequence.
+\end{itemize}
+
+\subsection{Semantic and Textual Features}
+\begin{itemize}
+  \item \textbf{Safety-rule prompts:} for example, ``Is the worker wearing a hard hat?'' or ``Is the worker tied off while working at height?''
+  \item \textbf{Regulatory tokens:} words such as hard hat, harness, edge, ladder, scaffold, exclusion zone, and equipment swing radius.
+  \item \textbf{Caption phrases:} generated or ground-truth phrases such as ``worker without helmet,'' ``excavator operating near worker,'' or ``open edge without guardrail.''
+  \item \textbf{Ontology-level concepts:} worker, PPE, equipment, hazard source, unsafe relation, compliant relation, and work activity.
+\end{itemize}
+
+The practical XAI unit should be a paired feature tuple: \textit{visual region + semantic query}. For example, the feature ``worker head region + hard-hat rule token'' can be perturbed visually by masking the head/helmet region and semantically by removing or rewording the hard-hat rule. This gives Abdallah's algorithms a clear construction analogue to top-k IDS feature removal.
+
+\section{Preparing the Six E-XAI Metrics}
+\begin{longtable}{L{0.18\linewidth} L{0.36\linewidth} L{0.36\linewidth}}
+\toprule
+\textbf{Metric} & \textbf{Construction VLM implementation} & \textbf{Best dataset support} \\
+\midrule
+\endhead
+Descriptive accuracy & Rank top-k visual/text features by XAI score. Mask top visual regions or remove key prompt tokens. Measure drop in VQA accuracy, caption faithfulness, answer confidence, IoU grounding, or semantic similarity to ground truth. & ConstructionSite 10k is strongest because it has VQA, captions, and grounding. SODA supports object-removal tests. \\
+\midrule
+Sparsity & Measure whether attribution mass is concentrated on true hazard regions rather than scattered across background clutter. Sparse explanations should focus on worker, PPE, equipment, edge, ladder, or unsafe interaction. & SODA and ConstructionSite 10k support object-level concentration tests; VisualSiteDiary supports phrase-level concentration in captions. \\
+\midrule
+Stability & Repeat the same image/prompt across multiple runs. Compare top-k visual regions and text tokens using overlap, IoU, rank correlation, or Jaccard similarity. & All image datasets support this. It is especially relevant for generative VLMs whose answers may vary across decoding settings. \\
+\midrule
+Efficiency & Record explanation runtime, memory use, number of forward/backward passes, and sample throughput. Compare black-box methods against white-box methods on open VLMs. & All datasets support timing tests; SODA and ConstructionSite 10k are large enough for scalable reporting. \\
+\midrule
+Robustness & Add realistic and adversarial perturbations: blur, low light, overexposure, occlusion, dust, camera distance, viewpoint shift, synthetic stickers, missing/false PPE cues, or misleading prompt wording. Explanation should continue to highlight the true hazard cue. & ConstructionSite 10k already includes image attributes such as lighting, camera distance, view angle, and information quality. SODA includes diverse weather/site conditions. CMA supports low-resolution and motion perturbation. \\
+\midrule
+Completeness & Check whether every class and corner case receives a valid explanation. Perturb top features until the model changes decision; if the prediction stays unchanged despite removing claimed causal features, the explanation is incomplete or unfaithful. & ConstructionSite 10k is best for VQA/grounding edge cases; CMA is best for temporal action edge cases; SODA is best for crowded-object and visual clutter edge cases. \\
+\bottomrule
+\end{longtable}
+
+\section{Side-by-Side Framework Translation}
+\begin{longtable}{L{0.24\linewidth} L{0.31\linewidth} L{0.35\linewidth}}
+\toprule
+\textbf{Framework element} & \textbf{Network intrusion detection} & \textbf{Construction VLM adaptation} \\
+\midrule
+\endhead
+Dataset family & NSL-KDD, CICIDS-2017, RoEduNet-SIMARGL2021 & ConstructionSite 10k, SODA, CMA or VisualSiteDiary \\
+\midrule
+Input modality & Tabular traffic records & Images, captions, visual questions, bounding boxes, grounding regions, video clips, and safety-rule prompts \\
+\midrule
+Prediction target & Normal traffic vs attack class & Compliant scene vs safety violation, hazard type, unsafe action, or progress/activity class \\
+\midrule
+Feature units & Flow duration, destination port, packet length, protocol, traffic statistics & Object boxes, image patches, masks, dense-caption regions, motion vectors, rule tokens, caption phrases \\
+\midrule
+Black-box XAI & SHAP and LIME perturb input features and approximate model behavior & Mask image regions, remove/rephrase prompt tokens, perturb captions/questions, and observe VLM output changes \\
+\midrule
+White-box XAI & IG, LRP, DeepLift on accessible neural-network models & IG, Grad-CAM/AttnLRP, DeepLift-like methods over open VLM visual encoders and language heads \\
+\midrule
+Robustness attack & Biased model and adversarial/unrelated feature that hijacks explanation & Noisy visual feature or misleading semantic cue that makes a hazard look safe or makes explanation focus on irrelevant clutter \\
+\midrule
+Completeness concern & Whether every traffic sample has a valid explanation, including corner cases & Whether every safety scene, including occlusion, subtle PPE misuse, worker-equipment overlap, and multi-hazard scenes, receives a faithful explanation \\
+\bottomrule
+\end{longtable}
+
+\section{Recommended Pilot Experiment}
+A practical 2--4 week pilot should avoid full model training. Use ConstructionSite 10k and one open VLM such as LLaVA, Qwen2-VL, Molmo, or Florence-2, plus one proprietary black-box reference model if available. Select 100--300 samples balanced across normal, PPE violation, fall hazard, and equipment/proximity risk.
+
+\begin{enumerate}
+  \item Run safety-rule VQA prompts and store predicted answer, confidence/proxy score, generated reasoning, and output caption.
+  \item Generate black-box explanations by masking top object boxes or superpixels and by removing key safety-rule tokens.
+  \item For an open VLM, generate white-box visual attributions using a gradient/attention method on the image encoder.
+  \item Compute descriptive accuracy, sparsity, stability, efficiency, and a small robustness test using lighting, blur, and occlusion.
+  \item Report whether explanations point to the same ground-truth violating object boxes supplied by ConstructionSite 10k.
+\end{enumerate}
+
+This pilot is small enough to discuss with Professor Abdallah but concrete enough to show that the proposal is technically executable.
+
+\section{Key Decisions for the Research Direction}
+\begin{enumerate}
+  \item If the project is primarily \textbf{safety}, choose ConstructionSite 10k + SODA + CMA.
+  \item If the project is \textbf{safety plus construction management reporting}, choose ConstructionSite 10k + SODA + VisualSiteDiary.
+  \item If the project needs \textbf{white-box XAI}, prioritize open-source VLMs and keep proprietary VLMs as black-box baselines only.
+  \item If the project needs a \textbf{fast professor pitch}, avoid datasets requiring author permission as the main evidence base.
+  \item If the project targets a \textbf{journal paper}, include both black-box and white-box comparisons because that directly extends Abdallah's two papers.
+\end{enumerate}
+
+\section{Sources Used}
+\begin{itemize}
+  \item ConstructionSite 10k paper: \url{https://www.cambridge.org/core/journals/data-centric-engineering/article/are-large-pretrained-vision-language-models-effective-construction-safety-inspectors/4F9F8B39B34FD6F2B201C9947CDF42E8}
+  \item ConstructionSite 10k dataset card: \url{https://huggingface.co/datasets/LouisChen15/ConstructionSite}
+  \item SODA paper: \url{https://arxiv.org/abs/2202.09554}
+  \item VisualSiteDiary paper page: \url{https://experts.illinois.edu/en/publications/visualsitediary-a-detector-free-vision-language-transformer-model/}
+  \item VisualSiteDiary GitHub: \url{https://github.com/joonv2/VisualSiteDiary}
+  \item CMA / Construction Action Recognition GitHub: \url{https://github.com/S1mpleyang/ConstructionActionRecognition}
+  \item ACID dataset suite: \url{https://www.acidb.net/}
+  \item ConDenseCap GitHub: \url{https://github.com/structron/ConDenseCap}
+  \item VL-Con GitHub: \url{https://github.com/huhuman/VL-Con}
+\end{itemize}
+
+\end{document}
