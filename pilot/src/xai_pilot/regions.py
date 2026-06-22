@@ -71,3 +71,17 @@ def boxes_overlap_or_close(box_a: Box, box_b: Box, distance_threshold: float = 0
     dy = max(by0 - ay1, ay0 - by1, 0.0)
     distance = float(np.hypot(dx, dy))
     return distance <= distance_threshold
+
+
+def all_boxes_covered(
+    subject_boxes: list[Box], reference_boxes: list[Box], distance_threshold: float = 0.0
+) -> bool:
+    """True if every subject box overlaps or is close to at least one reference box.
+
+    Vacuously true if subject_boxes is empty (standard `all()` convention);
+    false if subject_boxes is non-empty but reference_boxes is empty.
+    """
+    return all(
+        any(boxes_overlap_or_close(s, r, distance_threshold=distance_threshold) for r in reference_boxes)
+        for s in subject_boxes
+    )

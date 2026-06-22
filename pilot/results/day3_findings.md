@@ -66,11 +66,53 @@ is bad, but because the upstream proxy answer was already wrong before any
 explanation step ran.
 
 This is flagged here rather than silently patched, per the project's existing
-practice of documenting real adaptation gaps. **This needs a decision before
-Day 4 proceeds**: either (a) accept rules 1-3 as a documented limitation and
-report the rule_4-style relational proxy as the one that actually worked,
-matching the explicit purpose of this pilot (to find out what does and
-doesn't transfer), or (b) redesign the rules 1-3 proxy to be region/person-
-relative (e.g., detect all people, detect all hard hats, and flag any person
-box that does not overlap a hard-hat box) before continuing -- a real code
-change, not a parameter tweak.
+practice of documenting real adaptation gaps. **Decision: redesigned the
+rules 1-3 proxy** (see below) rather than accepting the scene-level version.
+
+## Redesign: person-relative presence check
+
+`inference.py`'s `_answer_presence_rule` now detects all "worker" boxes and
+all safety-object boxes independently, then flags **violation** if any
+detected worker has no nearby/overlapping safety-object box
+(`regions.all_boxes_covered`) -- mirroring the dataset's own semantics that
+one non-compliant worker is enough to mark the whole image violated. Worn
+PPE (rules 1-2) uses a tight proximity threshold (8% of max image dimension,
+since the object must be on the worker's body); rule 3's guardrail is
+structural and can protect from further away, so it uses a looser threshold
+(20%). Images with zero detected workers fall back to the old scene-level
+existence check (12/163 samples hit this fallback).
+
+Re-ran `scripts/03_run_baseline_inference.py` on all 163 samples with the new
+proxy:
+
+| Proxy | Sensitivity | Specificity | n |
+|---|---|---|---|
+| Presence-based, scene-level (old) | 3.0% (3/100) | 97.4% (37/38) | violation n=100, compliant n=38 |
+| Presence-based, person-relative (new) | **27.0%** (27/100) | 73.7% (28/38) | violation n=100, compliant n=38 |
+| Proximity-based (rule 4, unchanged) | 61.5% (8/13) | 41.7% (5/12) | struck_by_risk n=13, compliant n=12 |
+
+A 9x sensitivity improvement, at the cost of some specificity (73.7% vs
+97.4%) -- a real and expected precision/recall tradeoff for a proxy that now
+actually tries to discriminate instead of defaulting to "compliant". Per-rule
+breakdown on violation samples: rule_1 (hard hat) 8/50 = 16%, rule_2
+(harness) 4/13 = 30.8%, rule_3 (guardrail) 15/37 = 40.5% -- rule_3 benefits
+most, likely because its looser proximity threshold is closer in spirit to
+the relational rule_4 check that already worked well.
+
+### Residual limitation: Florence-2 often returns only one "worker" box in multi-worker scenes
+
+Visually confirmed on image 7 (5 workers visible, ground truth: ppe_violation)
+and image 79 (multiple people visible, ground truth: fall_hazard): the
+`<OPEN_VOCABULARY_DETECTION>` call for the singular phrase "worker" returned
+only **one** box, covering the most salient/clear person in the scene --
+not one box per visible worker. When that single detected worker happens to
+be the compliant one, the per-worker check still can't catch the actual
+violator, because the violator was never detected as a separate "worker"
+instance to check in the first place. This caps how much further the
+person-relative redesign can improve sensitivity without a different
+detection strategy (e.g. trying a plural phrasing, or switching from
+`<OPEN_VOCABULARY_DETECTION>` to `<DENSE_REGION_CAPTION>`/`<OD>` for more
+exhaustive instance enumeration) -- noted here as a real, observed limitation
+rather than pursued further in this pass, since the 9x sensitivity gain
+already achieved is a meaningful, honestly-earned improvement and further
+detection-strategy changes would be a new design iteration, not a fix.

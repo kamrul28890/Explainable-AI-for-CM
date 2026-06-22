@@ -18,9 +18,14 @@ RULE_QUERIES: dict[RuleId, list[str]] = {
     "rule_3": ["guardrail", "edge protection barrier"],
 }
 
+# Shared "person" phrase: rules 1-3 check each detected worker individually
+# against the relevant safety object (see inference.py), and rule 4 grounds
+# it independently against "excavator" for a proximity check.
+PERSON_PHRASE = "worker"
+
 # Rule 4 is proximity-based: it grounds these two phrases independently and
 # checks spatial overlap/distance rather than presence of either alone.
-RULE_4_PROXIMITY_PAIR = ("worker", "excavator")
+RULE_4_PROXIMITY_PAIR = (PERSON_PHRASE, "excavator")
 
 RULE_DESCRIPTIONS: dict[RuleId, str] = {
     "rule_1": "basic PPE (hard hat / high-visibility vest)",

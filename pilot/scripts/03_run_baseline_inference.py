@@ -58,7 +58,8 @@ def main() -> int:
                 "primary_class": class_by_id[image_id],
                 "assigned_rule_id": rule_id,
                 "answer": result.answer,
-                "boxes": json.dumps(result.boxes),
+                "worker_boxes": json.dumps(result.worker_boxes),
+                "object_boxes": json.dumps(result.object_boxes),
                 "confidence": result.confidence,
                 "inference_ms": result.inference_ms,
                 "caption": caption,
@@ -66,7 +67,12 @@ def main() -> int:
         )
 
         if visualized < N_VISUALIZE and result.boxes:
-            overlaid = overlay_boxes(image, result.boxes, labels=[rule_id] * len(result.boxes))
+            overlaid = overlay_boxes(
+                image, result.worker_boxes, labels=["worker"] * len(result.worker_boxes), color="blue"
+            )
+            overlaid = overlay_boxes(
+                overlaid, result.object_boxes, labels=[rule_id] * len(result.object_boxes), color="red"
+            )
             save_figure(overlaid, fig_dir / f"{image_id}_{rule_id}.png")
             visualized += 1
 

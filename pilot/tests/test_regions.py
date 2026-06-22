@@ -1,7 +1,13 @@
 import numpy as np
 from PIL import Image
 
-from xai_pilot.regions import boxes_overlap_or_close, grid_fallback_regions, iou, mask_region
+from xai_pilot.regions import (
+    all_boxes_covered,
+    boxes_overlap_or_close,
+    grid_fallback_regions,
+    iou,
+    mask_region,
+)
 
 
 def test_iou_identical_boxes_is_one():
@@ -53,3 +59,23 @@ def test_boxes_overlap_or_close_true_when_within_threshold():
 
 def test_boxes_overlap_or_close_false_when_far_apart():
     assert not boxes_overlap_or_close((0, 0, 10, 10), (100, 100, 110, 110), distance_threshold=5.0)
+
+
+def test_all_boxes_covered_true_when_every_subject_has_a_match():
+    workers = [(0, 0, 10, 10), (50, 50, 60, 60)]
+    objects = [(2, 2, 8, 8), (52, 52, 58, 58)]
+    assert all_boxes_covered(workers, objects)
+
+
+def test_all_boxes_covered_false_when_one_subject_has_no_match():
+    workers = [(0, 0, 10, 10), (50, 50, 60, 60)]
+    objects = [(2, 2, 8, 8)]  # only covers the first worker
+    assert not all_boxes_covered(workers, objects)
+
+
+def test_all_boxes_covered_false_when_no_reference_boxes():
+    assert not all_boxes_covered([(0, 0, 10, 10)], [])
+
+
+def test_all_boxes_covered_vacuously_true_when_no_subject_boxes():
+    assert all_boxes_covered([], [(0, 0, 10, 10)])
