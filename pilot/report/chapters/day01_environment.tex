@@ -1,0 +1,159 @@
+\chapter{Establishing a Reproducible GPU Environment for Florence-2 (Day 1)}
+\label{chap:day01}
+
+\section{Motivation}
+
+The first day of the pilot was scoped narrowly and deliberately: confirm that the pilot is
+executable at all before any evaluation work begins. Concretely, this meant demonstrating that
+(i) the software environment loads and recognizes the GPU, (ii) a real sample from the target
+dataset can be retrieved, and (iii) the target vision-language model can run a single inference
+pass on that sample and return a usable output. Until these three preconditions were verified
+directly, every subsequent day's plan --- sampling, masking, attention extraction, stability and
+robustness testing --- would have rested on an unverified assumption. Day 1's purpose was to
+remove that assumption.
+
+\section{Implementation}
+
+The pilot codebase was scaffolded as an installable Python package, \texttt{src/xai\_pilot}
+(commit \texttt{c30c4a9}), rather than as a loose collection of scripts. Two modules carried the
+environment-level logic established on Day 1: \texttt{config.py}, which centralizes shared paths
+and identifiers, and \texttt{model.py}, which encapsulates Florence-2 loading and task execution.
+
+\texttt{config.py} fixes three values that recur throughout the rest of the pilot:
+\texttt{HF\_DATASET\_ID = "LouisChen15/ConstructionSite"}, \texttt{MODEL\_ID =
+"microsoft/Florence-2-base-ft"}, and \texttt{SEED = 42}. Pinning these in one place, rather than
+inlining them per script, was intended to keep every later day's sampling and inference
+deterministic and traceable back to a single source of truth.
+
+\texttt{model.py} is responsible for loading Florence-2 in a way that actually succeeds on the
+target (Windows) platform. Florence-2's custom modeling code is loaded via
+\texttt{trust\_remote\_code=True} and, as shipped, unconditionally imports \texttt{flash\_attn}.
+Because no usable Windows wheel exists for \texttt{flash\_attn}, \texttt{model.py} monkeypatches
+\texttt{transformers.dynamic\_module\_utils.get\_imports} to drop \texttt{flash\_attn} from the
+list of required imports before \texttt{from\_pretrained} executes, and separately forces
+\texttt{attn\_implementation="sdpa"} so that the model is never asked to use the unavailable
+attention backend. Loading is otherwise the standard Hugging Face pattern:
+\texttt{AutoModelForCausalLM.from\_pretrained(model\_id, trust\_remote\_code=True, \ldots)}.
+
+The verification step itself was implemented as \texttt{scripts/01\_check\_environment.py}. This
+script loads the real ConstructionSite test split in streaming mode, loads
+Florence-2-base-ft, runs the \texttt{<CAPTION>} task on one real sample drawn from that split, and
+exits with a non-zero status if CUDA is unavailable, if the dataset fails to load, or if the model
+fails to load --- so that a successful run is itself evidence the environment is sound, rather than
+a claim that has to be taken on faith.
+
+\section{Architecture}
+
+Figure~\ref{fig:diagram-a} summarizes the pipeline as it existed at the end of Day 1: a streaming
+read from the ConstructionSite dataset on the Hugging Face Hub, a single forward pass through
+Florence-2-base-ft running in fp16 on CUDA with the \texttt{sdpa} attention implementation, the
+\texttt{<CAPTION>} task token, and a caption plus an accompanying confidence proxy as output. No
+masking, attention extraction, sampling-based stability checks, or perturbation logic exist yet at
+this stage; those are introduced in later chapters and, where relevant, the present pipeline is
+extended rather than replaced.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=1.6cm]
+\node[block] (data) {ConstructionSite 10k\\(HF Hub, streaming)};
+\node[block, right=of data] (model) {Florence-2-base-ft\\(CUDA, fp16, sdpa)};
+\node[block, right=of model] (task) {\texttt{<CAPTION>}\\task token};
+\node[block, right=of task] (out) {Caption +\\confidence proxy};
+\draw[arrow] (data) -- (model);
+\draw[arrow] (model) -- (task);
+\draw[arrow] (task) -- (out);
+\end{tikzpicture}
+\caption{Pipeline architecture after Day 1: environment and single-image inference only.}
+\label{fig:diagram-a}
+\end{figure}
+
+\section{Worked Example}
+
+The output below was not copied from Day 1's original log. It is a fresh execution of
+\texttt{scripts/01\_check\_environment.py}, reproduced verbatim during the preparation of this
+report, in the same spirit as the from-scratch reproducibility rerun performed on Day 13. This is
+stated explicitly because the distinction matters: the numbers that follow are evidence that the
+Day 1 environment remains reproducible months later, not merely a record of what once happened.
+
+\begin{quote}
+\ttfamily
+torch 2.12.1+cu130, cuda available: True\\
+Sample image\_id=0000001, size=(1200, 675)\\
+Model device: cuda:0, dtype: torch.float16\\
+Caption: A large truck with a crane on the back of it.\\
+Mean token probability (confidence proxy): 0.6442\\
+Inference time: 1565.3 ms
+\end{quote}
+
+The run confirms all three preconditions identified in Section~1.1 in a single execution: CUDA is
+available and a CUDA device is in use; a real, correctly-shaped sample (size $1200\times675$) was
+retrieved from the dataset's test split; and Florence-2 produced a coherent caption together with a
+mean-token-probability confidence proxy and an inference time, on a single image, without manual
+intervention.
+
+\section{Problems Encountered and Resolutions}
+
+Three concrete problems were encountered in establishing this environment, each requiring a
+deliberate resolution rather than a default installation path.
+
+\textbf{1. \texttt{flash\_attn} import crash on Windows.} Florence-2's remote modeling code
+unconditionally imports \texttt{flash\_attn} on load, and no usable Windows wheel for
+\texttt{flash\_attn} exists. \emph{Resolution}: \texttt{model.py} monkeypatches
+\texttt{transformers.dynamic\_module\_utils.get\_imports} to remove \texttt{flash\_attn} from the
+list of imports the loader requires, and explicitly forces \texttt{attn\_implementation="sdpa"} in
+the call to \texttt{from\_pretrained}, so the model never attempts to use the unavailable backend.
+
+\textbf{2. A \texttt{transformers>=5.0} config-load crash.} \texttt{transformers} versions at or
+above 5.0 removed legacy generation attributes (for example, \texttt{forced\_bos\_token\_id}) from
+\texttt{PretrainedConfig}. Florence-2's pinned remote-code \texttt{configuration\_florence2.py}
+still expects these attributes to exist, and crashes on load under \texttt{transformers>=5.0}.
+\emph{Resolution}: \texttt{requirements.txt} pins \texttt{transformers==4.49.0}, the last 4.x
+release, avoiding the breaking change entirely rather than attempting to patch around it.
+
+\textbf{3. A silent CPU-only \texttt{torch} install.} A plain \texttt{pip install torch}, or
+allowing \texttt{torch} to be pulled in as a side effect of installing the rest of the pilot's
+dependencies, silently installs a CPU-only wheel, with no error to signal that GPU support is
+missing. \emph{Resolution}: \texttt{requirements.txt} documents that \texttt{torch} must be
+installed first and separately, pinned to its exact CUDA build (\texttt{torch==2.12.1+cu130}),
+from the matching CUDA index, before any other dependency is installed.
+
+\section{Standard vs. Non-Standard Choices}
+
+It is worth separating, explicitly, which parts of this setup follow documented practice and which
+do not. The \emph{standard} choice is the loading pattern itself:
+\texttt{AutoModelForCausalLM.from\_pretrained(\ldots, trust\_remote\_code=True)} is a documented
+Hugging Face mechanism for loading models that ship custom modeling code, and Florence-2 is used
+through that mechanism as intended.
+
+Two choices, by contrast, are \emph{non-standard}. The \texttt{flash\_attn} import patch is a
+Windows-specific workaround with no upstream documentation; it relies on monkeypatching an internal
+\texttt{transformers} utility function rather than any officially supported configuration option,
+and may need to be revisited if that internal function's interface changes in a future
+\texttt{transformers} release. The hard pin to \texttt{transformers==4.49.0} is similarly a
+workaround rather than a preference: it was forced by an upstream breaking change in
+\texttt{transformers>=5.0}, not chosen for any feature in 4.49.0 itself, and the pilot's
+reproducibility is therefore contingent on that specific upstream version continuing to be
+installable.
+
+\section{Implications for the Paper}
+
+Florence-2-base-ft, the vision-language model used throughout this pilot, has 231.6M parameters
+and is released under the MIT license \citep{xiao2024florence2}; the dataset used to source sample
+images is ConstructionSite 10k, hosted on the Hugging Face Hub \citep{constructionsite10k}. Both
+facts are reported here because the model size, license, and dataset provenance are exactly the
+kind of detail that determines whether a result is reproducible by a third party without access to
+this codebase.
+
+More generally, the three problems documented in this chapter --- a platform-specific import
+failure, a breaking upstream dependency change, and a silent hardware-backend misconfiguration ---
+are the kind of detail that is easy to omit from a methods section and expensive to omit in
+practice: any of the three, left unresolved, would have produced either an outright crash or a
+silently CPU-bound, effectively unusable pipeline, without changing any of the pilot's downstream
+numbers in a way that would be obvious after the fact. We recommend that the eventual paper report
+the software environment as a methods footnote or appendix --- minimally, the exact
+\texttt{transformers} and \texttt{torch} versions, the attention implementation forced at load
+time, and the platform-specific workaround required to load the model at all --- rather than
+relying on a requirements file alone to carry that information. With the environment, dataset
+access, and a single forward pass confirmed working, the pilot's next step is to move from one
+manually inspected image to a defined, reproducible sample of the dataset suitable for systematic
+evaluation.
