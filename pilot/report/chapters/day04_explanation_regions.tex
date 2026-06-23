@@ -61,6 +61,7 @@ afterward.
 
 \begin{figure}[h]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[node distance=1.6cm]
 \node[block] (boxes) {Baseline boxes\\+ labels (Day 3)};
 \node[block, right=of boxes] (rank) {standardize\_regions\\(rank by area /\\grid fallback)};
@@ -71,7 +72,8 @@ afterward.
 \draw[arrow] (rank) -- (region);
 \draw[arrow] (region) -- (mask);
 \draw[arrow] (mask) -- (out);
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{Regions/masking layer added on top of Day 3's baseline grounding output.}
 \label{fig:diagram-c}
 \end{figure}
