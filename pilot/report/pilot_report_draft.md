@@ -1,6 +1,6 @@
 # Adapting a Six-Metric XAI Evaluation Framework to a Construction-Safety VLM — Pilot Report
 
-**Draft, Day 12 of the two-week pilot.** Every number below traces to a specific CSV or figure produced in Days 1-11 (`pilot/results/`); none are invented or estimated for this writeup. Citations in parentheses point to the source file.
+**Finalized for the Day 14 meeting package** (first drafted Day 12; Section 6.6 added after Day 13's from-scratch reproducibility rerun). Every number below traces to a specific CSV or figure produced in Days 1-11 (`pilot/results/`); none are invented or estimated for this writeup. Citations in parentheses point to the source file.
 
 ## 1. Motivation
 
@@ -85,6 +85,10 @@ Quantified directly (Day 9): of 611 robustness reruns where the final answer did
 ### 6.5 Efficiency is not a blocker
 
 Summing the full six-step pipeline's logged per-sample timings and extrapolating linearly to n=1000 gives **~0.5 GPU-hours (~30 minutes)** on a single RTX 3070 (Day 8). There is no compute obstacle between this pilot and a full 3,004-image or larger study.
+
+### 6.6 The pipeline reproduces end-to-end from scratch — and the reproducibility check itself found a real bug (Day 13)
+
+The full 11-script pipeline was exported at its exact committed state (`git archive HEAD`), installed into a brand-new venv, and rerun against a fresh 20-sample subset with zero manual intervention (61/61 unit tests, then all 11 scripts, all exit code 0; `results/day13_findings.md`). The 20-sample numbers land directionally consistent with the 163-sample numbers above (e.g. descriptive accuracy 30.0% vs. 36.2%, robustness 83.8% vs. 80.7%), with `stability_answer_agreement` the one metric that swings further (93.3% vs. 77.5%) — expected sampling noise at n=20, not a correctness concern. More importantly, the rerun **caught a real bug this report's own figure had**: `11_make_figures.py`'s chart legend and title hardcoded `"n=50"`/`"163-sample pilot"`, which would have silently mislabeled any future non-163-sample run. Found, fixed (computed dynamically from the loaded data instead), and reverified against the real 163-sample data with zero change to any reported number (`git diff --stat` showed no diff). This is presented here as evidence the reproducibility step had genuine value, not just formality.
 
 ## 7. Limitations (explicit, not papered over)
 
