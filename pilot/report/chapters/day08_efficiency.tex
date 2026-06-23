@@ -134,6 +134,7 @@ Table~\ref{tab:day08-results}'s headline numbers and the $n=1{,}000$ extrapolati
 \end{figure}
 
 \section{Sanity Check on the Extrapolation}
+\label{sec:day08-sanity}
 
 Because Days 6 and 7's per-sample costs rest on a 15-sample calibration rather than the full
 163-sample run, the extrapolation those two rows feed into was checked against an independent
@@ -181,7 +182,7 @@ the qualifications that accompany several of this pilot's other findings. Where 
 others uncovered confounds, instability, or methodological deviations that temper how their numbers
 should be read, efficiency's central claim survives those caveats intact: even granting Day 6 and
 7's calibration-based estimates the full uncertainty the sanity check in
-Section~\ref{sec:day08-gap} affords them, the headline figure would have to be wrong by close to an
+Section~\ref{sec:day08-sanity} affords them, the headline figure would have to be wrong by close to an
 order of magnitude before compute became a genuine scaling concern, and the sanity check found no
 such discrepancy.
 
@@ -189,7 +190,7 @@ That said, one caveat should be carried forward honestly into Chapters 11 and 12
 omitted for the sake of a clean headline: \textbf{Day 6 and 7's per-sample costs rest on a
 15-sample calibration, not the full 163-sample run}, unlike Day 3 and 5's exact aggregation over all
 163 samples. This is good enough for the order-of-magnitude story this chapter tells, and the
-sanity check in Section~\ref{sec:day08-gap} found it consistent with direct observation, but it
+sanity check in Section~\ref{sec:day08-sanity} found it consistent with direct observation, but it
 should be re-measured directly --- by instrumenting \texttt{inference\_ms} into Days 6 and 7's
 scripts themselves, the same way Day 3 already does --- before quoting precise per-sample numbers
 in anything more formal than this pilot. The methodological recommendation worth carrying into the

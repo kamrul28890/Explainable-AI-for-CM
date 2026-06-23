@@ -77,7 +77,11 @@ methods of the kind implemented in Captum \citep{kokhlikyan2020captum}, layer-wi
 propagation \citep{bach2015lrp}, and DeepLIFT \citep{shrikumar2017deeplift} all could, in
 principle, be adapted to Florence-2, but each carries its own architectural assumptions that would
 need the same kind of verification rollout was given here, and none was implemented or verified
-within this pilot's scope.
+within this pilot's scope. Notably, these are exactly the white-box methods Abdallah's own prior
+work has compared directly against each other --- layer-wise relevance propagation, integrated
+gradients, and DeepLIFT, evaluated on tabular network-intrusion DNNs \citep{arreche2025whitebox}
+--- so adapting any of them to a fused-modality VLM encoder is a genuine extension of that line of
+work, not a straightforward port.
 
 \section{Architecture: An Attribution Layer}
 

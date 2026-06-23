@@ -216,12 +216,13 @@ robustness weakness.
 
 \section{Finding 4: efficiency comfortably scales}
 
-Summing Chapter~\ref{chap:day08}'s \texttt{extrapolated\_1000\_hours} figure across all six
-logged pipeline steps --- baseline inference, descriptive-accuracy mask reruns, attribution,
-stability's threefold sampled reruns, robustness's perturbation reruns, and bounded
-completeness's top-1-mask reruns --- gives \textbf{$\sim$0.50 GPU-hours} for the complete
-six-metric pipeline extrapolated to $n=1{,}000$ samples, well under an hour of compute on a
-single RTX~3070. This is the one metric in the entire pilot where bigger is unambiguously
+Summing Chapter~\ref{chap:day08}'s \texttt{extrapolated\_1000\_hours} figure across the four
+inference-bearing pipeline steps it actually logged --- baseline inference, descriptive-accuracy
+mask reruns, attribution, and stability's threefold sampled reruns; robustness and bounded
+completeness's reruns reuse already-timed call types rather than being separately logged, per
+Chapter~\ref{chap:day08} --- gives \textbf{$\sim$0.50 GPU-hours} for the complete six-metric
+pipeline extrapolated to $n=1{,}000$ samples, well under an hour of compute on a
+single RTX~3070\footnote{\texttt{results/efficiency\_summary.csv} has exactly four rows (Days 3, 5, 6, 7); an earlier informal note on this finding described "six logged pipeline steps," which this chapter corrects against the primary CSV.}. This is the one metric in the entire pilot where bigger is unambiguously
 better news for a future full-dataset study: there is no compute bottleneck standing between
 this 163-sample pilot and a 1{,}000-sample, or larger, follow-up run of the same six-metric
 pipeline.
