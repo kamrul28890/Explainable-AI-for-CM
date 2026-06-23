@@ -1,0 +1,291 @@
+\chapter{Aggregating Six Metrics into a Single Cross-Class Picture (Day 11)}
+\label{chap:day11}
+
+\section{Motivation}
+
+Chapters~\ref{chap:day05}--\ref{chap:day10} each implemented one metric from the six-metric
+framework for evaluating black-box explainable-AI systems \citep{arreche2024exai} ---
+descriptive accuracy, visual sparsity, stability, robustness, efficiency, and bounded
+completeness --- and reported each one's results in isolation, against its own headline number,
+its own by-rule breakdown, and its own traced failure cases. None of those six chapters asked
+the cross-metric question directly: \emph{read side by side, broken down by the same four
+hazard classes, what picture do all six metrics paint together?} Day 11's task was exactly that
+rollup --- and, by deliberate design, nothing more. \textbf{No new model calls and no
+recomputed logic are introduced in this chapter.} Every number that follows is a
+\texttt{groupby(primary\_class).mean()} over a column Chapters~5--10 already computed and
+already verified; \texttt{scripts/11\_make\_figures.py} reads
+\texttt{descriptive\_accuracy.csv}, \texttt{visual\_sparsity.csv}, \texttt{stability.csv},
+\texttt{robustness.csv}, \texttt{bounded\_completeness.csv}, and \texttt{efficiency\_summary.csv}
+and writes one summary table, \texttt{results/pilot\_metric\_summary.csv} (six rows, one per
+metric), and one chart, \texttt{results/figures/summary/metric\_summary\_by\_class.png}.
+
+This chapter's contribution is not new measurement; it is the discipline of \emph{reading the
+six metrics together without overstating what that joint reading is allowed to mean}. Two of
+the four findings below exist specifically to guard against a natural but mistaken
+cross-metric inference: that two metrics moving together by class is independent confirmation
+of one underlying story (Finding~1 shows it sometimes is not, by construction), and that a
+metric measuring "focused attention" must agree with a metric measuring "decision-critical
+region" (Finding~2 shows it need not). One further tooling note belongs here because Day 11 is
+where the pilot's visual-review practice is named explicitly for the first time: throughout
+this pilot, every saved figure --- the overlays in Chapter~\ref{chap:day03}, the masked-image
+pairs in Chapter~\ref{chap:day04}, the heatmaps in Chapter~\ref{chap:day06}, the before/after
+pairs in Chapters~\ref{chap:day09} and~\ref{chap:day10}, and this chapter's own summary chart
+--- was visually reviewed by reading the saved PNG directly (Claude Code's \texttt{Read} tool
+rendering the image), not by opening a Jupyter notebook. The \texttt{notebooks/} directory
+scaffolded at the start of the pilot was never actually used.
+
+\section{Architecture: The Complete Pipeline}
+
+Figure~\ref{fig:diagram-f} is the capstone diagram of this report: the complete eleven-script
+pipeline as it stands after Day 11, with every earlier chapter's architecture diagram visible
+inside it as a sub-piece rather than superseded by it. Scripts \texttt{01}--\texttt{04} are
+Diagram~A (Chapter~\ref{chap:day01}'s environment-and-inference path) extended by
+Diagram~B (Chapter~\ref{chap:day03}'s person-relative baseline redesign, folded into script
+\texttt{03}) and Diagram~C (Chapter~\ref{chap:day04}'s region-standardization and masking
+layer, script \texttt{04}). From script \texttt{04}'s ranked regions, the pipeline fans out
+into five parallel metric scripts, \texttt{05}--\texttt{09}: \texttt{05} (descriptive accuracy,
+Chapter~\ref{chap:day05}), \texttt{06} (visual sparsity, Chapter~\ref{chap:day06}, which is
+Diagram~D's decoder$\to$encoder cross-attention layer), \texttt{07} (stability,
+Chapter~\ref{chap:day07}), \texttt{08} (efficiency, Chapter~\ref{chap:day08}), and \texttt{09}
+(robustness, Chapter~\ref{chap:day09}, which is Diagram~E's three-branch perturbation layer).
+Script \texttt{10} (bounded completeness, Chapter~\ref{chap:day10}) sits downstream of all five
+parallel metric scripts because it is itself a rollup over two of them (\texttt{05}'s
+answer-change columns and \texttt{04}'s region-source column), not a sixth independent
+measurement running in parallel. Script \texttt{11} --- this chapter --- is the final node,
+collecting all five metric CSVs plus \texttt{10}'s completeness CSV into the one summary table
+and one chart reported below. \textbf{Diagram~F is, in this precise sense, the composition of
+Diagrams A, B, C, D, and E from Chapters~\ref{chap:day01}, \ref{chap:day03},
+\ref{chap:day04}, \ref{chap:day06}, and \ref{chap:day09}}: nothing in it is a new architectural
+component, only the assembled shape of components each already introduced and individually
+verified in those five chapters.
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=1.1cm and 1.5cm]
+\node[block] (s01) {01 env check};
+\node[block, right=of s01] (s02) {02 sample\\selection};
+\node[block, right=of s02] (s03) {03 baseline\\inference};
+\node[block, right=of s03] (s04) {04 region\\extraction};
+\node[block, below=2.0cm of s02, xshift=0.55cm] (s05) {05 descr.\\accuracy};
+\node[block, right=of s05] (s06) {06 visual\\sparsity};
+\node[block, right=of s06] (s07) {07 stability};
+\node[block, right=of s07] (s08) {08 efficiency};
+\node[block, below=1.5cm of s07, xshift=2.2cm] (s09) {09 robustness};
+\node[block, below=2.0cm of s06] (s10) {10 bounded\\completeness};
+\node[block, below=1.8cm of s10, fill=rulegray] (s11) {11 figures /\\summary};
+\draw[arrow] (s01) -- (s02); \draw[arrow] (s02) -- (s03); \draw[arrow] (s03) -- (s04);
+\draw[arrow] (s04) -- (s05); \draw[arrow] (s04) -- (s06); \draw[arrow] (s04) -- (s07);
+\draw[arrow] (s04) -- (s08); \draw[arrow] (s04) -- (s09);
+\draw[arrow] (s05) -- (s10); \draw[arrow] (s06) -- (s10); \draw[arrow] (s07) -- (s10);
+\draw[arrow] (s08) -- (s10); \draw[arrow] (s09) -- (s10);
+\draw[arrow] (s10) -- (s11);
+\end{tikzpicture}%
+}
+\caption{The complete 11-script pipeline after Day 11 --- the composition of Diagrams A-E.}
+\label{fig:diagram-f}
+\end{figure}
+
+\section{Results}
+
+Table~\ref{tab:day11-headline} reproduces \texttt{pilot\_metric\_summary.csv} in full: all six
+metrics, their overall value, and their per-class breakdown across the pilot's four hazard
+classes.
+
+\begin{center}
+\begin{tabular}{p{3.6cm}p{1.5cm}p{1.6cm}p{1.7cm}p{1.6cm}p{1.8cm}}
+\toprule
+\textbf{Metric} & \textbf{Overall} & \textbf{compliant} & \textbf{ppe\_\allowbreak violation} & \textbf{fall\_\allowbreak hazard} & \textbf{struck\_\allowbreak by\_\allowbreak risk (n=13)} \\
+\midrule
+descriptive\_accuracy & 36.2\% & 28.0\% & 28.0\% & 46.0\% & \textbf{61.5\%} \\
+visual\_sparsity\_top5 & 0.108 & 0.099 & 0.127 & 0.109 & \textbf{0.067} \\
+stability & 77.5\% & 74.7\% & 76.0\% & 78.7\% & \textbf{89.7\%} \\
+robustness Level~1 & 80.7\% & 79.5\% & 86.0\% & \textbf{75.0\%} & 86.5\% \\
+bounded\_completeness & 43.6\% & 32.0\% & 36.0\% & 58.0\% & \textbf{61.5\%} \\
+efficiency (n=1{,}000, aggregate) & \multicolumn{4}{l}{\textbf{$\sim$0.50 GPU-hours} (single RTX 3070; aggregate, not per-class)} \\
+\bottomrule
+\end{tabular}
+\captionof{table}{The headline cross-metric summary, reproduced from
+\texttt{pilot\_metric\_summary.csv}. Bold marks each row's strongest class (efficiency has no
+per-class breakdown: it is an aggregate runtime budget, not a per-sample classification).
+\textbf{struck\_by\_risk rests on n=13, not n=50} --- the balanced 50-per-class sampler could
+not find 50 struck\_by\_risk images in the 3{,}004-image test split, a constraint already noted
+in Chapter~\ref{chap:day02}. Every struck\_by\_risk number in this table should be read as a
+directional signal, not a stable estimate.}
+\label{tab:day11-headline}
+\end{center}
+
+\section{Worked Example}
+
+Figure~\ref{fig:day11-summary} is the single most important figure in this report: the one
+chart that places all five per-sample metrics (efficiency is excluded, as it has no per-class
+or per-sample breakdown to plot) side by side, grouped by hazard class, on their own native
+scales. It is the visual form of Table~\ref{tab:day11-headline} and the source the four
+findings below were read directly from --- each bar height was cross-checked against the
+printed table before any finding was drafted, rather than trusting the chart's proportions
+alone.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{summary/metric_summary_by_class.png}
+\caption{The headline rollup chart: five per-sample metrics (descriptive accuracy, visual
+sparsity, stability, robustness, bounded completeness), each on its own scale, broken down by
+the pilot's four hazard classes. Efficiency is omitted here because it is a single aggregate
+runtime figure with no per-class structure to plot.}
+\label{fig:day11-summary}
+\end{figure}
+
+\section{Finding 1: descriptive\_accuracy and bounded\_completeness move together by class --- but that's expected, not independent confirmation}
+
+descriptive\_accuracy and bounded\_completeness trace nearly the same shape across the four
+classes: both are weakest for compliant (28.0\% / 32.0\%) and ppe\_violation (28.0\% / 36.0\%),
+and both are strongest for fall\_hazard (46.0\% / 58.0\%) and struck\_by\_risk (61.5\% /
+61.5\%). Read carelessly, two metrics agreeing this closely could be mistaken for two
+independent lines of evidence converging on the same conclusion. \textbf{They are not
+independent.} Chapter~\ref{chap:day10}'s \texttt{bounded\_completeness} classification is
+\emph{built from} Chapter~\ref{chap:day05}'s own \texttt{answer\_changed\_top1} and
+\texttt{answer\_changed\_top2} columns by construction --- \texttt{classify\_sample()} labels a
+sample \texttt{explanation\_supported} precisely when one of those two columns is \texttt{True}.
+The two metrics sharing a shape across classes is therefore close to a methodological identity,
+not a second, independently-arrived-at confirmation of the same underlying pattern.
+
+The real, independent explanation for \emph{why} both numbers are low for compliant/
+ppe\_violation and high for fall\_hazard/struck\_by\_risk was already traced in
+Chapter~\ref{chap:day10}, Finding~1, not discovered here: \texttt{standardize\_regions}'s
+area-based ranking promotes the worker's whole-body box over the smaller hard-hat or vest box
+for rule\_1, and masking the worker is measurably less likely to flip the proxy's answer than
+masking the actual safety object (37.5\% versus 49.4\% supported, Chapter~\ref{chap:day10}).
+This chapter's cross-metric view adds no new evidence for that claim; its contribution is
+narrower and more disciplined --- making the consequence of that already-traced mechanism
+visible in one chart, while flagging plainly that the two bars moving together is not itself a
+second piece of evidence, so that the eventual paper does not double-count one finding as two.
+
+\section{Finding 2: visual sparsity runs opposite from descriptive\_accuracy/completeness for struck\_by\_risk}
+
+struck\_by\_risk has the \emph{highest} descriptive\_accuracy (61.5\%) and the \emph{highest}
+bounded\_completeness (61.5\%) of any class --- but the \emph{lowest} visual\_sparsity\_top5
+(0.067, against 0.099--0.127 for the other three classes). The class whose top-ranked region is
+most reliably load-bearing under masking is the same class whose attention is least
+concentrated by the cross-attention attribution signal. \textbf{"Focused attention" and
+"decision-critical region" are not the same property}, and struck\_by\_risk is this pilot's
+clearest case of the two pointing in different directions at once.
+
+The plausible mechanism traces to rule\_4's attributed objects. rule\_4's proximity check
+grounds \texttt{"excavator"} and \texttt{"worker"} --- both large structural regions, not small
+point-like objects in the way a hard hat is. Florence-2's grounding-query attention naturally
+spreads over a bigger area for a physically bigger object, the same size confound
+Chapter~\ref{chap:day06} already documented driving the hard-hat/excavator concentration gap
+(top-5 mass ratio 0.195 versus 0.079, correlation $-0.70$ between log box area and
+concentration). That same spread-out attention pattern lowers struck\_by\_risk's top-5 mass
+ratio here. It does not, however, make the masking test any less decisive: masking that whole
+large excavator-or-worker region still reliably destroys the spatial relationship rule\_4's
+proximity check depends on, which is exactly why descriptive\_accuracy and bounded\_completeness
+stay high for this class even as visual\_sparsity\_top5 falls. This is, at $n=13$ across a
+four-class comparison, a real but weak signal --- consistent with, and a direct continuation of,
+the running theme already established in Chapters~\ref{chap:day06} and~\ref{chap:day09}:
+sparsity and accuracy/completeness measure genuinely different properties of an explanation and
+must be reported separately, never blended into one undifferentiated "explanation quality"
+score.
+
+\section{Finding 3: robustness is the flattest metric across classes, and fall\_hazard is its worst case --- not its best, unlike elsewhere}
+
+Robustness Level~1 varies only from 75.0\% to 86.5\% across the four classes --- an 11.5
+percentage-point spread, far narrower than the roughly 30--60 point spans the other four
+per-sample metrics show in Table~\ref{tab:day11-headline}. Within that flat metric,
+\textbf{fall\_hazard is the single worst class (75.0\%)}, which is notable specifically because
+fall\_hazard is the \emph{second-best} class for both descriptive\_accuracy (46.0\%) and
+bounded\_completeness (58.0\%). No other class reverses position this sharply between the two
+metric groups.
+
+This matches, rather than contradicts, what Chapter~\ref{chap:day09} already found at the rule
+level: fall\_hazard pools rule\_2 (harness/lanyard) and rule\_3 (guardrail/edge barrier)
+samples, and these two sub-rules destabilize under perturbation for \textbf{two different
+reasons}. rule\_2 has the highest \texttt{worker\_lost} fallback-rerouting rate of any rule
+under occlusion, 19.2\% (Chapter~\ref{chap:day09}, Finding~1) --- occlusion disrupts Florence-2's
+whole-scene grounding enough that no worker survives detection, triggering a degenerate
+fallback branch unrelated to whether the harness itself is actually still visible. rule\_3, by
+contrast, has the highest grid-fallback rate of any rule (Chapter~\ref{chap:day10}, Finding~3:
+3 of the 4 total grid-fallback samples in the entire pilot are rule\_3), reflecting that
+"guardrail" is a harder open-vocabulary grounding target for Florence-2 than the other rules'
+queried objects. Averaging rule\_2's and rule\_3's results into one \texttt{fall\_hazard} number
+here makes the class look moderately fragile under perturbation without revealing either
+underlying cause --- both of which are already documented individually, at the rule level, in
+their respective chapters' findings. The class-level number in this chapter's table is real, but
+it is a blend of two distinct failure modes, not evidence of a single fall\_hazard-specific
+robustness weakness.
+
+\section{Finding 4: efficiency comfortably scales}
+
+Summing Chapter~\ref{chap:day08}'s \texttt{extrapolated\_1000\_hours} figure across all six
+logged pipeline steps --- baseline inference, descriptive-accuracy mask reruns, attribution,
+stability's threefold sampled reruns, robustness's perturbation reruns, and bounded
+completeness's top-1-mask reruns --- gives \textbf{$\sim$0.50 GPU-hours} for the complete
+six-metric pipeline extrapolated to $n=1{,}000$ samples, well under an hour of compute on a
+single RTX~3070. This is the one metric in the entire pilot where bigger is unambiguously
+better news for a future full-dataset study: there is no compute bottleneck standing between
+this 163-sample pilot and a 1{,}000-sample, or larger, follow-up run of the same six-metric
+pipeline.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard}: rolling up several already-computed per-metric results into one summary
+table and one comparison chart is itself standard practice for any multi-metric evaluation
+framework paper, and mirrors the reporting style of \citep{arreche2024exai}, the same
+six-metric framework this pilot adapts --- a single cross-metric figure or table, alongside
+each metric's own detailed results, is the conventional way such frameworks are presented.
+Nothing about \emph{producing} that rollup departs from convention; \texttt{11\_make\_figures.py}
+performs no new model calls and no recomputed logic, only \texttt{groupby(primary\_class).mean()}
+over columns Chapters~5--10 already wrote and already verified.
+
+\textbf{Non-standard}: the contribution in this chapter is not the rollup itself but two
+explicit cautions attached to it, neither of which a generic multi-metric rollup would
+necessarily surface on its own. First, Finding~1's flagging that descriptive\_accuracy and
+bounded\_completeness's shared cross-class shape is a near-identity of construction, not two
+independent confirmations --- a caution against double-counting one finding as two simply
+because it appears in two different metric columns. Second, Finding~2's reading of the
+sparsity-versus-completeness divergence for struck\_by\_risk as positive evidence that the six
+metrics measure genuinely different properties of an explanation, not six redundant proxies for
+one underlying "explanation quality" score. Both cautions require checking \emph{how} a metric
+was computed, not only what value it produced, before treating cross-metric agreement or
+disagreement as meaningful --- a discipline a purely numerical rollup does not enforce by
+itself.
+
+\section{Implications for the Paper}
+
+\textbf{This chapter's headline table, Table~\ref{tab:day11-headline}, is essentially the
+paper's Results-section centerpiece}: it is the one place in this pilot where all six metrics
+from \citep{arreche2024exai}'s framework, adapted to Florence-2 and the ConstructionSite safety
+domain, are reported together, on a shared four-class breakdown, in a form a reader can take
+in in a single table or a single chart rather than assembling it themselves from six separate
+chapters. Figure~\ref{fig:day11-summary} should be the paper's primary results figure, full
+width, exactly as presented here; no other single figure in this pilot carries as much of the
+report's quantitative content at a glance.
+
+Findings~1 and~2, read together, are the strongest argument this chapter contributes to the
+paper's broader methodological case: \textbf{the six metrics are not redundant, and a rollup
+chapter's job is partly to demonstrate that non-redundancy explicitly, not merely to display
+the numbers side by side.} Finding~1 shows that two metrics can agree closely across classes
+for a reason that has nothing to do with independent corroboration --- one is partially
+constructed from the other --- and a paper that reported this agreement as "two metrics confirm
+the same finding" without that caveat would overstate its own evidence. Finding~2 shows the
+complementary case: two metrics can \emph{disagree} sharply for a class (struck\_by\_risk) for a
+reason that is itself informative --- a large structural attributed region versus a small
+point-like one --- rather than indicating that one of the two metrics is simply wrong. Both
+findings should be stated explicitly in the paper's discussion of the six-metric framework's
+internal validity, since a reviewer's first question about any multi-metric evaluation system is
+almost always whether its metrics are actually measuring different things or merely restating
+one signal six ways.
+
+Finding~3 carries forward a caution already raised independently in Chapters~\ref{chap:day09}
+and~\ref{chap:day10}: any class- or rule-level aggregate that pools sub-rules with different
+underlying failure modes (here, rule\_2's fallback-rerouting fragility and rule\_3's
+grounding-difficulty fragility, both folded into one \texttt{fall\_hazard} number) risks masking
+both causes behind a single moderate-looking statistic. The paper should report sub-rule
+breakdowns alongside class-level numbers wherever a class, like fall\_hazard, pools structurally
+different rules, rather than treating the class-level number as self-explanatory. Finally,
+Diagram~F (Figure~\ref{fig:diagram-f}) should anchor the paper's own architecture or methods
+figure: it is the only diagram in this pilot that shows the complete eleven-script pipeline in
+one image, and Day 13's from-scratch reproducibility rerun, later in this report, is, in
+substance, a validation that this exact pipeline --- end to end, all eleven scripts, all five
+Diagrams A through E composed together --- runs correctly outside the original development
+environment.
