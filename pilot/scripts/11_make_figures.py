@@ -116,16 +116,17 @@ def main() -> int:
     print(f"Wrote {len(out_df)} rows to {out_csv}")
     print(out_df.to_string(index=False))
 
+    class_counts = da["primary_class"].value_counts()
     chart_df = out_df[out_df["metric"] != "efficiency_total_pipeline_1000hr"].set_index("metric")
     fig, ax = plt.subplots(figsize=(11, 5))
     x = list(range(len(chart_df)))
     width = 0.2
     for i, cls in enumerate(CLASSES):
-        ax.bar([xi + i * width for xi in x], chart_df[cls], width, label=f"{cls} (n={'13' if cls == 'struck_by_risk' else '50'})")
+        ax.bar([xi + i * width for xi in x], chart_df[cls], width, label=f"{cls} (n={class_counts.get(cls, 0)})")
     ax.set_xticks([xi + 1.5 * width for xi in x])
     ax.set_xticklabels(chart_df.index, rotation=15, ha="right")
     ax.set_ylabel("metric value (0-1)")
-    ax.set_title("Five per-sample metrics by hazard class (163-sample pilot)\nnote: each metric has its own scale -- see pilot_metric_summary.csv for definitions")
+    ax.set_title(f"Five per-sample metrics by hazard class ({len(da)}-sample pilot)\nnote: each metric has its own scale -- see pilot_metric_summary.csv for definitions")
     ax.legend()
     plt.tight_layout()
 
