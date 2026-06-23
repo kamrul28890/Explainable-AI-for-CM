@@ -194,9 +194,9 @@ two has been blacked out. Masking top-1 alone leaves the object visible and so r
 \texttt{compliant}; masking top-1 and top-2 together hides the object too and so reads as
 \texttt{violation} again --- and because the rule's binary answer space has only these two values,
 hiding the object after the worker is already gone does not produce some third intermediate answer,
-it produces the literal original baseline value. Fourteen of the fifteen regressions follow this exact
+it produces the literal original baseline value. All fifteen regressions follow this exact
 full-revert pattern: \texttt{masked\_answer\_top2} equal to \texttt{baseline\_answer}, not merely
-unequal to \texttt{masked\_answer\_top1}. Confirmed visually for \texttt{0000069} in
+unequal to \texttt{masked\_answer\_top1}\footnote{Recomputed directly from \texttt{results/descriptive\_accuracy.csv}: of the 15 samples with \texttt{answer\_changed\_top1=True} and \texttt{answer\_changed\_top2=False}, \texttt{masked\_answer\_top2} equals \texttt{baseline\_answer} for all 15, not 14 as an earlier informal note on this finding stated.}. Confirmed visually for \texttt{0000069} in
 Figure~\ref{fig:day05-0000069}, the masked region drawn there is unambiguously the worker box, not the
 hard-hat box, exactly as the traced mechanism requires.
 
