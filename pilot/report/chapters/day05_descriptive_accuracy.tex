@@ -6,8 +6,8 @@
 Day 4 produced, for every sample, a ranked list of candidate explanation regions and a masking
 primitive capable of blacking out the top-ranked one. Neither is useful on its own: ranking a region
 first and being able to mask it says nothing yet about whether that region actually mattered to the
-model's judgment. Descriptive Accuracy closes that gap. It is one of the six metrics defined by
-\citet{arreche2024exai} for evaluating black-box explainable-AI frameworks, and the idea behind it is
+model's judgment. Descriptive Accuracy closes that gap. It is one of the six metrics defined for
+evaluating black-box explainable-AI frameworks \citep{arreche2024exai}, and the idea behind it is
 simple and falsifiable: if the explanation method has correctly identified the region the model's
 decision depends on, removing that region should be capable of changing the decision; if masking the
 region never changes anything, the region was not load-bearing for the answer in the first place, and
@@ -216,7 +216,7 @@ the anomaly is what happens when one test's side effect collides with the other'
 
 \textbf{Standard}: deletion- or masking-based descriptive accuracy is a well-established
 explanation-fidelity pattern in the explainability literature, and is adopted here directly as one of
-the six metrics defined by \citet{arreche2024exai} for evaluating black-box XAI frameworks --- that
+the six metrics defined for evaluating black-box XAI frameworks \citep{arreche2024exai} --- that
 work is the direct methodological source for the metric as implemented in this chapter, rather than a
 method invented for this pilot.
 
