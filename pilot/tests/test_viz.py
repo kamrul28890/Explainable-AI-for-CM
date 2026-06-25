@@ -1,3 +1,5 @@
+"""Unit tests for heatmap overlay dimensions and color behavior."""
+
 import numpy as np
 from PIL import Image
 

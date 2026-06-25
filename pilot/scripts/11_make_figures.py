@@ -26,6 +26,11 @@ CLASSES = ["compliant", "ppe_violation", "fall_hazard", "struck_by_risk"]
 
 
 def _rate_by_class(df: pd.DataFrame, value_col: str) -> dict:
+    """Return overall and class-specific means with the evaluated row count.
+
+    Boolean columns therefore become rates, while continuous metric columns
+    remain arithmetic means. Missing classes are represented as NaN.
+    """
     row = {"overall": df[value_col].mean()}
     for cls in CLASSES:
         subset = df[df["primary_class"] == cls]
@@ -35,8 +40,12 @@ def _rate_by_class(df: pd.DataFrame, value_col: str) -> dict:
 
 
 def main() -> int:
+    """Build the final cross-metric CSV and class comparison chart."""
     rows = []
 
+    # Each block converts its source-specific result into one consistently
+    # shaped summary row. Source files remain authoritative for finer-grained
+    # rule and perturbation analyses.
     da = pd.read_csv(RESULTS_DIR / "descriptive_accuracy.csv")
     da["answer_changed_top1"] = da["answer_changed_top1"].astype(bool)
     rows.append(
@@ -70,6 +79,9 @@ def main() -> int:
     )
 
     rb = pd.read_csv(RESULTS_DIR / "robustness.csv")
+    # The headline robustness value is answer survival under image noise.
+    # Prompt rewording and patch-stretch results answer different questions
+    # and remain in the Day 9 detailed artifacts.
     rb_level1 = rb[rb["level"] == "level1_image"].copy()
     rb_level1["answer_survived"] = ~rb_level1["answer_changed"].astype(bool)
     rows.append(
@@ -92,6 +104,8 @@ def main() -> int:
         }
     )
 
+    # Efficiency is a pipeline-level runtime budget, so class-specific cells
+    # and a per-sample n would be misleading.
     eff = pd.read_csv(RESULTS_DIR / "efficiency_summary.csv")
     rows.append(
         {
@@ -121,6 +135,8 @@ def main() -> int:
     fig, ax = plt.subplots(figsize=(11, 5))
     x = list(range(len(chart_df)))
     width = 0.2
+    # Offset one bar per class around every metric position. The metrics share
+    # a 0-1 display range but retain distinct definitions documented in CSV.
     for i, cls in enumerate(CLASSES):
         ax.bar([xi + i * width for xi in x], chart_df[cls], width, label=f"{cls} (n={class_counts.get(cls, 0)})")
     ax.set_xticks([xi + 1.5 * width for xi in x])

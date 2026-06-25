@@ -16,6 +16,8 @@ def overlay_boxes(
     out = image.convert("RGB").copy()
     draw = ImageDraw.Draw(out)
     labels = labels or [""] * len(boxes)
+    # `zip` intentionally stops at the shorter sequence. Callers normally
+    # provide one label per box; omitted labels are expanded above.
     for box, label in zip(boxes, labels):
         draw.rectangle(box, outline=color, width=3)
         if label:
@@ -39,11 +41,14 @@ def overlay_heatmap(image: Image.Image, heatmap: np.ndarray, alpha: float = 0.5,
     red = np.zeros_like(base)
     red[..., 0] = 255.0
 
+    # Convert the scalar heat intensity to a broadcastable RGB blend weight.
+    # Cold pixels retain the source image; hot pixels move toward pure red.
     weight = (alpha * heat_arr)[..., None]
     blended = base * (1 - weight) + red * weight
     return Image.fromarray(blended.astype(np.uint8))
 
 
 def save_figure(image: Image.Image, path: Path) -> None:
+    """Create parent directories and persist a PIL image review artifact."""
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path)

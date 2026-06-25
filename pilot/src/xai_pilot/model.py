@@ -16,6 +16,12 @@ from xai_pilot.config import MODEL_ID
 
 
 def _get_imports_without_flash_attn(filename):
+    """Return remote-model imports after removing unsupported FlashAttention.
+
+    Transformers calls this function while validating dependencies in
+    Florence-2's downloaded modeling file. Removing only `flash_attn` leaves
+    all other dependency checks intact.
+    """
     imports = get_imports(filename)
     if "flash_attn" in imports:
         imports.remove("flash_attn")
@@ -24,6 +30,7 @@ def _get_imports_without_flash_attn(filename):
 
 @contextmanager
 def _no_flash_attn():
+    """Temporarily patch Transformers only while Florence-2 is being loaded."""
     with patch(
         "transformers.dynamic_module_utils.get_imports",
         _get_imports_without_flash_attn,
@@ -36,6 +43,9 @@ def load_florence2(model_id: str = MODEL_ID, device: str | None = None):
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     dtype = torch.float16 if device == "cuda" else torch.float32
 
+    # Keep the monkey patch tightly scoped to model construction. Leaving it
+    # active globally could hide a legitimate flash_attn requirement for a
+    # different model loaded later in the same Python process.
     with _no_flash_attn():
         model = AutoModelForCausalLM.from_pretrained(
             model_id,
@@ -67,10 +77,14 @@ def run_task(
     mean_token_prob is the confidence proxy (mean per-step token probability
     of the chosen sequence).
     """
+    # Florence-2 encodes the task and optional grounding phrase in one prompt,
+    # for example "<OPEN_VOCABULARY_DETECTION>hard hat".
     prompt = task_token if text_input is None else task_token + text_input
     device = next(model.parameters()).device
     dtype = next(model.parameters()).dtype
 
+    # Moving the processor output with both device and dtype keeps pixel values
+    # aligned with the model while integer token IDs remain integer tensors.
     inputs = processor(text=prompt, images=image, return_tensors="pt").to(device, dtype)
 
     generate_kwargs = dict(
@@ -82,6 +96,8 @@ def run_task(
         output_scores=True,
         return_dict_in_generate=True,
     )
+    # Transformers warns when temperature is supplied to deterministic
+    # decoding, so include it only for the sampling-based stability runs.
     if do_sample:
         generate_kwargs["temperature"] = temperature
 
@@ -91,6 +107,9 @@ def run_task(
     sequences = out.sequences
     raw_text = processor.batch_decode(sequences, skip_special_tokens=False)[0]
 
+    # Florence-2 emits location tokens and labels as text. The processor
+    # converts those tokens back to task-specific dictionaries and pixel-space
+    # bounding boxes using the original image dimensions.
     parsed = processor.post_process_generation(
         raw_text, task=task_token, image_size=(image.width, image.height)
     )
@@ -111,6 +130,9 @@ def _mean_token_probability(generate_output) -> float:
     if not scores:
         return float("nan")
     probs = []
+    # Collapse each generation step to the average probability of its most
+    # likely token across active beams. This deliberately produces a compact
+    # relative confidence proxy rather than a calibrated sequence probability.
     for step_logits in scores:
         step_probs = torch.softmax(step_logits.float(), dim=-1)
         probs.append(step_probs.max(dim=-1).values.mean().item())

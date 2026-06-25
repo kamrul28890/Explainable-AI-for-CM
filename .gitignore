@@ -5,6 +5,12 @@ tmp/
 *.aux
 *.log
 *.out
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.toc
+*.synctex.gz
 
 # Office lock files
 ~$*
@@ -13,10 +19,18 @@ tmp/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+*.egg-info/
 
 # Pilot project (created during the technical pilot)
 pilot/.venv/
 pilot/data/
 
-# Claude Code internal state (not a project artifact)
+# Claude Code / superpowers internal state (not a project artifact)
 .claude/
+.superpowers/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

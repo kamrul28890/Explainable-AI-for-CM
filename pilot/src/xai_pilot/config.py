@@ -24,5 +24,7 @@ RULE_TO_CLASS = {
 }
 CLASS_PRIORITY = ["ppe_violation", "fall_hazard", "struck_by_risk", "compliant"]
 
+# Create the standard artifact directories at import time so individual day
+# scripts can write outputs without duplicating directory bootstrap logic.
 for _dir in (DATA_DIR, RESULTS_DIR, FIGURES_DIR, REPORT_DIR):
     _dir.mkdir(parents=True, exist_ok=True)

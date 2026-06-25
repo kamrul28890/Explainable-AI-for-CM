@@ -1,3 +1,5 @@
+"""Unit tests for region geometry, masking, proximity, and fallback ranking."""
+
 import numpy as np
 from PIL import Image
 

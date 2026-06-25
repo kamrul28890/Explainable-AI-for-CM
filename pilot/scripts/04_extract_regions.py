@@ -24,11 +24,14 @@ OBJECT_LABEL = {"rule_1": "hard hat", "rule_2": "harness", "rule_3": "guardrail"
 
 
 def main() -> int:
+    """Convert baseline grounding boxes into ranked explanation regions."""
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
     target_ids = set(preds_df["image_id"])
 
     print(f"Streaming test split to fetch {len(target_ids)} images for region extraction...")
     ds = load_construction_site(split="test", streaming=True)
+    # Day 4 needs the source pixels for masking but does not rerun the model.
+    # Cache only selected images while walking the streamed split.
     images_by_id = {}
     for row in ds:
         if row["image_id"] in target_ids:
@@ -41,6 +44,8 @@ def main() -> int:
 
     out_rows = []
     visualized = 0
+    # Reconstruct variable-length boxes from JSON, retain semantic labels, and
+    # apply the same ranking policy that all later masking metrics consume.
     for _, row in preds_df.iterrows():
         image_id = row["image_id"]
         rule_id = row["assigned_rule_id"]
@@ -65,6 +70,8 @@ def main() -> int:
             }
         )
 
+        # Before/after pairs make coordinate or masking errors visible before
+        # those regions are used for causal perturbation on Day 5.
         if visualized < N_VISUALIZE:
             before = overlay_boxes(image, [top.box], labels=[f"top:{top.label}"], color="lime")
             after = mask_region(image, top.box, mode="black")

@@ -18,6 +18,8 @@ import numpy as np
 
 def aggregate_timings(timings_ms: list[float]) -> dict:
     """Mean/median/std/max of a list of per-call timings in milliseconds."""
+    # NumPy provides a consistent population standard deviation (`ddof=0`)
+    # and handles the scalar conversion needed for CSV serialization.
     arr = np.asarray(timings_ms, dtype=float)
     if arr.size == 0:
         return {"n": 0, "mean_ms": float("nan"), "median_ms": float("nan"), "std_ms": float("nan"), "max_ms": float("nan")}

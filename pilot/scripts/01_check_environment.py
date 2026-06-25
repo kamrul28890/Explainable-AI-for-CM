@@ -16,12 +16,17 @@ from xai_pilot.model import load_florence2, run_task
 
 
 def main() -> int:
+    """Run an end-to-end smoke test of CUDA, dataset access, and inference."""
+    # Check CUDA before downloading/loading the model so a machine that cannot
+    # execute the intended GPU pilot fails quickly with a clear explanation.
     print(f"torch {torch.__version__}, cuda available: {torch.cuda.is_available()}")
     if not torch.cuda.is_available():
         print("FAIL: CUDA is not available.")
         return 1
 
     print(f"Loading {HF_DATASET_ID} (test split)...")
+    # Streaming one record validates authentication and dataset decoding
+    # without materializing the complete test split.
     ds = load_dataset(HF_DATASET_ID, split="test", streaming=True)
     sample = next(iter(ds))
     image = sample["image"]
@@ -35,6 +40,8 @@ def main() -> int:
         return 1
 
     print("Running <CAPTION> on the sample image...")
+    # Captioning is used only as a generic Florence-2 smoke test on Day 1. The
+    # safety proxy uses open-vocabulary grounding in later scripts.
     t0 = time.perf_counter()
     raw_text, parsed, confidence = run_task(model, processor, image, "<CAPTION>")
     elapsed_ms = (time.perf_counter() - t0) * 1000

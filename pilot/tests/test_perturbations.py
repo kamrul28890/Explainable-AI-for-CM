@@ -1,3 +1,5 @@
+"""Unit tests for controlled image perturbations used by Day 9."""
+
 import numpy as np
 from PIL import Image
 

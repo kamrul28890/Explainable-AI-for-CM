@@ -48,6 +48,8 @@ GLOBAL_TOKEN_OFFSET = 1
 
 @dataclass
 class AttributionResult:
+    """Cross-attention artifact and metadata from one greedy grounding run."""
+
     heatmap: np.ndarray  # (24, 24), normalized to [0, 1]
     greedy_boxes: list[tuple[float, float, float, float]] = field(default_factory=list)
     n_generated_tokens: int = 0
@@ -67,6 +69,8 @@ def cross_attention_heatmap(
     dtype = next(model.parameters()).dtype
     inputs = processor(text=prompt, images=image, return_tensors="pt").to(device, dtype)
 
+    # Attribution is observational: gradients are unnecessary, and disabling
+    # them reduces memory pressure during generation on the pilot GPU.
     with torch.no_grad():
         out = model.generate(
             input_ids=inputs["input_ids"],
@@ -81,14 +85,22 @@ def cross_attention_heatmap(
     if not out.cross_attentions:
         return AttributionResult(heatmap=np.zeros(PATCH_GRID), greedy_boxes=[], n_generated_tokens=0)
 
+    # `generate` returns one tuple per generated token and one tensor per
+    # decoder layer. Average layers, batch, heads, and target-token position
+    # within each step, then average the remaining source attention over all
+    # generated steps. The final vector has one value per encoder token.
     step_means = []
     for step_layers in out.cross_attentions:
         layer_stack = torch.stack(list(step_layers))  # (n_layers, 1, heads, 1, src_len)
         step_means.append(layer_stack.mean(dim=(0, 1, 2, 3)))  # (src_len,)
     seq_mean = torch.stack(step_means).mean(dim=0)  # (src_len,)
 
+    # Drop the pooled global image token and ignore prompt-text tokens after
+    # the 576 visual patches before reshaping to the known 24x24 grid.
     image_attn = seq_mean[GLOBAL_TOKEN_OFFSET : GLOBAL_TOKEN_OFFSET + N_PATCH_TOKENS]
     heatmap = image_attn.reshape(PATCH_GRID).float().cpu().numpy()
+    # Min-max normalization supports visual overlays and threshold metrics.
+    # A constant map stays all-zero to avoid division by zero.
     heatmap = heatmap - heatmap.min()
     if heatmap.max() > 0:
         heatmap = heatmap / heatmap.max()

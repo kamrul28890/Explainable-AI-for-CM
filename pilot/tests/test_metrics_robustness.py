@@ -1,3 +1,5 @@
+"""Unit tests for baseline-to-perturbation robustness comparisons."""
+
 import math
 
 from xai_pilot.inference import AnswerResult

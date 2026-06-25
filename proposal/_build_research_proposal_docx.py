@@ -1,3 +1,11 @@
+"""Build the formatted Word proposal from the Markdown source.
+
+The script implements the document's page geometry, typography, table XML,
+headers/footers, and a small Markdown parser. It intentionally targets the
+known proposal structure rather than attempting to be a general Markdown to
+DOCX converter.
+"""
+
 from pathlib import Path
 import re
 
@@ -23,6 +31,7 @@ BORDER = "D0D7DE"
 
 
 def set_cell_shading(cell, fill):
+    """Apply a hexadecimal background fill to a python-docx table cell."""
     tc_pr = cell._tc.get_or_add_tcPr()
     shd = tc_pr.find(qn("w:shd"))
     if shd is None:
@@ -32,11 +41,14 @@ def set_cell_shading(cell, fill):
 
 
 def set_cell_margins(cell, top=80, bottom=80, start=120, end=120):
+    """Set cell padding in Word twips through the underlying OOXML."""
     tc_pr = cell._tc.get_or_add_tcPr()
     tc_mar = tc_pr.first_child_found_in("w:tcMar")
     if tc_mar is None:
         tc_mar = OxmlElement("w:tcMar")
         tc_pr.append(tc_mar)
+    # python-docx does not expose table-cell margins directly, so create or
+    # update each w:tcMar child in the cell properties.
     for margin_name, margin_value in {
         "top": top,
         "bottom": bottom,
@@ -52,6 +64,7 @@ def set_cell_margins(cell, top=80, bottom=80, start=120, end=120):
 
 
 def set_table_borders(table, color=BORDER, size="4"):
+    """Create consistent outer and inner borders for a Word table."""
     tbl_pr = table._tbl.tblPr
     borders = tbl_pr.first_child_found_in("w:tblBorders")
     if borders is None:
@@ -70,6 +83,11 @@ def set_table_borders(table, color=BORDER, size="4"):
 
 
 def set_table_width(table, widths):
+    """Set total, grid-column, and individual cell widths in Word twips.
+
+    Updating all three representations prevents Word from discarding the
+    intended layout when it recalculates an autofit table.
+    """
     table.autofit = False
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
@@ -99,6 +117,8 @@ def set_table_width(table, widths):
         col.set(qn("w:w"), str(width))
         grid.append(col)
 
+    # Repeat widths at cell level because Word readers may prioritize tcW over
+    # the table grid depending on compatibility settings.
     for row in table.rows:
         for idx, cell in enumerate(row.cells):
             cell.width = Pt(widths[idx] / 20)
@@ -112,6 +132,7 @@ def set_table_width(table, widths):
 
 
 def add_page_number(paragraph):
+    """Insert a live PAGE field into a footer paragraph."""
     paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     run = paragraph.add_run()
     fld_char_1 = OxmlElement("w:fldChar")
@@ -127,6 +148,7 @@ def add_page_number(paragraph):
 
 
 def configure_styles(doc):
+    """Configure the document's global body, heading, and list typography."""
     styles = doc.styles
 
     normal = styles["Normal"]
@@ -192,6 +214,7 @@ def configure_styles(doc):
 
 
 def configure_page(doc):
+    """Set margins and install the recurring header and page-number footer."""
     section = doc.sections[0]
     section.top_margin = Inches(1)
     section.bottom_margin = Inches(1)
@@ -217,6 +240,7 @@ def configure_page(doc):
 
 
 def add_title_block(doc, title):
+    """Add the centered title, subtitle, and shaded strategic-focus callout."""
     p = doc.add_paragraph(style="Title")
     p.add_run(title)
 
@@ -241,6 +265,7 @@ def add_title_block(doc, title):
 
 
 def add_markdown_table(doc, rows):
+    """Render parsed Markdown table rows as a styled Word table."""
     headers = rows[0]
     body = rows[2:] if len(rows) > 1 and set(rows[1]) == {"---"} else rows[1:]
     col_count = len(headers)
@@ -286,10 +311,12 @@ def add_markdown_table(doc, rows):
 
 
 def split_table_row(line):
+    """Split one pipe-delimited Markdown table row into trimmed cell text."""
     return [part.strip() for part in line.strip().strip("|").split("|")]
 
 
 def build_doc():
+    """Parse the proposal Markdown and write the fully formatted DOCX."""
     doc = Document()
     configure_page(doc)
     configure_styles(doc)
@@ -301,11 +328,15 @@ def build_doc():
     table_buffer = []
 
     def flush_table():
+        """Render and clear a contiguous block of buffered Markdown rows."""
         nonlocal table_buffer
         if table_buffer:
             add_markdown_table(doc, table_buffer)
             table_buffer = []
 
+    # Parse only the Markdown constructs used by this proposal. Contiguous
+    # table rows are buffered because the Word table must be created as one
+    # object; all other blocks can be emitted immediately.
     for raw in lines[1:]:
         line = raw.rstrip()
         if not line:
@@ -322,6 +353,8 @@ def build_doc():
 
         flush_table()
 
+        # Map the source's lightweight structure to native Word styles so the
+        # resulting file remains editable and navigation-friendly.
         if line.startswith("## "):
             doc.add_paragraph(line[3:].strip(), style="Heading 1")
         elif line.startswith("### "):
@@ -343,6 +376,7 @@ def build_doc():
 
     flush_table()
 
+    # Populate document metadata separately from visible page content.
     doc.core_properties.title = "Research Proposal: Evaluating Explainability in VLMs for Construction Safety"
     doc.core_properties.subject = "Research proposal"
     doc.core_properties.keywords = "construction safety, VLM, XAI, explainability, Florence-2"

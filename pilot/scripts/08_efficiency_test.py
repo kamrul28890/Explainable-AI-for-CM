@@ -32,6 +32,7 @@ DETECTION_TASK = "<OPEN_VOCABULARY_DETECTION>"
 
 
 def _phrase_for_top_region(rule_id: str, top_label: str) -> str:
+    """Map a ranked region label back to its attribution query phrase."""
     if top_label == "worker":
         return PERSON_PHRASE
     if rule_id == "rule_4":
@@ -40,6 +41,9 @@ def _phrase_for_top_region(rule_id: str, top_label: str) -> str:
 
 
 def main() -> int:
+    """Combine recorded timings with bounded calibration measurements."""
+    # Convert numeric columns explicitly because reading with dtype=str keeps
+    # identifiers stable but would otherwise make arithmetic concatenate text.
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
     preds_df["inference_ms"] = pd.to_numeric(preds_df["inference_ms"])
     regions_df = pd.read_csv(RESULTS_DIR / "region_extraction.csv", dtype=str)
@@ -61,6 +65,8 @@ def main() -> int:
     print("Loading Florence-2-base-ft for Day 6/7 calibration...")
     model, processor = load_florence2()
 
+    # Use a fixed prefix of the reproducible manifest. This is a runtime
+    # calibration, not a statistical estimate of model accuracy.
     calib_ids = set(merged.head(N_CALIBRATION)["image_id"])
     print(f"Streaming test split to fetch {len(calib_ids)} calibration images...")
     images_by_id = {}
@@ -81,6 +87,8 @@ def main() -> int:
             continue  # excluded from Day 6's own aggregate too -- no phrase to attribute
         image = images_by_id[row["image_id"]]
         phrase = _phrase_for_top_region(row["assigned_rule_id"], row["top_region_label"])
+        # Wall-clock timing includes preprocessing, generation, attention
+        # extraction, and post-processing, matching the user's actual cost.
         t0 = time.perf_counter()
         cross_attention_heatmap(model, processor, image, DETECTION_TASK, text_input=phrase)
         day6_timings.append((time.perf_counter() - t0) * 1000)
@@ -97,6 +105,8 @@ def main() -> int:
     day7_per_sample_ms = 3 * day7_call_stats["mean_ms"]  # 3 reruns per sample, per metrics/stability.run_n_times
     day7_total_ms = day7_per_sample_ms * n_samples_observed
 
+    # Normalize each pipeline stage to mean milliseconds per pilot sample so
+    # stages with different call counts can be summed and extrapolated.
     rows = [
         {
             "day": 3,
@@ -137,6 +147,8 @@ def main() -> int:
     ]
 
     out_df = pd.DataFrame(rows)
+    # Linear extrapolation assumes no batching and similar hardware/load. The
+    # output is an engineering budget, not a hardware-independent benchmark.
     extrap = out_df["mean_ms_per_sample"].apply(lambda ms: extrapolate(ms, N_FULL_STUDY))
     out_df["extrapolated_1000_minutes"] = [e["total_minutes"] for e in extrap]
     out_df["extrapolated_1000_hours"] = [e["total_hours"] for e in extrap]
@@ -154,6 +166,8 @@ def main() -> int:
 
     fig_dir = FIGURES_DIR / "efficiency"
     fig_dir.mkdir(parents=True, exist_ok=True)
+    # Plot per-sample cost rather than total observed cost so stages measured
+    # on different calibration counts remain visually comparable.
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.bar(out_df["name"], out_df["mean_ms_per_sample"], color="steelblue")
     ax.set_ylabel("mean ms per sample")

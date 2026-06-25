@@ -14,6 +14,13 @@ COMPLIANT_ROUND_ROBIN = ["rule_1", "rule_2", "rule_3", "rule_4"]
 
 @dataclass
 class PilotSample:
+    """Minimal metadata needed to reproduce one selected pilot observation.
+
+    The image itself remains in the Hugging Face dataset. Storing only its
+    identifier and experimental labels keeps the sample manifest small and
+    allows every later script to retrieve the same image from the test split.
+    """
+
     image_id: str
     primary_class: str
     violated_rule_ids: list[str] = field(default_factory=list)
@@ -60,6 +67,12 @@ def assign_rule_id(primary_class: str, violated_rule_ids: list[str], compliant_i
 
 
 def load_construction_site(split: str = "test", streaming: bool = True):
+    """Load a ConstructionSite split using the repository's fixed dataset ID.
+
+    Streaming is the default because the experiment usually needs only the
+    selected image IDs and should not download the complete image corpus into
+    memory before processing can begin.
+    """
     return load_dataset(HF_DATASET_ID, split=split, streaming=streaming)
 
 
@@ -79,6 +92,11 @@ def select_balanced_sample(
     cap = n_per_class * 10
     reservoirs: dict[str, list[PilotSample]] = {c: [] for c in classes}
 
+    # Build bounded candidate pools in one streaming pass. This is not a
+    # textbook reservoir-sampling algorithm: once a class reaches `cap`, later
+    # rows for that class are ignored. The seeded shuffle below therefore
+    # randomizes a bounded prefix of each class while keeping memory usage
+    # predictable for an image dataset.
     for row in ds:
         primary_class, violated_rule_ids = classify_image(row)
         if primary_class not in reservoirs:
@@ -89,12 +107,17 @@ def select_balanced_sample(
         if all(len(reservoirs[c]) >= cap for c in classes):
             break
 
+    # Shuffle each class independently so class prevalence in the source
+    # dataset cannot dominate the final balanced pilot subset.
     selected: list[PilotSample] = []
     for c in classes:
         bucket = reservoirs[c]
         rng.shuffle(bucket)
         selected.extend(bucket[:n_per_class])
 
+    # Violation samples inherit a relevant violated rule. Compliant samples
+    # have no violated rule, so assign them round-robin across all four rules
+    # to avoid evaluating only one safety question on the compliant class.
     compliant_index = 0
     for sample in selected:
         sample.assigned_rule_id = assign_rule_id(

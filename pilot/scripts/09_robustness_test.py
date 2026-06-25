@@ -40,6 +40,7 @@ LEVEL1_PERTURBATIONS = {
 
 
 def _baseline_from_row(row) -> AnswerResult:
+    """Reconstruct a typed baseline result from one CSV record."""
     return AnswerResult(
         answer=row["answer"],
         worker_boxes=[tuple(b) for b in json.loads(row["worker_boxes"])],
@@ -49,6 +50,12 @@ def _baseline_from_row(row) -> AnswerResult:
 
 
 def _make_hardhat_patch(size=(60, 60)) -> Image.Image:
+    """Create the deliberately simple synthetic patch used by the stretch test.
+
+    This is not intended to be photorealistic. It tests whether adding a
+    high-contrast hard-hat-like cue near the estimated head can alter the
+    grounding proxy.
+    """
     patch = Image.new("RGB", size, (235, 220, 200))
     draw = ImageDraw.Draw(patch)
     draw.ellipse((2, 2, size[0] - 2, size[1] - 6), fill=(255, 210, 0))
@@ -56,6 +63,7 @@ def _make_hardhat_patch(size=(60, 60)) -> Image.Image:
 
 
 def _head_box(worker_box, scale: float = 0.22) -> tuple[float, float, float, float]:
+    """Estimate a centered head region from the upper portion of a worker box."""
     wx0, wy0, wx1, wy1 = worker_box
     w_width, w_height = wx1 - wx0, wy1 - wy0
     head_h = w_height * scale
@@ -65,6 +73,7 @@ def _head_box(worker_box, scale: float = 0.22) -> tuple[float, float, float, flo
 
 
 def main() -> int:
+    """Run image, prompt, and bounded synthetic-patch robustness checks."""
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
     target_ids = set(preds_df["image_id"])
 
@@ -85,6 +94,8 @@ def main() -> int:
 
     out_rows = []
     visualized_count = {name: 0 for name in LEVEL1_PERTURBATIONS}
+    # Every Level 1 perturbation starts from the original image. Perturbations
+    # are not composed, which keeps each measured factor interpretable.
     for i, row in preds_df.iterrows():
         image_id = row["image_id"]
         rule_id = row["assigned_rule_id"]
@@ -114,6 +125,9 @@ def main() -> int:
                 visualized_count[name] += 1
 
         # --- Level 2: reworded prompt (rule_4 has no second phrasing) ---
+        # Rule 4 is defined by a fixed worker/excavator pair and has no honest
+        # synonym variant. Record an explicit exclusion instead of treating it
+        # as an unchanged answer.
         if rule_id == "rule_4":
             out_rows.append(
                 {
@@ -131,6 +145,8 @@ def main() -> int:
             )
         else:
             reworded = answer_rule(model, processor, image, rule_id, phrasing_index=1)
+            # Reuse the same comparison logic as image perturbations so answer,
+            # confidence, box drift, and worker-loss semantics stay identical.
             from xai_pilot.metrics.robustness import _robustness_from_results
 
             result = _robustness_from_results(baseline, reworded)
@@ -157,6 +173,8 @@ def main() -> int:
     out_df.to_csv(out_csv, index=False)
     print(f"\nWrote {len(out_df)} rows to {out_csv}")
 
+    # Preserve excluded records in the artifact, but report rates only for
+    # conditions that were actually evaluated.
     scored = out_df[out_df["excluded_reason"].isna()].copy()
     scored["answer_changed"] = scored["answer_changed"].astype(bool)
     scored["worker_lost"] = scored["worker_lost"].astype(bool)
@@ -169,6 +187,8 @@ def main() -> int:
 
     # --- Stretch: synthetic hard-hat patch on ppe_violation/rule_1 samples ---
     print(f"\nRunning stretch patch test on up to {N_PATCH_STRETCH} ppe_violation/rule_1 samples...")
+    # A hard-hat patch is conceptually relevant only to rule 1. Requiring a
+    # detected worker also provides a location for the synthetic intervention.
     candidates = preds_df[(preds_df["primary_class"] == "ppe_violation") & (preds_df["assigned_rule_id"] == "rule_1")]
     candidates = candidates[candidates["worker_boxes"].apply(lambda s: len(json.loads(s)) > 0)].head(N_PATCH_STRETCH)
 
@@ -179,6 +199,9 @@ def main() -> int:
         image_id = row["image_id"]
         image = images_by_id[image_id]
         baseline = _baseline_from_row(row)
+        # Use the first worker because the current Florence-2 query frequently
+        # returns only one worker even in multi-worker scenes, a known pilot
+        # limitation documented in the report.
         head_box = _head_box(baseline.worker_boxes[0])
         patched_image = paste_patch(image, head_box, patch)
         result = answer_rule(model, processor, patched_image, "rule_1")

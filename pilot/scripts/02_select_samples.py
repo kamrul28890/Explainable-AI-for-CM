@@ -16,16 +16,21 @@ from xai_pilot.prompts import RULE_4_PROXIMITY_PAIR, RULE_QUERIES
 
 
 def main() -> int:
+    """Create the reproducible sample manifest and prompt configuration."""
     print(f"Streaming ConstructionSite test split, target {SAMPLES_PER_CLASS}/class...")
     ds = load_construction_site(split="test", streaming=True)
     samples = select_balanced_sample(ds, n_per_class=SAMPLES_PER_CLASS, seed=SEED)
 
+    # Recount the returned sample rather than assuming every class reached the
+    # requested target; rare classes can legitimately be underfilled.
     counts = {c: 0 for c in CLASS_PRIORITY}
     for s in samples:
         counts[s.primary_class] += 1
     print("Class counts:", counts)
 
     out_csv = DATA_DIR / "pilot_samples.csv"
+    # Store lists as pipe-delimited values because a sample can violate more
+    # than one rule while CSV still requires one scalar value per cell.
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(
@@ -38,6 +43,8 @@ def main() -> int:
     print(f"Wrote {len(samples)} rows to {out_csv}")
 
     out_prompts = DATA_DIR / "safety_prompts.json"
+    # Snapshot the exact prompt phrases beside the sample manifest so later
+    # results remain interpretable if source constants are changed.
     prompts_payload = {
         "rule_queries": RULE_QUERIES,
         "rule_4_proximity_pair": list(RULE_4_PROXIMITY_PAIR),

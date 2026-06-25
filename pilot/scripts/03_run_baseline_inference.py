@@ -23,6 +23,9 @@ CAPTION_TASK = "<MORE_DETAILED_CAPTION>"
 
 
 def main() -> int:
+    """Run and persist baseline predictions for every selected sample."""
+    # These lookup tables turn the sequential dataset stream into an efficient
+    # membership test and preserve the experimental assignment from Day 2.
     samples_df = pd.read_csv(DATA_DIR / "pilot_samples.csv", dtype=str)
     target_ids = set(samples_df["image_id"])
     rule_by_id = dict(zip(samples_df["image_id"], samples_df["assigned_rule_id"]))
@@ -37,6 +40,8 @@ def main() -> int:
     fig_dir = FIGURES_DIR / "baseline"
     fig_dir.mkdir(parents=True, exist_ok=True)
 
+    # The dataset is streamed once. Non-pilot rows are skipped immediately, so
+    # model inference is performed only for the fixed target IDs.
     out_rows = []
     visualized = 0
     for row in ds:
@@ -47,11 +52,14 @@ def main() -> int:
         rule_id = rule_by_id[image_id]
         image = row["image"]
 
+        # The detailed caption is qualitative context for manual review. It is
+        # not used to derive the safety answer or any reported metric.
         _, caption_parsed, _ = run_task(model, processor, image, CAPTION_TASK)
         caption = caption_parsed.get(CAPTION_TASK, "")
 
         result = answer_rule(model, processor, image, rule_id)
 
+        # JSON preserves a variable number of boxes inside a flat CSV row.
         out_rows.append(
             {
                 "image_id": image_id,
@@ -66,6 +74,8 @@ def main() -> int:
             }
         )
 
+        # Save a bounded number of overlays to inspect grounding quality without
+        # generating hundreds of redundant image files.
         if visualized < N_VISUALIZE and result.boxes:
             overlaid = overlay_boxes(
                 image, result.worker_boxes, labels=["worker"] * len(result.worker_boxes), color="blue"
@@ -87,6 +97,8 @@ def main() -> int:
     print(f"Wrote {len(out_rows)} rows to {out_csv}")
     print(f"Saved {visualized} overlay images to {fig_dir}")
 
+    # A non-empty set means the source split and Day 2 manifest disagree. Keep
+    # the partial output for diagnosis but report the integrity problem.
     missing = target_ids - {r["image_id"] for r in out_rows}
     if missing:
         print(f"WARNING: {len(missing)} target image_ids not found in test split stream: {missing}")

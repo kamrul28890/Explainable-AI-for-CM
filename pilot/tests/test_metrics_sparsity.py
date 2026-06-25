@@ -1,3 +1,5 @@
+"""Unit tests for visual-attribution concentration metrics."""
+
 import numpy as np
 
 from xai_pilot.metrics.sparsity import regions_above_threshold, topk_mass_ratio

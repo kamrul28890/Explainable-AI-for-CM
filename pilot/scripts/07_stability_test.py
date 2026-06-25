@@ -43,6 +43,7 @@ def _object_region_overlap(results) -> float:
 
 
 def main() -> int:
+    """Quantify answer and region reproducibility across sampled reruns."""
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
     target_ids = set(preds_df["image_id"])
 
@@ -69,8 +70,12 @@ def main() -> int:
         image = images_by_id[image_id]
         deterministic_answer = row["answer"]
 
+        # Sampling introduces controlled decoding variability. The saved
+        # deterministic answer is retained only as an external reference.
         results = run_n_times(model, processor, image, rule_id, n=N_RERUNS, temperature=TEMPERATURE)
 
+        # Standardize every rerun independently because both the number and
+        # geometry of returned grounding boxes may change across generations.
         top_regions = []
         for r in results:
             boxes = r.worker_boxes + r.object_boxes
@@ -79,6 +84,8 @@ def main() -> int:
             top_regions.append(regions[0])
 
         sampled_answers = [r.answer for r in results]
+        # With three reruns a majority always exists. `max` is sufficient here;
+        # the odd rerun count avoids ambiguous two-way ties.
         majority_answer = max(set(sampled_answers), key=sampled_answers.count)
 
         out_rows.append(

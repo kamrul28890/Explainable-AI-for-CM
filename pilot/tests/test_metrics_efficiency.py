@@ -1,3 +1,5 @@
+"""Unit tests for timing aggregation and linear cost extrapolation."""
+
 import math
 
 from xai_pilot.metrics.efficiency import aggregate_timings, extrapolate

@@ -19,6 +19,7 @@ from xai_pilot.regions import iou
 
 @dataclass
 class RobustnessResult:
+    """Comparison signals between one baseline and one perturbed inference."""
     answer_changed: bool
     confidence_drop: float
     object_box_iou: float  # nan if either side has no object box to compare
@@ -26,6 +27,12 @@ class RobustnessResult:
 
 
 def _robustness_from_results(baseline: AnswerResult, perturbed: AnswerResult) -> RobustnessResult:
+    """Compare normalized results without performing another model call.
+
+    The first safety-object box is used because the pilot proxy and reports
+    consistently treat it as the representative object detection. Missing
+    boxes produce NaN rather than being interpreted as zero overlap.
+    """
     object_box_iou = (
         iou(baseline.object_boxes[0], perturbed.object_boxes[0])
         if baseline.object_boxes and perturbed.object_boxes

@@ -1,3 +1,5 @@
+"""Unit tests for answer agreement and explanation-region overlap."""
+
 from xai_pilot.inference import AnswerResult
 from xai_pilot.metrics.stability import answer_agreement_rate, region_overlap_score
 from xai_pilot.regions import Region

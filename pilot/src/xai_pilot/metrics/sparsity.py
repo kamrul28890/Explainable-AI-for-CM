@@ -20,6 +20,8 @@ def topk_mass_ratio(attr_map: np.ndarray, k: int) -> float:
     total = flat.sum()
     if total <= 0:
         return float("nan")
+    # Sorting is acceptable for the fixed 576-cell map and keeps the metric
+    # definition transparent. The largest k cells represent concentrated mass.
     top_k_sum = np.sort(flat)[-k:].sum()
     return float(top_k_sum / total)
 

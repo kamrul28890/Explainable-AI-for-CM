@@ -23,6 +23,7 @@ OBJECT_LABEL = {"rule_1": "hard hat", "rule_2": "harness", "rule_3": "guardrail"
 
 
 def main() -> int:
+    """Measure answer changes after masking the top one and two regions."""
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
     target_ids = set(preds_df["image_id"])
 
@@ -31,6 +32,8 @@ def main() -> int:
 
     print(f"Streaming test split to fetch {len(target_ids)} images...")
     ds = load_construction_site(split="test", streaming=True)
+    # Keep images in memory because each one is used for multiple masked
+    # re-inference calls during this script.
     images_by_id = {}
     for row in ds:
         if row["image_id"] in target_ids:
@@ -43,6 +46,8 @@ def main() -> int:
 
     out_rows = []
     visualized = 0
+    # Rebuild the exact baseline objects and region order from saved Day 3
+    # outputs so the unmasked model does not need to run again.
     for i, row in preds_df.iterrows():
         image_id = row["image_id"]
         rule_id = row["assigned_rule_id"]
@@ -62,6 +67,8 @@ def main() -> int:
             object_boxes=object_boxes,
         )
 
+        # `evaluate` applies cumulative masks: first top-1, then top-1 plus
+        # top-2, with a fresh safety-proxy inference after each condition.
         result = evaluate(model, processor, image, rule_id, baseline, regions)
 
         out_rows.append(
@@ -80,6 +87,7 @@ def main() -> int:
             }
         )
 
+        # Prefer visually informative answer-flip cases over arbitrary samples.
         if visualized < N_VISUALIZE and result.answer_changed_top1:
             top1_overlay = overlay_boxes(image, [regions[0].box], labels=["masked top-1"], color="lime")
             save_figure(top1_overlay, fig_dir / f"{image_id}_{rule_id}_flip.png")

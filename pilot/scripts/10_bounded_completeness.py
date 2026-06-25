@@ -27,6 +27,7 @@ import json
 
 
 def _baseline_from_row(row) -> AnswerResult:
+    """Rehydrate the saved baseline fields needed for fallback-risk analysis."""
     return AnswerResult(
         answer=row["answer"],
         worker_boxes=[tuple(b) for b in json.loads(row["worker_boxes"])],
@@ -36,6 +37,9 @@ def _baseline_from_row(row) -> AnswerResult:
 
 
 def main() -> int:
+    """Assign completeness verdicts and audit worker-loss artifacts."""
+    # Read booleans as strings first, then map explicitly. Python's bool("False")
+    # is True, so a direct astype(bool) would corrupt these columns.
     accuracy_df = pd.read_csv(RESULTS_DIR / "descriptive_accuracy.csv", dtype=str)
     accuracy_df["answer_changed_top1"] = accuracy_df["answer_changed_top1"].map({"True": True, "False": False})
     accuracy_df["answer_changed_top2"] = accuracy_df["answer_changed_top2"].map({"True": True, "False": False})
@@ -44,6 +48,8 @@ def main() -> int:
     samples_df = pd.read_csv(DATA_DIR / "pilot_samples.csv", dtype=str)
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
 
+    # Compose one analysis table from prior-day artifacts. Each merge adds only
+    # the fields required for verdicts or the hard-subset diagnostics.
     merged = accuracy_df.merge(
         regions_df[["image_id", "assigned_rule_id", "top_region_source", "top_region_box"]],
         on=["image_id", "assigned_rule_id"],
@@ -57,6 +63,9 @@ def main() -> int:
     target_ids = set(merged["image_id"])
     print(f"Streaming test split to fetch quality_of_info for {len(target_ids)} images...")
     ds = load_construction_site(split="test", streaming=True)
+    # Fetch metadata and image pixels in separate streaming passes. The first
+    # covers all samples; the second downloads images only where a real model
+    # region can be masked for the fallback audit.
     quality_by_id = {}
     for row in ds:
         if row["image_id"] in target_ids:
@@ -82,6 +91,9 @@ def main() -> int:
         verdict = classify_sample(row["top_region_source"], row["answer_changed_top1"], row["answer_changed_top2"])
 
         worker_lost_in_top1_mask = None
+        # Grid fallbacks have no model-selected region and are already labeled
+        # no_usable_explanation, so rerunning them would not answer the audit
+        # question and would waste GPU work.
         if row["top_region_source"] == "model":
             baseline = _baseline_from_row(row)
             top1_box = tuple(json.loads(row["top_region_box"]))
@@ -128,6 +140,8 @@ def main() -> int:
     print("\nGrid-fallback rate (no_usable_explanation by definition):")
     print(f"{(out_df['top_region_source'] == 'grid').mean():.1%}")
 
+    # Only model-region samples received the fresh mask rerun. Restrict the
+    # worker-loss calculation to that explicitly observed subset.
     scored = out_df[out_df["worker_lost_in_top1_mask"].notna()].copy()
     scored["worker_lost_in_top1_mask"] = scored["worker_lost_in_top1_mask"].astype(bool)
     print(f"\nworker_lost_in_top1_mask rate over the {len(scored)} model-region samples: {scored['worker_lost_in_top1_mask'].mean():.1%}")

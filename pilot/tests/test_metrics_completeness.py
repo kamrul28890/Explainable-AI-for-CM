@@ -1,3 +1,5 @@
+"""Unit tests for the three bounded-completeness verdicts."""
+
 from xai_pilot.metrics.completeness import classify_sample
 
 

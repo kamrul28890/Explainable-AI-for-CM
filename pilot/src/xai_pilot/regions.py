@@ -19,7 +19,11 @@ class Region:
 
 
 def iou(box_a: Box, box_b: Box) -> float:
-    """Intersection-over-union of two (x0, y0, x1, y1) boxes."""
+    """Return intersection-over-union for two pixel-space boxes.
+
+    Invalid or inverted dimensions contribute zero area instead of producing a
+    negative intersection. A zero-area union returns 0.0.
+    """
     ax0, ay0, ax1, ay1 = box_a
     bx0, by0, bx1, by1 = box_b
 
@@ -46,6 +50,8 @@ def mask_region(
     if x1 <= x0 or y1 <= y0:
         return out
 
+    # Black masking removes both texture and color evidence. Blur masking is
+    # retained as a less destructive alternative for controlled experiments.
     if mode == "black":
         patch = Image.new("RGB", (x1 - x0, y1 - y0), (0, 0, 0))
     elif mode == "blur":
@@ -64,6 +70,8 @@ def grid_fallback_regions(image_size: tuple[int, int], grid: tuple[int, int] = (
     cols, rows = grid
     cell_w, cell_h = width / cols, height / rows
     boxes = []
+    # Floating-point boundaries preserve complete coverage even when image
+    # dimensions are not evenly divisible by the grid dimensions.
     for r in range(rows):
         for c in range(cols):
             x0, y0 = c * cell_w, r * cell_h
@@ -98,6 +106,7 @@ def all_boxes_covered(
 
 
 def _box_area(box: Box) -> float:
+    """Return non-negative pixel area for ranking candidate regions."""
     x0, y0, x1, y1 = box
     return max(0.0, x1 - x0) * max(0.0, y1 - y0)
 
@@ -120,6 +129,9 @@ def standardize_regions(
     to mask for Day 5's descriptive-accuracy test.
     """
     if boxes:
+        # `zip` preserves the model's box-label association while sorting.
+        # Descending area is a pragmatic proxy, not a learned importance score;
+        # the pilot report documents its bias against small PPE objects.
         paired = sorted(zip(boxes, labels), key=lambda bl: _box_area(bl[0]), reverse=True)
         return [Region(box=b, source="model", label=l) for b, l in paired]
     return [Region(box=b, source="grid", label="grid") for b in grid_fallback_regions(image_size, grid)]

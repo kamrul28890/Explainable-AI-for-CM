@@ -29,6 +29,8 @@ def run_n_times(
     **extra_kwargs,
 ) -> list[AnswerResult]:
     """Rerun answer_rule n times with sampling-based decoding (do_sample=True, num_beams=1)."""
+    # Keep complete AnswerResult objects because stability is evaluated both at
+    # the categorical answer level and at the grounding-region level.
     return [
         answer_rule(model, processor, image, rule_id, do_sample=True, num_beams=1, temperature=temperature, **extra_kwargs)
         for _ in range(n)

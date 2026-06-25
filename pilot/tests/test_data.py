@@ -1,3 +1,5 @@
+"""Unit tests for dataset classification and experimental rule assignment."""
+
 from xai_pilot.data import assign_rule_id, classify_image
 
 BASE_ROW = {

@@ -18,6 +18,7 @@ from xai_pilot.regions import Region, mask_region
 
 @dataclass
 class DescriptiveAccuracyResult:
+    """Answer and confidence changes for cumulative top-region masks."""
     answer_changed_top1: bool
     answer_changed_top2: bool
     confidence_drop_top1: float
@@ -36,6 +37,8 @@ def evaluate(
     **run_kwargs,
 ) -> DescriptiveAccuracyResult:
     """Mask top-1, then top-1+top-2 regions; rerun answer_rule after each."""
+    # The top-2 condition is cumulative by design: it removes both the first
+    # and second ranked regions rather than testing region two in isolation.
     top1_masked = mask_region(image, top_regions[0].box, mode="black")
     result_top1 = answer_rule(model, processor, top1_masked, rule_id, **run_kwargs)
 

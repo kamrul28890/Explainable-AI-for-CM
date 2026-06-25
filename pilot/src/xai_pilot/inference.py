@@ -47,6 +47,13 @@ PRESENCE_PROXIMITY_FRACTION: dict[str, float] = {
 
 @dataclass
 class AnswerResult:
+    """Normalized output shared by every metric in the pilot.
+
+    `boxes` contains all regions used by downstream region ranking, while the
+    worker/object lists remain separate so robustness and stability can detect
+    semantically important failures such as losing the worker detection.
+    """
+
     answer: str
     boxes: list[Box] = field(default_factory=list)
     confidence: float = float("nan")
@@ -56,6 +63,7 @@ class AnswerResult:
 
 
 def _detect(model, processor, image: Image.Image, phrase: str, **run_kwargs):
+    """Ground one noun phrase and normalize Florence-2 boxes to tuples."""
     _, parsed, confidence = run_task(
         model, processor, image, DETECTION_TASK, text_input=phrase, **run_kwargs
     )
@@ -86,11 +94,19 @@ def _answer_presence_rule(
     phrasing_index: int = 0,
     **run_kwargs,
 ) -> AnswerResult:
+    """Evaluate PPE or edge protection relative to each detected worker.
+
+    Two independent grounding calls are necessary because Florence-2 does not
+    expose a relational VQA task. The result is compliant only when every
+    detected worker has at least one sufficiently close safety-object box.
+    """
     phrase = RULE_QUERIES[rule_id][phrasing_index]
     t0 = time.perf_counter()
     worker_boxes, worker_conf = _detect(model, processor, image, PERSON_PHRASE, **run_kwargs)
     object_boxes, object_conf = _detect(model, processor, image, phrase, **run_kwargs)
     elapsed_ms = (time.perf_counter() - t0) * 1000
+    # Both detections are required for the proxy decision, so their simple mean
+    # is used as the run-level confidence signal. It remains uncalibrated.
     confidence = (worker_conf + object_conf) / 2
 
     if not worker_boxes:
@@ -106,6 +122,8 @@ def _answer_presence_rule(
             object_boxes=object_boxes,
         )
 
+    # Scale thresholds by the longer image dimension so the same rule behaves
+    # consistently across source images with different pixel resolutions.
     distance_threshold = PRESENCE_PROXIMITY_FRACTION[rule_id] * max(image.width, image.height)
     covered = all_boxes_covered(worker_boxes, object_boxes, distance_threshold=distance_threshold)
     answer = "compliant" if covered else "violation"
@@ -120,6 +138,12 @@ def _answer_presence_rule(
 
 
 def _answer_rule_4(model, processor, image: Image.Image, **run_kwargs) -> AnswerResult:
+    """Flag struck-by risk when any worker is near any excavator.
+
+    The nested pairwise comparison intentionally implements an existential
+    safety condition: one hazardous worker-excavator pairing is enough to mark
+    the entire scene as a hazard.
+    """
     worker_phrase, excavator_phrase = RULE_4_PROXIMITY_PAIR
     t0 = time.perf_counter()
     worker_boxes, worker_conf = _detect(model, processor, image, worker_phrase, **run_kwargs)
