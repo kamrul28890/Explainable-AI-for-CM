@@ -1,5 +1,6 @@
 """Region utilities: IoU, masking, and grid fallback for explanation regions."""
 
+from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Literal
 
@@ -7,6 +8,15 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 Box = tuple[float, float, float, float]
+
+# Candidate region ranking policies (Scale-up Phase 1.1).
+#   "area"       -- frozen pilot behavior: largest model box first.
+#   "rule_aware" -- promote regions whose label is the rule's queried object
+#                   above all others, area-descending within each tier.
+#   "attention"  -- rank by a real importance signal (cross-attention / IG
+#                   mass); wired in Phase 4, not yet available.
+RegionRanking = Literal["area", "rule_aware", "attention"]
+REGION_RANKING_MODES: tuple[RegionRanking, ...] = ("area", "rule_aware", "attention")
 
 
 @dataclass
@@ -116,22 +126,63 @@ def standardize_regions(
     labels: list[str],
     image_size: tuple[int, int],
     grid: tuple[int, int] = (4, 4),
+    region_ranking: RegionRanking = "area",
+    object_labels: Collection[str] | None = None,
 ) -> list[Region]:
     """Rank candidate explanation regions for one sample.
 
-    Florence-2 gives no attention/saliency map for these grounding-based
-    answers, so there is no real per-region importance score to rank by.
-    Model-returned boxes are ranked by area (descending) as the best
-    available stand-in -- a larger detection is assumed more salient than a
-    sliver -- and are always preferred over the grid. Only when the model
-    returned zero boxes (rule_id wasn't grounded at all) do we fall back to
-    an unranked 4x4 grid, so every sample still has *some* candidate region
-    to mask for Day 5's descriptive-accuracy test.
+    `region_ranking` selects the policy (default ``"area"``, the frozen pilot
+    behavior):
+
+    - ``"area"``: model-returned boxes ranked by area (descending) as a
+      pragmatic importance proxy -- a larger detection is assumed more salient
+      than a sliver. The pilot report documents this policy's bias against
+      small PPE objects (the worker's body box outranks the hard hat in ~96%
+      of PPE samples), which is exactly what ``"rule_aware"`` fixes.
+    - ``"rule_aware"``: regions whose label is in ``object_labels`` (the rule's
+      queried safety object) are promoted above all others, so masking metrics
+      test the object that actually answers the rule rather than the worker
+      body. Within each tier, boxes are still area-descending. Requires a
+      non-empty ``object_labels``.
+    - ``"attention"``: rank by cross-attention / IG importance mass; wired in
+      Phase 4, raises ``NotImplementedError`` until then.
+
+    Model-returned boxes are always preferred over the grid. Only when the
+    model returned zero boxes (rule_id wasn't grounded at all) do we fall back
+    to an unranked grid, so every sample still has *some* candidate region to
+    mask for the descriptive-accuracy test. Grid fallback is identical across
+    ranking modes (there is nothing to rank).
     """
-    if boxes:
-        # `zip` preserves the model's box-label association while sorting.
-        # Descending area is a pragmatic proxy, not a learned importance score;
-        # the pilot report documents its bias against small PPE objects.
-        paired = sorted(zip(boxes, labels), key=lambda bl: _box_area(bl[0]), reverse=True)
-        return [Region(box=b, source="model", label=l) for b, l in paired]
-    return [Region(box=b, source="grid", label="grid") for b in grid_fallback_regions(image_size, grid)]
+    if region_ranking not in REGION_RANKING_MODES:
+        raise ValueError(
+            f"unknown region_ranking={region_ranking!r}; expected one of {REGION_RANKING_MODES}"
+        )
+    if region_ranking == "attention":
+        raise NotImplementedError(
+            "region_ranking='attention' is a Phase 4 deliverable (cross-attention / IG mass); "
+            "no importance signal is available yet"
+        )
+
+    if not boxes:
+        return [
+            Region(box=b, source="grid", label="grid")
+            for b in grid_fallback_regions(image_size, grid)
+        ]
+
+    # `zip` preserves the model's box-label association while sorting.
+    paired = list(zip(boxes, labels))
+    if region_ranking == "area":
+        paired.sort(key=lambda bl: _box_area(bl[0]), reverse=True)
+    else:  # rule_aware
+        if not object_labels:
+            raise ValueError(
+                "region_ranking='rule_aware' requires a non-empty object_labels set "
+                "(the rule's queried safety object)"
+            )
+        object_set = set(object_labels)
+        # Two-key sort: object-labeled regions first (tier 0), then area
+        # within each tier. Python's sort is stable, so sorting by area first
+        # and then by tier preserves area order inside each tier.
+        paired.sort(key=lambda bl: _box_area(bl[0]), reverse=True)
+        paired.sort(key=lambda bl: 0 if bl[1] in object_set else 1)
+    return [Region(box=b, source="model", label=l) for b, l in paired]

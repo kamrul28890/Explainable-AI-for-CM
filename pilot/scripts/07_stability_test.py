@@ -8,23 +8,25 @@ logged beam-search answer is reported alongside as a separate "decoding
 ceiling" reference, not mixed into the stability score.
 """
 
+import argparse
 import itertools
 import json
 import sys
 
 import pandas as pd
 
-from xai_pilot.config import FIGURES_DIR, RESULTS_DIR
+from xai_pilot.config import FIGURES_DIR, REGION_RANKING, RESULTS_DIR
 from xai_pilot.data import load_construction_site
 from xai_pilot.metrics.stability import answer_agreement_rate, region_overlap_score, run_n_times
 from xai_pilot.model import load_florence2
-from xai_pilot.regions import iou, standardize_regions
+from xai_pilot.prompts import RULE_OBJECT_LABEL, rule_object_labels
+from xai_pilot.regions import REGION_RANKING_MODES, iou, standardize_regions
 from xai_pilot.viz import overlay_boxes, save_figure
 
 N_RERUNS = 3
 N_VISUALIZE = 10
 TEMPERATURE = 0.7
-OBJECT_LABEL = {"rule_1": "hard hat", "rule_2": "harness", "rule_3": "guardrail", "rule_4": "excavator"}
+OBJECT_LABEL = RULE_OBJECT_LABEL
 
 
 def _object_region_overlap(results) -> float:
@@ -42,8 +44,14 @@ def _object_region_overlap(results) -> float:
     return sum(iou(a, b) for a, b in pairs) / len(pairs)
 
 
-def main() -> int:
-    """Quantify answer and region reproducibility across sampled reruns."""
+def main(region_ranking: str = REGION_RANKING) -> int:
+    """Quantify answer and region reproducibility across sampled reruns.
+
+    `region_ranking` defaults to config.REGION_RANKING ("area", frozen pilot)
+    and controls only the top-1 `top_region_overlap_score`; the
+    `object_region_overlap_score` is ranking-independent. Non-default modes
+    write to a mode-suffixed CSV.
+    """
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
     target_ids = set(preds_df["image_id"])
 
@@ -80,7 +88,13 @@ def main() -> int:
         for r in results:
             boxes = r.worker_boxes + r.object_boxes
             labels = ["worker"] * len(r.worker_boxes) + [OBJECT_LABEL[rule_id]] * len(r.object_boxes)
-            regions = standardize_regions(boxes, labels, image_size=(image.width, image.height))
+            regions = standardize_regions(
+                boxes,
+                labels,
+                image_size=(image.width, image.height),
+                region_ranking=region_ranking,
+                object_labels=rule_object_labels(rule_id),
+            )
             top_regions.append(regions[0])
 
         sampled_answers = [r.answer for r in results]
@@ -113,9 +127,11 @@ def main() -> int:
         if (i + 1) % 20 == 0:
             print(f"{i + 1}/{len(preds_df)} done...")
 
-    out_csv = RESULTS_DIR / "stability.csv"
+    suffix = "" if region_ranking == "area" else f"_{region_ranking}"
+    out_csv = RESULTS_DIR / f"stability{suffix}.csv"
     out_df = pd.DataFrame(out_rows)
     out_df.to_csv(out_csv, index=False)
+    print(f"Ranking policy: {region_ranking}")
     print(f"Wrote {len(out_df)} rows to {out_csv}")
     print(f"Saved {visualized} rerun-overlay images to {fig_dir}")
 
@@ -134,4 +150,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--region-ranking",
+        choices=REGION_RANKING_MODES,
+        default=REGION_RANKING,
+        help="Candidate-region ranking policy (default: config.REGION_RANKING).",
+    )
+    args = parser.parse_args()
+    sys.exit(main(region_ranking=args.region_ranking))

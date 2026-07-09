@@ -12,18 +12,70 @@ perturbations? That would make a sample look "explanation_supported" for a
 reason disconnected from the region actually containing the safety object.
 """
 
+import argparse
 import sys
 
 import pandas as pd
 
-from xai_pilot.config import DATA_DIR, RESULTS_DIR
+from xai_pilot.config import DATA_DIR, REGION_RANKING, REPORT_WORKER_LOSS_CORRECTED, RESULTS_DIR
 from xai_pilot.data import load_construction_site
 from xai_pilot.inference import AnswerResult, answer_rule
-from xai_pilot.metrics.completeness import classify_sample
+from xai_pilot.metrics.completeness import classify_sample, classify_sample_worker_loss_corrected
 from xai_pilot.metrics.robustness import _robustness_from_results
-from xai_pilot.regions import mask_region
+from xai_pilot.regions import REGION_RANKING_MODES, mask_region
 
 import json
+
+
+def _bool_col(series):
+    """Map a string boolean column to real bools (bool('False') is True)."""
+    return series.map({"True": True, "False": False})
+
+
+def _rollup_worker_loss_corrected(region_ranking: str) -> int:
+    """Bounded-completeness raw vs worker-loss-corrected verdicts, no reruns.
+
+    Phase 1.4 makes descriptive_accuracy log post-mask worker boxes and a
+    flip_due_to_worker_loss flag, so the fallback-artifact correction Day 10
+    previously needed 159 fresh GPU reruns to estimate is now a pure rollup of
+    the "_wlc" descriptive CSV -- no model load, no re-inference.
+    """
+    ranking_suffix = "" if region_ranking == "area" else f"_{region_ranking}"
+    da_name = f"descriptive_accuracy{ranking_suffix}_wlc.csv"
+    re_name = f"region_extraction{ranking_suffix}.csv"
+    da = pd.read_csv(RESULTS_DIR / da_name, dtype=str)
+    for c in ["answer_changed_top1", "answer_changed_top2",
+              "flip_due_to_worker_loss_top1", "flip_due_to_worker_loss_top2"]:
+        da[c] = _bool_col(da[c])
+    re = pd.read_csv(RESULTS_DIR / re_name, dtype=str)
+    merged = da.merge(re[["image_id", "assigned_rule_id", "top_region_source"]],
+                      on=["image_id", "assigned_rule_id"])
+
+    merged["verdict_raw"] = merged.apply(
+        lambda r: classify_sample(r["top_region_source"], r["answer_changed_top1"], r["answer_changed_top2"]),
+        axis=1,
+    )
+    merged["verdict_corrected"] = merged.apply(
+        lambda r: classify_sample_worker_loss_corrected(
+            r["top_region_source"], r["answer_changed_top1"], r["answer_changed_top2"],
+            r["flip_due_to_worker_loss_top1"], r["flip_due_to_worker_loss_top2"],
+        ),
+        axis=1,
+    )
+    out_csv = RESULTS_DIR / f"bounded_completeness{ranking_suffix}_wlc.csv"
+    merged[["image_id", "assigned_rule_id", "primary_class", "verdict_raw", "verdict_corrected"]].to_csv(
+        out_csv, index=False
+    )
+    print(f"Read {da_name} + {re_name}; wrote {len(merged)} rows to {out_csv} (no model reruns).")
+    n = len(merged)
+    raw_sup = (merged["verdict_raw"] == "explanation_supported").sum()
+    cor_sup = (merged["verdict_corrected"] == "explanation_supported").sum()
+    downgraded = ((merged["verdict_raw"] == "explanation_supported") &
+                  (merged["verdict_corrected"] != "explanation_supported")).sum()
+    print(f"\nexplanation_supported  raw: {raw_sup}/{n} ({raw_sup/n:.1%})   "
+          f"corrected: {cor_sup}/{n} ({cor_sup/n:.1%})")
+    print(f"Verdicts downgraded from supported by worker-loss correction: {downgraded}")
+    return 0
 
 
 def _baseline_from_row(row) -> AnswerResult:
@@ -36,8 +88,20 @@ def _baseline_from_row(row) -> AnswerResult:
     )
 
 
-def main() -> int:
-    """Assign completeness verdicts and audit worker-loss artifacts."""
+def main(
+    report_worker_loss_corrected: bool = REPORT_WORKER_LOSS_CORRECTED,
+    region_ranking: str = REGION_RANKING,
+) -> int:
+    """Assign completeness verdicts and audit worker-loss artifacts.
+
+    With `report_worker_loss_corrected` (Phase 1.4), the verdict is a pure
+    rollup of the "_wlc" descriptive CSV that already carries post-mask worker
+    boxes -- no model reruns -- reporting raw and worker-loss-corrected
+    supported rates. The frozen default path is unchanged (and still performs
+    the bounded 159-rerun audit that Phase 1.4 supersedes).
+    """
+    if report_worker_loss_corrected:
+        return _rollup_worker_loss_corrected(region_ranking)
     # Read booleans as strings first, then map explicitly. Python's bool("False")
     # is True, so a direct astype(bool) would corrupt these columns.
     accuracy_df = pd.read_csv(RESULTS_DIR / "descriptive_accuracy.csv", dtype=str)
@@ -155,4 +219,21 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--report-worker-loss-corrected",
+        action="store_true",
+        default=REPORT_WORKER_LOSS_CORRECTED,
+        help="Roll up raw + worker-loss-corrected verdicts from the _wlc descriptive CSV (no reruns).",
+    )
+    parser.add_argument(
+        "--region-ranking",
+        choices=REGION_RANKING_MODES,
+        default=REGION_RANKING,
+        help="Which ranking's descriptive/region CSVs to roll up (default: config.REGION_RANKING).",
+    )
+    args = parser.parse_args()
+    sys.exit(main(
+        report_worker_loss_corrected=args.report_worker_loss_corrected,
+        region_ranking=args.region_ranking,
+    ))

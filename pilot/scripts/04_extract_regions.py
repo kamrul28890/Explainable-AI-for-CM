@@ -8,23 +8,31 @@ Saves before/after masked-image pairs for a handful of samples so the
 masking itself can be sanity-checked visually before Day 5 relies on it.
 """
 
+import argparse
 import json
 import sys
 
 import pandas as pd
 from PIL import Image
 
-from xai_pilot.config import DATA_DIR, FIGURES_DIR, RESULTS_DIR
+from xai_pilot.config import DATA_DIR, FIGURES_DIR, REGION_RANKING, RESULTS_DIR
 from xai_pilot.data import load_construction_site
-from xai_pilot.regions import mask_region, standardize_regions
+from xai_pilot.prompts import RULE_OBJECT_LABEL, rule_object_labels
+from xai_pilot.regions import REGION_RANKING_MODES, mask_region, standardize_regions
 from xai_pilot.viz import overlay_boxes, save_figure
 
 N_VISUALIZE = 10
-OBJECT_LABEL = {"rule_1": "hard hat", "rule_2": "harness", "rule_3": "guardrail", "rule_4": "excavator"}
+OBJECT_LABEL = RULE_OBJECT_LABEL
 
 
-def main() -> int:
-    """Convert baseline grounding boxes into ranked explanation regions."""
+def main(region_ranking: str = REGION_RANKING) -> int:
+    """Convert baseline grounding boxes into ranked explanation regions.
+
+    `region_ranking` defaults to config.REGION_RANKING ("area", the frozen
+    pilot policy). Passing "rule_aware" promotes each rule's queried object
+    above the worker body; results are then written to a mode-suffixed CSV so
+    the frozen pilot record is never overwritten.
+    """
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
     target_ids = set(preds_df["image_id"])
 
@@ -56,7 +64,13 @@ def main() -> int:
         boxes = worker_boxes + object_boxes
         labels = ["worker"] * len(worker_boxes) + [OBJECT_LABEL[rule_id]] * len(object_boxes)
 
-        regions = standardize_regions(boxes, labels, image_size=(image.width, image.height))
+        regions = standardize_regions(
+            boxes,
+            labels,
+            image_size=(image.width, image.height),
+            region_ranking=region_ranking,
+            object_labels=rule_object_labels(rule_id),
+        )
         top = regions[0]
 
         out_rows.append(
@@ -79,9 +93,13 @@ def main() -> int:
             save_figure(after, fig_dir / f"{image_id}_{rule_id}_after.png")
             visualized += 1
 
-    out_csv = RESULTS_DIR / "region_extraction.csv"
+    # Non-default ranking writes to a mode-suffixed file so the frozen pilot
+    # record (region_extraction.csv) stays byte-for-byte reproducible.
+    suffix = "" if region_ranking == "area" else f"_{region_ranking}"
+    out_csv = RESULTS_DIR / f"region_extraction{suffix}.csv"
     out_df = pd.DataFrame(out_rows)
     out_df.to_csv(out_csv, index=False)
+    print(f"Ranking policy: {region_ranking}")
     print(f"Wrote {len(out_df)} rows to {out_csv}")
     print(f"Saved {visualized} before/after pairs to {fig_dir}")
 
@@ -91,4 +109,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--region-ranking",
+        choices=REGION_RANKING_MODES,
+        default=REGION_RANKING,
+        help="Candidate-region ranking policy (default: config.REGION_RANKING).",
+    )
+    args = parser.parse_args()
+    sys.exit(main(region_ranking=args.region_ranking))

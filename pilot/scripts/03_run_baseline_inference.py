@@ -7,11 +7,13 @@ context, not scored), and saves box overlays for a handful of samples for
 manual sanity-checking.
 """
 
+import argparse
 import json
 import sys
 
 import pandas as pd
 
+from xai_pilot import config
 from xai_pilot.config import DATA_DIR, FIGURES_DIR, RESULTS_DIR
 from xai_pilot.data import load_construction_site
 from xai_pilot.inference import answer_rule
@@ -22,8 +24,16 @@ N_VISUALIZE = 20
 CAPTION_TASK = "<MORE_DETAILED_CAPTION>"
 
 
-def main() -> int:
-    """Run and persist baseline predictions for every selected sample."""
+def main(decoding: str = None) -> int:
+    """Run and persist baseline predictions for every selected sample.
+
+    `decoding` sets the global grounding decoding policy (Phase 1.6): "beam"
+    (frozen pilot, num_beams=3) or "greedy" (num_beams=1). Non-default writes a
+    mode-suffixed CSV so the frozen baseline_predictions.csv is preserved.
+    """
+    if decoding is not None:
+        config.DECODING = decoding
+    decoding = config.DECODING
     # These lookup tables turn the sequential dataset stream into an efficient
     # membership test and preserve the experimental assignment from Day 2.
     samples_df = pd.read_csv(DATA_DIR / "pilot_samples.csv", dtype=str)
@@ -92,8 +102,10 @@ def main() -> int:
         if len(out_rows) >= len(target_ids):
             break
 
-    out_csv = RESULTS_DIR / "baseline_predictions.csv"
+    suffix = "" if decoding == "beam" else f"_{decoding}"
+    out_csv = RESULTS_DIR / f"baseline_predictions{suffix}.csv"
     pd.DataFrame(out_rows).to_csv(out_csv, index=False)
+    print(f"Decoding policy: {decoding}")
     print(f"Wrote {len(out_rows)} rows to {out_csv}")
     print(f"Saved {visualized} overlay images to {fig_dir}")
 
@@ -106,4 +118,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--decoding",
+        choices=["beam", "greedy"],
+        default=config.DECODING,
+        help="Grounding decoding policy (default: config.DECODING).",
+    )
+    args = parser.parse_args()
+    sys.exit(main(decoding=args.decoding))

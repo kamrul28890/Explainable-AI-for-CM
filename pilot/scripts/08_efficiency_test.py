@@ -171,7 +171,7 @@ def main() -> int:
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.bar(out_df["name"], out_df["mean_ms_per_sample"], color="steelblue")
     ax.set_ylabel("mean ms per sample")
-    ax.set_title("Per-sample cost by pilot day (163-sample pilot)")
+    ax.set_title(f"Per-sample cost by pilot day ({n_samples_observed}-sample pilot)")
     plt.xticks(rotation=20, ha="right")
     plt.tight_layout()
     fig.savefig(fig_dir / "per_sample_cost.png", dpi=150)

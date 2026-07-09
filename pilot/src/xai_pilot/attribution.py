@@ -38,19 +38,35 @@ import numpy as np
 import torch
 from PIL import Image
 
-# Verified against the model's actual encoder layout (see module docstring):
-# 768x768 input / vision-tower stride 32 = 24x24 patches; index 0 in the
-# image-feature block is the pooled "spatial_avg_pool" token, not a patch.
-PATCH_GRID = (24, 24)
-N_PATCH_TOKENS = PATCH_GRID[0] * PATCH_GRID[1]
+# The image feature block is [1 pooled token] + [(H/stride)x(W/stride) patch
+# tokens]. Rather than hardcode the 24x24 grid (correct only for the 768x768
+# processor input), the grid is recomputed from the *actual* pixel_values
+# resolution at run time (see _patch_grid), so a different input size or model
+# variant does not silently misalign every heatmap. Only two architectural
+# facts are kept as constants: the vision tower's total downsampling stride and
+# the single pooled global token that precedes the patch tokens.
+VISION_TOWER_STRIDE = 32  # DaViT four conv stages, strides 4*2*2*2 = 32
 GLOBAL_TOKEN_OFFSET = 1
+
+
+def _patch_grid(pixel_values) -> tuple[int, int]:
+    """Patch-grid (rows, cols) implied by the actual input resolution.
+
+    Derived from the real pixel_values height/width and the vision tower stride
+    rather than assumed, so the reshape below cannot silently misalign if the
+    processor's input size ever changes.
+    """
+    h, w = int(pixel_values.shape[-2]), int(pixel_values.shape[-1])
+    gh, gw = h // VISION_TOWER_STRIDE, w // VISION_TOWER_STRIDE
+    assert gh > 0 and gw > 0, f"degenerate patch grid {gh}x{gw} from input {h}x{w}"
+    return gh, gw
 
 
 @dataclass
 class AttributionResult:
     """Cross-attention artifact and metadata from one greedy grounding run."""
 
-    heatmap: np.ndarray  # (24, 24), normalized to [0, 1]
+    heatmap: np.ndarray  # (rows, cols) patch grid, normalized to [0, 1]
     greedy_boxes: list[tuple[float, float, float, float]] = field(default_factory=list)
     n_generated_tokens: int = 0
 
@@ -68,6 +84,9 @@ def cross_attention_heatmap(
     device = next(model.parameters()).device
     dtype = next(model.parameters()).dtype
     inputs = processor(text=prompt, images=image, return_tensors="pt").to(device, dtype)
+    # Patch grid comes from the real input resolution, not a hardcoded 24x24.
+    patch_grid = _patch_grid(inputs["pixel_values"])
+    n_patch_tokens = patch_grid[0] * patch_grid[1]
 
     # Attribution is observational: gradients are unnecessary, and disabling
     # them reduces memory pressure during generation on the pilot GPU.
@@ -83,7 +102,7 @@ def cross_attention_heatmap(
         )
 
     if not out.cross_attentions:
-        return AttributionResult(heatmap=np.zeros(PATCH_GRID), greedy_boxes=[], n_generated_tokens=0)
+        return AttributionResult(heatmap=np.zeros(patch_grid), greedy_boxes=[], n_generated_tokens=0)
 
     # `generate` returns one tuple per generated token and one tensor per
     # decoder layer. Average layers, batch, heads, and target-token position
@@ -96,9 +115,16 @@ def cross_attention_heatmap(
     seq_mean = torch.stack(step_means).mean(dim=0)  # (src_len,)
 
     # Drop the pooled global image token and ignore prompt-text tokens after
-    # the 576 visual patches before reshaping to the known 24x24 grid.
-    image_attn = seq_mean[GLOBAL_TOKEN_OFFSET : GLOBAL_TOKEN_OFFSET + N_PATCH_TOKENS]
-    heatmap = image_attn.reshape(PATCH_GRID).float().cpu().numpy()
+    # the visual patches before reshaping to the (runtime-derived) grid. Assert
+    # the encoder sequence is long enough to hold the global token + all patch
+    # tokens, so a layout change fails loudly instead of misaligning silently.
+    src_len = int(seq_mean.shape[0])
+    assert GLOBAL_TOKEN_OFFSET + n_patch_tokens <= src_len, (
+        f"patch grid {patch_grid} ({n_patch_tokens} tokens) + global token "
+        f"exceeds encoder sequence length {src_len}"
+    )
+    image_attn = seq_mean[GLOBAL_TOKEN_OFFSET : GLOBAL_TOKEN_OFFSET + n_patch_tokens]
+    heatmap = image_attn.reshape(patch_grid).float().cpu().numpy()
     # Min-max normalization supports visual overlays and threshold metrics.
     # A constant map stays all-zero to avoid division by zero.
     heatmap = heatmap - heatmap.min()

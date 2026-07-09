@@ -12,7 +12,19 @@ import torch
 from transformers import AutoModelForCausalLM, AutoProcessor
 from transformers.dynamic_module_utils import get_imports
 
+from xai_pilot import config
 from xai_pilot.config import MODEL_ID
+
+
+def _effective_num_beams(num_beams: int | None) -> int:
+    """Resolve the beam count for a run_task call (Phase 1.6).
+
+    An explicit value always wins (stability and attribution pass num_beams
+    directly). ``None`` resolves from the global config.DECODING policy, so a
+    single switch unifies baseline/masking/robustness/sparsity onto one path.
+    Read at call time so a script can flip config.DECODING before running.
+    """
+    return num_beams if num_beams is not None else config.decoding_num_beams()
 
 
 def _get_imports_without_flash_attn(filename):
@@ -66,7 +78,7 @@ def run_task(
     task_token: str,
     text_input: str | None = None,
     max_new_tokens: int = 1024,
-    num_beams: int = 3,
+    num_beams: int | None = None,
     do_sample: bool = False,
     temperature: float = 1.0,
 ):
@@ -76,7 +88,12 @@ def run_task(
     structured output from processor.post_process_generation and
     mean_token_prob is the confidence proxy (mean per-step token probability
     of the chosen sequence).
+
+    `num_beams=None` resolves from the global decoding policy (Phase 1.6):
+    config.DECODING "beam" -> 3 (frozen pilot), "greedy" -> 1. Passing an
+    explicit value overrides the policy.
     """
+    num_beams = _effective_num_beams(num_beams)
     # Florence-2 encodes the task and optional grounding phrase in one prompt,
     # for example "<OPEN_VOCABULARY_DETECTION>hard hat".
     prompt = task_token if text_input is None else task_token + text_input

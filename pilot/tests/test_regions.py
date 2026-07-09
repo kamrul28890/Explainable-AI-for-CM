@@ -102,3 +102,89 @@ def test_standardize_regions_grid_fallback_matches_grid_fallback_regions():
     regions = standardize_regions([], [], image_size=(100, 80), grid=(2, 2))
     expected = grid_fallback_regions((100, 80), grid=(2, 2))
     assert [r.box for r in regions] == expected
+
+
+def test_standardize_regions_default_is_area_ranking():
+    # The frozen pilot behavior: absent an explicit mode, rank by area.
+    boxes = [(0, 0, 10, 10), (0, 0, 100, 100)]
+    labels = ["worker", "hard hat"]
+    regions = standardize_regions(boxes, labels, image_size=(200, 200))
+    assert [r.label for r in regions] == ["hard hat", "worker"]
+
+
+def test_standardize_regions_rule_aware_promotes_object_over_larger_worker():
+    # The pilot's #1 bug: the large worker body box outranks the small PPE
+    # object under area ranking. rule_aware must invert that so the queried
+    # object (hard hat) becomes the top explanation region.
+    boxes = [(0, 0, 100, 100), (10, 10, 20, 20)]
+    labels = ["worker", "hard hat"]
+    regions = standardize_regions(
+        boxes, labels, image_size=(200, 200),
+        region_ranking="rule_aware", object_labels={"hard hat"},
+    )
+    assert regions[0].label == "hard hat"
+    assert regions[1].label == "worker"
+    assert all(r.source == "model" for r in regions)
+
+
+def test_standardize_regions_rule_aware_sorts_by_area_within_each_tier():
+    # Object-labeled regions rank first, area-descending among themselves;
+    # non-object regions follow, also area-descending.
+    boxes = [
+        (0, 0, 30, 30),    # worker, big
+        (0, 0, 10, 10),    # worker, small
+        (0, 0, 20, 20),    # hard hat, big object
+        (0, 0, 5, 5),      # hard hat, small object
+    ]
+    labels = ["worker", "worker", "hard hat", "hard hat"]
+    regions = standardize_regions(
+        boxes, labels, image_size=(200, 200),
+        region_ranking="rule_aware", object_labels={"hard hat"},
+    )
+    areas = [ (r.box[2]-r.box[0]) for r in regions ]
+    assert [r.label for r in regions] == ["hard hat", "hard hat", "worker", "worker"]
+    # 20x20 object before 5x5 object; 30x30 worker before 10x10 worker
+    assert areas == [20, 5, 30, 10]
+
+
+def test_standardize_regions_rule_aware_falls_back_to_grid_when_no_boxes():
+    regions = standardize_regions(
+        [], [], image_size=(100, 80), grid=(4, 4),
+        region_ranking="rule_aware", object_labels={"hard hat"},
+    )
+    assert len(regions) == 16
+    assert all(r.source == "grid" for r in regions)
+
+
+def test_standardize_regions_rule_aware_requires_object_labels():
+    # Fail loud rather than silently degrading to area ranking (guiding
+    # principle: no silent hardcoded/implicit assumptions).
+    import pytest
+
+    with pytest.raises(ValueError):
+        standardize_regions(
+            [(0, 0, 10, 10)], ["worker"], image_size=(200, 200),
+            region_ranking="rule_aware", object_labels=None,
+        )
+
+
+def test_standardize_regions_unknown_ranking_mode_raises():
+    import pytest
+
+    with pytest.raises(ValueError):
+        standardize_regions(
+            [(0, 0, 10, 10)], ["worker"], image_size=(200, 200),
+            region_ranking="nonsense",
+        )
+
+
+def test_standardize_regions_attention_ranking_not_yet_implemented():
+    # Phase 4 wires cross-attention / IG mass into ranking; until then the
+    # mode must exist as a named option but refuse to run silently.
+    import pytest
+
+    with pytest.raises(NotImplementedError):
+        standardize_regions(
+            [(0, 0, 10, 10)], ["worker"], image_size=(200, 200),
+            region_ranking="attention", object_labels={"hard hat"},
+        )

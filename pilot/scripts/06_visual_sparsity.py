@@ -99,6 +99,7 @@ def main() -> int:
                 "topk5_mass_ratio": topk_mass_ratio(result.heatmap, TOPK_SMALL),
                 "topk20_mass_ratio": topk_mass_ratio(result.heatmap, TOPK_LARGE),
                 "regions_above_0.5": regions_above_threshold(result.heatmap, THRESH),
+                "n_cells": int(result.heatmap.size),
                 "excluded_reason": None,
             }
         )
@@ -126,7 +127,10 @@ def main() -> int:
     print(f"Excluded (grid fallback, no grounded phrase): {excluded}/{len(out_df)}")
     print(f"Mean topk5_mass_ratio: {scored['topk5_mass_ratio'].mean():.3f}")
     print(f"Mean topk20_mass_ratio: {scored['topk20_mass_ratio'].mean():.3f}")
-    print(f"Mean regions_above_0.5: {scored['regions_above_0.5'].mean():.1f} / 576 cells")
+    # Total cell count is read from the actual heatmaps, not hardcoded, so this
+    # stays correct if the patch grid ever changes (see attribution._patch_grid).
+    n_cells = int(scored["n_cells"].iloc[0]) if len(scored) else 0
+    print(f"Mean regions_above_0.5: {scored['regions_above_0.5'].mean():.1f} / {n_cells} cells")
     print()
     print("By assigned_rule_id (topk5_mass_ratio):")
     print(scored.groupby("assigned_rule_id")["topk5_mass_ratio"].mean())

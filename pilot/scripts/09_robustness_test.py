@@ -14,13 +14,15 @@ approximate head region of 20 ppe_violation/rule_1 workers and checks
 whether the answer flips from "violation" to "compliant".
 """
 
+import argparse
 import json
 import sys
 
 import pandas as pd
 from PIL import Image, ImageDraw
 
-from xai_pilot.config import FIGURES_DIR, RESULTS_DIR
+from xai_pilot import config
+from xai_pilot.config import FIGURES_DIR, REPORT_WORKER_LOSS_CORRECTED, RESULTS_DIR
 from xai_pilot.data import load_construction_site
 from xai_pilot.inference import AnswerResult, answer_rule
 from xai_pilot.metrics.robustness import evaluate
@@ -72,8 +74,19 @@ def _head_box(worker_box, scale: float = 0.22) -> tuple[float, float, float, flo
     return (head_x0, wy0, head_x0 + head_w, wy0 + head_h)
 
 
-def main() -> int:
-    """Run image, prompt, and bounded synthetic-patch robustness checks."""
+def main(report_worker_loss_corrected: bool = REPORT_WORKER_LOSS_CORRECTED, decoding: str = None) -> int:
+    """Run image, prompt, and bounded synthetic-patch robustness checks.
+
+    `report_worker_loss_corrected` (Phase 1.4) adds a flip_due_to_worker_loss
+    column and reports a genuine (worker-loss-excluded) answer-change rate; it
+    suffixes the output ("_wlc") so the frozen robustness.csv is preserved.
+
+    `decoding` (Phase 1.6) sets the global grounding decoding policy ("beam" or
+    "greedy"); non-default adds a "greedy" suffix to the output.
+    """
+    if decoding is not None:
+        config.DECODING = decoding
+    decoding = config.DECODING
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
     target_ids = set(preds_df["image_id"])
 
@@ -106,20 +119,21 @@ def main() -> int:
         for name, fn in LEVEL1_PERTURBATIONS.items():
             perturbed_image = fn(image)
             result = evaluate(model, processor, perturbed_image, rule_id, baseline)
-            out_rows.append(
-                {
-                    "image_id": image_id,
-                    "assigned_rule_id": rule_id,
-                    "primary_class": row["primary_class"],
-                    "level": "level1_image",
-                    "perturbation": name,
-                    "answer_changed": result.answer_changed,
-                    "confidence_drop": result.confidence_drop,
-                    "object_box_iou": result.object_box_iou,
-                    "worker_lost": result.worker_lost,
-                    "excluded_reason": None,
-                }
-            )
+            record = {
+                "image_id": image_id,
+                "assigned_rule_id": rule_id,
+                "primary_class": row["primary_class"],
+                "level": "level1_image",
+                "perturbation": name,
+                "answer_changed": result.answer_changed,
+                "confidence_drop": result.confidence_drop,
+                "object_box_iou": result.object_box_iou,
+                "worker_lost": result.worker_lost,
+                "excluded_reason": None,
+            }
+            if report_worker_loss_corrected:
+                record["flip_due_to_worker_loss"] = result.flip_due_to_worker_loss
+            out_rows.append(record)
             if visualized_count[name] < N_VISUALIZE_PER_PERTURBATION:
                 save_figure(perturbed_image, fig_dir / f"{image_id}_{rule_id}_{name}.png")
                 visualized_count[name] += 1
@@ -129,20 +143,21 @@ def main() -> int:
         # synonym variant. Record an explicit exclusion instead of treating it
         # as an unchanged answer.
         if rule_id == "rule_4":
-            out_rows.append(
-                {
-                    "image_id": image_id,
-                    "assigned_rule_id": rule_id,
-                    "primary_class": row["primary_class"],
-                    "level": "level2_prompt",
-                    "perturbation": "reworded_prompt",
-                    "answer_changed": None,
-                    "confidence_drop": None,
-                    "object_box_iou": None,
-                    "worker_lost": None,
-                    "excluded_reason": "rule_4_has_no_second_phrasing",
-                }
-            )
+            record = {
+                "image_id": image_id,
+                "assigned_rule_id": rule_id,
+                "primary_class": row["primary_class"],
+                "level": "level2_prompt",
+                "perturbation": "reworded_prompt",
+                "answer_changed": None,
+                "confidence_drop": None,
+                "object_box_iou": None,
+                "worker_lost": None,
+                "excluded_reason": "rule_4_has_no_second_phrasing",
+            }
+            if report_worker_loss_corrected:
+                record["flip_due_to_worker_loss"] = None
+            out_rows.append(record)
         else:
             reworded = answer_rule(model, processor, image, rule_id, phrasing_index=1)
             # Reuse the same comparison logic as image perturbations so answer,
@@ -150,25 +165,29 @@ def main() -> int:
             from xai_pilot.metrics.robustness import _robustness_from_results
 
             result = _robustness_from_results(baseline, reworded)
-            out_rows.append(
-                {
-                    "image_id": image_id,
-                    "assigned_rule_id": rule_id,
-                    "primary_class": row["primary_class"],
-                    "level": "level2_prompt",
-                    "perturbation": "reworded_prompt",
-                    "answer_changed": result.answer_changed,
-                    "confidence_drop": result.confidence_drop,
-                    "object_box_iou": result.object_box_iou,
-                    "worker_lost": result.worker_lost,
-                    "excluded_reason": None,
-                }
-            )
+            record = {
+                "image_id": image_id,
+                "assigned_rule_id": rule_id,
+                "primary_class": row["primary_class"],
+                "level": "level2_prompt",
+                "perturbation": "reworded_prompt",
+                "answer_changed": result.answer_changed,
+                "confidence_drop": result.confidence_drop,
+                "object_box_iou": result.object_box_iou,
+                "worker_lost": result.worker_lost,
+                "excluded_reason": None,
+            }
+            if report_worker_loss_corrected:
+                record["flip_due_to_worker_loss"] = result.flip_due_to_worker_loss
+            out_rows.append(record)
 
         if (i + 1) % 20 == 0:
             print(f"{i + 1}/{len(preds_df)} done...")
 
-    out_csv = RESULTS_DIR / "robustness.csv"
+    parts = [p for p in ("greedy" if decoding != "beam" else "",
+                         "wlc" if report_worker_loss_corrected else "") if p]
+    suffix = ("_" + "_".join(parts)) if parts else ""
+    out_csv = RESULTS_DIR / f"robustness{suffix}.csv"
     out_df = pd.DataFrame(out_rows)
     out_df.to_csv(out_csv, index=False)
     print(f"\nWrote {len(out_df)} rows to {out_csv}")
@@ -178,10 +197,16 @@ def main() -> int:
     scored = out_df[out_df["excluded_reason"].isna()].copy()
     scored["answer_changed"] = scored["answer_changed"].astype(bool)
     scored["worker_lost"] = scored["worker_lost"].astype(bool)
-    print("\nanswer_changed rate by perturbation:")
+    print("\nanswer_changed rate by perturbation (raw):")
     print(scored.groupby("perturbation")["answer_changed"].mean())
     print("\nworker_lost rate by perturbation (Day-5-flagged fallback-rerouting risk):")
     print(scored.groupby("perturbation")["worker_lost"].mean())
+    if report_worker_loss_corrected:
+        scored["flip_due_to_worker_loss"] = scored["flip_due_to_worker_loss"].astype(bool)
+        # Genuine answer change = changed AND not attributable to worker loss.
+        scored["genuine_change"] = scored["answer_changed"] & ~scored["flip_due_to_worker_loss"]
+        print("\nanswer_changed rate by perturbation (genuine, worker-loss excluded):")
+        print(scored.groupby("perturbation")["genuine_change"].mean())
     print("\nmean confidence_drop by perturbation:")
     print(scored.groupby("perturbation")["confidence_drop"].mean())
 
@@ -242,4 +267,21 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--report-worker-loss-corrected",
+        action="store_true",
+        default=REPORT_WORKER_LOSS_CORRECTED,
+        help="Add flip_due_to_worker_loss column and report genuine answer-change rate.",
+    )
+    parser.add_argument(
+        "--decoding",
+        choices=["beam", "greedy"],
+        default=config.DECODING,
+        help="Grounding decoding policy (default: config.DECODING).",
+    )
+    args = parser.parse_args()
+    sys.exit(main(
+        report_worker_loss_corrected=args.report_worker_loss_corrected,
+        decoding=args.decoding,
+    ))

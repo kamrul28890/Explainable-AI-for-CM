@@ -24,6 +24,10 @@ class RobustnessResult:
     confidence_drop: float
     object_box_iou: float  # nan if either side has no object box to compare
     worker_lost: bool  # baseline detected >=1 worker, perturbed run detected none
+    # Phase 1.4: the answer flip is attributable to worker loss (answer changed
+    # AND the worker became undetectable), so a "genuine" robustness rate can be
+    # reported by excluding these from the raw answer-change rate.
+    flip_due_to_worker_loss: bool = False
 
 
 def _robustness_from_results(baseline: AnswerResult, perturbed: AnswerResult) -> RobustnessResult:
@@ -38,11 +42,14 @@ def _robustness_from_results(baseline: AnswerResult, perturbed: AnswerResult) ->
         if baseline.object_boxes and perturbed.object_boxes
         else float("nan")
     )
+    answer_changed = perturbed.answer != baseline.answer
+    worker_lost = bool(baseline.worker_boxes) and not perturbed.worker_boxes
     return RobustnessResult(
-        answer_changed=perturbed.answer != baseline.answer,
+        answer_changed=answer_changed,
         confidence_drop=baseline.confidence - perturbed.confidence,
         object_box_iou=object_box_iou,
-        worker_lost=bool(baseline.worker_boxes) and not perturbed.worker_boxes,
+        worker_lost=worker_lost,
+        flip_due_to_worker_loss=answer_changed and worker_lost,
     )
 
 

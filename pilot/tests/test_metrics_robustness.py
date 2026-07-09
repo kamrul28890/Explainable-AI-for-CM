@@ -53,3 +53,28 @@ def test_worker_lost_false_when_baseline_never_had_a_worker():
     perturbed = AnswerResult(answer="violation", worker_boxes=[])
     result = _robustness_from_results(baseline, perturbed)
     assert result.worker_lost is False
+
+
+# --- Phase 1.4: flip attributable to worker loss ------------------------------
+
+
+def test_flip_due_to_worker_loss_true_when_flip_coincides_with_worker_loss():
+    baseline = AnswerResult(answer="violation", worker_boxes=[(0, 0, 5, 5)])
+    perturbed = AnswerResult(answer="compliant", worker_boxes=[])
+    result = _robustness_from_results(baseline, perturbed)
+    assert result.flip_due_to_worker_loss is True
+
+
+def test_flip_due_to_worker_loss_false_when_flip_without_worker_loss():
+    # A genuine flip: the worker is still detected, the answer changed anyway.
+    baseline = AnswerResult(answer="violation", worker_boxes=[(0, 0, 5, 5)])
+    perturbed = AnswerResult(answer="compliant", worker_boxes=[(0, 0, 5, 5)])
+    result = _robustness_from_results(baseline, perturbed)
+    assert result.flip_due_to_worker_loss is False
+
+
+def test_flip_due_to_worker_loss_false_when_worker_lost_but_no_flip():
+    baseline = AnswerResult(answer="violation", worker_boxes=[(0, 0, 5, 5)])
+    perturbed = AnswerResult(answer="violation", worker_boxes=[])
+    result = _robustness_from_results(baseline, perturbed)
+    assert result.flip_due_to_worker_loss is False

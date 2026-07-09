@@ -37,3 +37,29 @@ def classify_sample(top_region_source: str, answer_changed_top1: bool, answer_ch
     if answer_changed_top1 or answer_changed_top2:
         return "explanation_supported"
     return "explanation_weak"
+
+
+def classify_sample_worker_loss_corrected(
+    top_region_source: str,
+    answer_changed_top1: bool,
+    answer_changed_top2: bool,
+    flip_due_to_worker_loss_top1: bool,
+    flip_due_to_worker_loss_top2: bool,
+) -> Verdict:
+    """Bounded-completeness verdict with worker-loss flips discounted (Phase 1.4).
+
+    Identical to classify_sample, except an answer flip that only happened
+    because the mask made the worker undetectable (rerouting the proxy into its
+    scene-level fallback) does not count as evidence that the region was
+    necessary for the rule's actual reasoning. A sample is "supported" only if a
+    *genuine* flip -- one not attributable to worker loss -- remains at top-1 or
+    top-2. This promotes Day 10's ad-hoc 159-rerun correction into a standard
+    verdict.
+    """
+    if top_region_source == "grid":
+        return "no_usable_explanation"
+    genuine_top1 = answer_changed_top1 and not flip_due_to_worker_loss_top1
+    genuine_top2 = answer_changed_top2 and not flip_due_to_worker_loss_top2
+    if genuine_top1 or genuine_top2:
+        return "explanation_supported"
+    return "explanation_weak"

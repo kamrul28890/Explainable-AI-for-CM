@@ -1,0 +1,100 @@
+\chapter{Hardcoded-Assumption Audit and a CI Guard (Phase 1.7)}
+\label{chap:p1-7}
+
+\section{Goal}
+
+Chapter~13 of the pilot report found a real bug the hard way: \texttt{11\_make\_figures.py} had the
+sample count (``163'') and per-class sizes typed as string literals into its chart labels, so the
+moment the script ran on a different sample size it produced a chart confidently mislabeled with the
+wrong numbers. That bug survived twelve days and a passing 61-test suite precisely because every run
+until then happened to use the one sample size for which the literals were correct. The scale-up plan
+(item 3.7) generalizes the lesson: sweep every analysis and plotting path for literal sample counts,
+class sizes, grid dimensions, and the patch-grid arithmetic (the 768$\rightarrow$24 image-token math),
+replace each with a value read from data or config, and add an automated check that fails if a known-
+magic literal ever reappears. This is the phase that designs the bug \emph{class} out, not just the one
+instance Chapter~13 caught.
+
+\section{What Was Done}
+
+\subsection{The patch-grid arithmetic, now derived}
+
+The clearest remaining instance was in \texttt{attribution.py}, which hardcoded the cross-attention
+heatmap grid as \texttt{PATCH\_GRID = (24, 24)} with \texttt{N\_PATCH\_TOKENS = 576} --- values correct
+only for Florence-2's fixed 768$\times$768 processor input. These are now computed at run time from the
+\emph{actual} \texttt{pixel\_values} resolution and the vision tower's documented stride
+(\texttt{\_patch\_grid}), and the reshape is protected by an assertion that the encoder sequence is long
+enough to hold the global token plus every patch token --- so a layout change fails loudly instead of
+silently shifting every heatmap by a cell. The one retained constant, \texttt{VISION\_TOWER\_STRIDE =
+32}, is an architectural fact (the DaViT tower's $4\times2\times2\times2$ downsampling), not a
+resolution assumption. Verified directly: \texttt{\_patch\_grid} returns $(24,24)$ for a $768\times768$
+input --- reproducing the frozen grid exactly --- and $(32,24)$ for a $1024\times768$ input, adapting as
+intended.
+
+\subsection{The remaining label literals}
+
+Two output labels still carried hardcoded counts and were switched to data-derived values:
+\texttt{08\_efficiency\_test.py}'s plot title ``\ldots(163-sample pilot)'' now interpolates the
+observed sample count it already computes, and \texttt{06\_visual\_sparsity.py}'s
+``\ldots/ 576 cells'' summary now reads the cell count from the actual heatmaps (recorded as an
+\texttt{n\_cells} column) rather than assuming 576. Model IDs were checked and are already sourced from
+\texttt{config.MODEL\_ID} everywhere they drive behavior; only cosmetic ``Loading Florence-2\ldots'' log
+strings mention the name literally, which affects nothing computed.
+
+\subsection{A CI guard that tells code from documentation}
+
+The automated check is a test, \texttt{test\_no\_hardcoded\_literals.py}, that tokenizes every file
+under \texttt{scripts/} and \texttt{src/xai\_pilot/} and fails if a forbidden numeric literal ---
+\{163, 3004, 576, 768\}: the pilot/test sample counts and the patch-grid dimensions --- appears as an
+actual \texttt{NUMBER} token in code. Using the tokenizer rather than a text grep is the point: comments
+and docstrings that legitimately \emph{describe} the pilot's 163 samples or explain why $576 = 24\times
+24$ are not \texttt{NUMBER} tokens and are correctly ignored, so the guard catches a real regression (a
+literal typed into an expression) without firing on prose that mentions the same number. The check runs
+as part of the ordinary \texttt{pytest} suite, so it gates every change the way any other test does.
+
+\section{Results}
+
+\begin{center}
+\begin{tabular}{p{5.4cm}p{7.2cm}}
+\toprule
+\textbf{check} & \textbf{outcome} \\
+\midrule
+\texttt{\_patch\_grid(768$\times$768)}   & $(24,24)$ --- frozen grid reproduced \\
+\texttt{\_patch\_grid(1024$\times$768)}  & $(32,24)$ --- adapts to input resolution \\
+CI literal guard                         & passes (no forbidden literal in code) \\
+full test suite                          & 110 passed \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Phase 1.7 verification. The patch grid reproduces the pilot's grid for the pilot's
+input and adapts for a different one; the CI guard is active and green.}
+\label{tab:p17}
+\end{center}
+
+The audit's effect is preventative rather than a headline number: the attribution heatmap now cannot
+misalign if a scale-run model uses a different input resolution, the two remaining mislabel risks are
+closed, and any future reintroduction of a dataset count or patch dimension as a code literal fails the
+suite immediately --- the same class of bug Chapter~13 found by accident is now caught by construction.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard.} Reading counts from data instead of hardcoding them, and asserting invariants at the
+point they are relied upon, are ordinary defensive-programming practice.
+
+\textbf{Non-standard, and the contribution.} Two choices. The patch grid is not merely moved to a
+constant but \emph{derived from the actual input and guarded by an assertion}, so the code is correct by
+construction across input sizes rather than correct by coincidence at one size --- directly answering
+the plan's instruction to recompute the arithmetic rather than hardcode it. And the CI guard is
+deliberately tokenizer-based so it can distinguish a magic literal in \emph{code} from the same number
+appearing in a comment or docstring; a naive grep would either miss real regressions or drown in false
+positives on the many places the report's prose legitimately cites 163 or 576. Encoding ``a literal
+here is a bug, the same number in a sentence is documentation'' into the check is what makes it
+maintainable enough to actually keep passing.
+
+\section{Implications}
+
+With the patch grid derived and asserted, Phase~4's attribution work and Phase~5's additional models can
+run at whatever input resolution they require without a silent heatmap-misalignment risk. The CI guard
+makes the ``every number traces to data or config'' principle enforceable rather than aspirational,
+which matters most exactly when the codebase grows during the scale run and manual vigilance is least
+reliable. This closes Phase~1: the six foundational fixes and this audit together leave a pipeline whose
+metrics test the right region, measure model faithfulness rather than proxy plumbing where the fixes
+reach, and reproduce the frozen pilot byte-for-byte under their default flags.
