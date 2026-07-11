@@ -13,7 +13,41 @@ runs a small fresh calibration for those two call types rather than silently
 assuming they cost the same as Day 3's calls.
 """
 
+from time import perf_counter
+
 import numpy as np
+
+
+def time_call_cuda(fn):
+    """Run `fn`, returning (result, gpu_ms, wall_ms) with a standardized boundary.
+
+    Separates GPU-compute time from end-to-end wall-clock (Scale-up Phase 2.6):
+    `gpu_ms` is the GPU-busy time between two CUDA events (0 while the GPU is
+    idle waiting on CPU work), and `wall_ms` is the total call time. Their ratio
+    is the GPU-bound-ness -- gpu_ms approximately equal to wall_ms means the call
+    is compute-bound, not I/O- or Python-bound. The boundary is made explicit
+    with torch.cuda.synchronize() so asynchronous kernel launches are fully
+    accounted rather than under-counted. On CPU, gpu_ms is NaN.
+    """
+    import torch
+
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        start = torch.cuda.Event(enable_timing=True)
+        end = torch.cuda.Event(enable_timing=True)
+        wall0 = perf_counter()
+        start.record()
+        result = fn()
+        end.record()
+        torch.cuda.synchronize()
+        wall_ms = (perf_counter() - wall0) * 1000.0
+        gpu_ms = float(start.elapsed_time(end))
+    else:
+        wall0 = perf_counter()
+        result = fn()
+        wall_ms = (perf_counter() - wall0) * 1000.0
+        gpu_ms = float("nan")
+    return result, gpu_ms, wall_ms
 
 
 def aggregate_timings(timings_ms: list[float]) -> dict:
@@ -27,6 +61,29 @@ def aggregate_timings(timings_ms: list[float]) -> dict:
         "n": int(arr.size),
         "mean_ms": float(arr.mean()),
         "median_ms": float(np.median(arr)),
+        "std_ms": float(arr.std()),
+        "max_ms": float(arr.max()),
+    }
+
+
+def summarize_timings(timings_ms: list[float], warmup: int = 0) -> dict:
+    """Per-sample timing stats after discarding the first `warmup` measurements
+    (Scale-up Phase 2.6).
+
+    Retires the pilot's 15-sample calibration in favor of real per-sample
+    timing: the warm-up iterations (cold caches, autotuning) are dropped, and a
+    p90 is added so tail cost is visible, not just the mean.
+    """
+    measured = timings_ms[warmup:]
+    arr = np.asarray(measured, dtype=float)
+    if arr.size == 0:
+        return {"n": 0, "mean_ms": float("nan"), "median_ms": float("nan"),
+                "p90_ms": float("nan"), "std_ms": float("nan"), "max_ms": float("nan")}
+    return {
+        "n": int(arr.size),
+        "mean_ms": float(arr.mean()),
+        "median_ms": float(np.median(arr)),
+        "p90_ms": float(np.percentile(arr, 90)),
         "std_ms": float(arr.std()),
         "max_ms": float(arr.max()),
     }

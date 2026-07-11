@@ -8,6 +8,7 @@ heatmap is via metrics/sparsity.py. The 4 samples with no model box at all
 to and are excluded from the aggregate, same as Day 4 flagged them.
 """
 
+import argparse
 import sys
 
 import pandas as pd
@@ -15,7 +16,13 @@ import pandas as pd
 from xai_pilot.attribution import cross_attention_heatmap
 from xai_pilot.config import FIGURES_DIR, RESULTS_DIR
 from xai_pilot.data import load_construction_site
-from xai_pilot.metrics.sparsity import regions_above_threshold, topk_mass_ratio
+from xai_pilot.metrics.sparsity import (
+    box_mass_inside,
+    box_mass_ratio,
+    gini_concentration,
+    regions_above_threshold,
+    topk_mass_ratio,
+)
 from xai_pilot.model import load_florence2
 from xai_pilot.prompts import PERSON_PHRASE, RULE_4_PROXIMITY_PAIR, RULE_QUERIES
 from xai_pilot.viz import overlay_boxes, overlay_heatmap, save_figure
@@ -35,8 +42,14 @@ def _phrase_for_top_region(rule_id: str, top_label: str) -> str:
     return RULE_QUERIES[rule_id][0]
 
 
-def main() -> int:
-    """Generate visual attributions and compute concentration statistics."""
+def main(size_invariant: bool = False) -> int:
+    """Generate visual attributions and compute concentration statistics.
+
+    `size_invariant` (Phase 2.2) additionally records the size-invariant box
+    concentration ratio and the grounded box area, and reports the size
+    confound (correlation of each sparsity measure with box area). Output is
+    suffixed so the frozen visual_sparsity.csv is preserved.
+    """
     # The merge ties each baseline sample to Day 4's top-region provenance.
     # Both keys are used to guard against accidental rule reassignment.
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
@@ -89,20 +102,37 @@ def main() -> int:
         phrase = _phrase_for_top_region(rule_id, row["top_region_label"])
         result = cross_attention_heatmap(model, processor, image, DETECTION_TASK, text_input=phrase)
 
-        out_rows.append(
-            {
-                "image_id": image_id,
-                "assigned_rule_id": rule_id,
-                "primary_class": row["primary_class"],
-                "attributed_phrase": phrase,
-                "n_generated_tokens": result.n_generated_tokens,
-                "topk5_mass_ratio": topk_mass_ratio(result.heatmap, TOPK_SMALL),
-                "topk20_mass_ratio": topk_mass_ratio(result.heatmap, TOPK_LARGE),
-                "regions_above_0.5": regions_above_threshold(result.heatmap, THRESH),
-                "n_cells": int(result.heatmap.size),
-                "excluded_reason": None,
-            }
-        )
+        record = {
+            "image_id": image_id,
+            "assigned_rule_id": rule_id,
+            "primary_class": row["primary_class"],
+            "attributed_phrase": phrase,
+            "n_generated_tokens": result.n_generated_tokens,
+            "topk5_mass_ratio": topk_mass_ratio(result.heatmap, TOPK_SMALL),
+            "topk20_mass_ratio": topk_mass_ratio(result.heatmap, TOPK_LARGE),
+            "regions_above_0.5": regions_above_threshold(result.heatmap, THRESH),
+            "n_cells": int(result.heatmap.size),
+            "excluded_reason": None,
+        }
+        if size_invariant:
+            # The grounded box the attention is explaining (the attributed
+            # phrase's own greedy detection), scored against its own footprint.
+            grounded = result.greedy_boxes[0] if result.greedy_boxes else None
+            record["box_area"] = (
+                max(0.0, grounded[2] - grounded[0]) * max(0.0, grounded[3] - grounded[1])
+                if grounded else float("nan")
+            )
+            record["box_mass_ratio"] = (
+                box_mass_ratio(result.heatmap, grounded, (image.width, image.height))
+                if grounded else float("nan")
+            )
+            record["box_mass_inside"] = (
+                box_mass_inside(result.heatmap, grounded, (image.width, image.height))
+                if grounded else float("nan")
+            )
+            # Box-independent focus measure -- available even without a box.
+            record["gini"] = gini_concentration(result.heatmap)
+        out_rows.append(record)
 
         if visualized < N_VISUALIZE:
             heat_img = overlay_heatmap(image, result.heatmap, alpha=0.6, gamma=0.4)
@@ -113,7 +143,8 @@ def main() -> int:
         if (i + 1) % 20 == 0:
             print(f"{i + 1}/{len(merged)} done...")
 
-    out_csv = RESULTS_DIR / "visual_sparsity.csv"
+    suffix = "_sizeinv" if size_invariant else ""
+    out_csv = RESULTS_DIR / f"visual_sparsity{suffix}.csv"
     out_df = pd.DataFrame(out_rows)
     out_df.to_csv(out_csv, index=False)
     print(f"Wrote {len(out_df)} rows to {out_csv}")
@@ -137,8 +168,36 @@ def main() -> int:
     print()
     print("By attributed_phrase (topk5_mass_ratio):")
     print(scored.groupby("attributed_phrase")["topk5_mass_ratio"].mean())
+
+    if size_invariant:
+        import numpy as np
+
+        sized = scored.dropna(subset=["box_area", "box_mass_ratio", "box_mass_inside", "topk5_mass_ratio"])
+        sized = sized[sized["box_area"] > 0].copy()
+        sized["log_area"] = np.log(sized["box_area"])
+        # The size confound is measured as correlation with log(box area) (the
+        # pilot's convention). The size-biased top-k measure correlates strongly
+        # negative; box_mass_inside should be much closer to zero. box_mass_ratio
+        # is kept for reference and over-corrects (see chapter).
+        print()
+        print("Size confound -- |corr| with log(box area) (smaller = less size-biased):")
+        print(f"  topk5_mass_ratio [pilot, size-biased]      : {sized['log_area'].corr(sized['topk5_mass_ratio']):+.3f}")
+        print(f"  box_mass_ratio   [plan formula, over-corr] : {sized['log_area'].corr(sized['box_mass_ratio']):+.3f}")
+        print(f"  box_mass_inside  [flips the confound]      : {sized['log_area'].corr(sized['box_mass_inside']):+.3f}")
+        print(f"  gini             [box-independent shape]   : {sized['log_area'].corr(sized['gini']):+.3f}")
+        print()
+        print("Mean gini by rule (box-independent focus; flatter across sizes is better):")
+        print(sized.groupby("assigned_rule_id")["gini"].mean())
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--size-invariant",
+        action="store_true",
+        default=False,
+        help="Also record the size-invariant box_mass_ratio and report the size confound.",
+    )
+    args = parser.parse_args()
+    sys.exit(main(size_invariant=args.size_invariant))

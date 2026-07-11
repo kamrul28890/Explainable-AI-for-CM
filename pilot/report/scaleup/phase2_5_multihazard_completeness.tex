@@ -1,0 +1,102 @@
+\chapter{Bounded Completeness: Multi-Hazard Corner Cases (Phase 2.5)}
+\label{chap:p2-5}
+
+\section{Goal}
+
+The proposal's most distinctive claim was that a good explanation should capture \emph{every} hazard an
+image exhibits, not merely one. The pilot could not test this: priority-collapse labeling (fixed in
+Phase~1.2) assigned each image a single class, so an image that violated two rules was only ever tested
+against one. The plan (item 4.5) asks for three things here: bake the worker-loss correction into the
+headline completeness number (already delivered in Phase~1.4); state explicitly that completeness is
+not an independent confirmation of descriptive accuracy; and --- the substantive new work --- test
+multi-hazard completeness on images that violate two or more rules, reporting it as its own result.
+
+\section{What Was Done}
+
+\subsection{Worker-loss correction and the shared-construction caveat}
+
+The completeness headline is already worker-loss-correctable: Phase~1.4 added
+\texttt{classify\_sample\_worker\_loss\_corrected} and reduced the pilot's ``supported'' rate from
+43.6\% to 41.1\% as a pure rollup, no reruns. Phase~2.5 records the caveat the plan asks for plainly:
+the bounded-completeness verdict is computed \emph{from} the descriptive-accuracy masking results (it is
+a rollup of the same top-1/top-2 answer-flip signal), so a sample being both ``descriptively accurate''
+and ``complete'' is one measurement reported twice, not two independent confirmations. The two metrics
+should be cited together with that dependence stated, never as mutually corroborating.
+
+\subsection{Multi-hazard completeness}
+
+A new metric, \texttt{multi\_hazard\_verdict}, classifies an image as \texttt{complete} (every violated
+hazard's own region is load-bearing), \texttt{partial}, or \texttt{none}. A focused script
+(\texttt{12\_multihazard\_completeness.py}) finds every test-split image violating two or more rules and,
+for each violated rule \emph{independently}, masks that rule's rule-aware top region (Phase~1.1) and
+checks whether the rule's answer flips, worker-loss-corrected (Phase~1.4). This is the first time the
+pipeline tests one image against several rules --- the \texttt{(image, rule)} multi-testing the full
+Phase~5 scale run generalizes, scoped here to the multi-hazard subset.
+
+\section{Results}
+
+The test split contains 22 images that violate two or more rules (most commonly rule\_1+rule\_4, nine
+images, and rule\_1+rule\_3, five). Testing each against all of its hazards:
+
+\begin{center}
+\begin{tabular}{p{4.6cm}p{2.4cm}p{2.4cm}}
+\toprule
+\textbf{verdict} & \textbf{count} & \textbf{share} \\
+\midrule
+complete (all hazards' regions load-bearing) & 6 & 27.3\% \\
+partial (some, not all)                      & 10 & 45.5\% \\
+none (no hazard's region load-bearing)       & 6 & 27.3\% \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Multi-hazard completeness over the 22 test-split images that violate two or more
+rules. Only about a quarter have an explanation that captures every hazard; on average 1.05 of the 2.09
+hazards per image are supported.}
+\label{tab:p25-multihazard}
+\end{center}
+
+The result is a direct, and sobering, measurement of the proposal's core promise: for multi-hazard
+scenes, Florence-2's grounding-proxy explanation captures only about \emph{half} the hazards present
+(1.05 of 2.09 on average), and fewer than one image in three has an explanation that is complete across
+all its hazards. The proxy reliably points at one hazard --- typically the most visually salient object
+--- and leaves the others unexplained. This is exactly the failure mode a single-label evaluation could
+never surface, because it never asked the image about its second hazard. It is also a clean motivation
+for the native-VQA models of Phase~5: a model that reasons about the whole scene, rather than grounding
+one phrase at a time, is the natural candidate to raise multi-hazard completeness.
+
+\subsection{Higher-order necessity}
+
+The plan flags an optional extension: a region necessary only \emph{in combination} with another. The
+pilot's cumulative masking (top-1, then top-1+top-2) plus the Phase~2.1 \texttt{non\_monotonic} flag
+already detect the simplest form of this --- a region whose removal only matters alongside another's ---
+so it is partially in place. A full higher-order necessity analysis (every subset of regions) is a
+combinatorial extension deferred to the scale run, where the multi-worker, multi-object detection of D4
+makes more than two candidate regions per sample common enough to be worth the extra masking.
+
+\section{An Honest Note on Sample Size}
+
+Twenty-two multi-hazard images is a pilot-scale floor, not a powered estimate; the 27.3\% complete rate
+should be read as an existence result (multi-hazard incompleteness is real and common) rather than a
+precise rate. The plan anticipates exactly this and provides the remedy: the train split supplies
+additional multi-hazard examples, and the scale run stratifies and oversamples them to reach an adequate
+$n$ per rule-combination. The machinery to test them --- the metric, the per-rule masking, the
+worker-loss correction --- is in place and validated here; only the sample count grows.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard.} Testing each hazard's region for necessity independently, and rolling the per-hazard
+verdicts into a per-image completeness class, is the natural construction once multi-label data exists.
+
+\textbf{Non-standard, and the contribution.} The phase reports a metric the pilot's own design made
+unmeasurable, and reports it \emph{against} the project's interest --- 27.3\% complete is a weak result
+for the proxy, stated plainly rather than buried. It also states the completeness/descriptive-accuracy
+dependence explicitly, refusing to present a rollup of one signal as two independent confirmations ---
+a common way evaluation sections overstate their evidence.
+
+\section{Implications}
+
+Multi-hazard completeness is now a measured quantity, and its low value (27.3\% complete) is one of the
+strongest arguments in the study for moving beyond the single-phrase grounding proxy to a scene-level
+native-VQA model (Phase~5). The per-rule masking harness built here is the same one the scale run uses
+to test every image against every rule it violates, so this phase doubles as the working prototype of
+that consumption path. The immediate carry-forward is sample size: the test is ready; the multi-hazard
+$n$ needs to grow from the train split before the rate is quoted as more than an existence result.

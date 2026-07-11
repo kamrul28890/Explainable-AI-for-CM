@@ -16,7 +16,7 @@ from PIL import Image
 
 from xai_pilot.inference import AnswerResult, answer_rule
 from xai_pilot.prompts import RuleId
-from xai_pilot.regions import Region, iou
+from xai_pilot.regions import Box, Region, iou, normalized_centroid_distance
 
 
 def run_n_times(
@@ -44,6 +44,41 @@ def answer_agreement_rate(results: list[AnswerResult]) -> float:
     if not pairs:
         return float("nan")
     return sum(1 for a, b in pairs if a == b) / len(pairs)
+
+
+def object_presence_rate(results: list[AnswerResult]) -> float:
+    """Fraction of reruns in which the safety object was detected at all
+    (Scale-up Phase 2.3).
+
+    The pilot's overlap scores returned NaN and silently dropped a sample when
+    the object box appeared in some reruns and vanished in others -- the worst
+    kind of instability. This turns that into a number: 1.0 means the object was
+    present in every rerun, 0.0 in none, and an intermediate value flags a
+    flickering detection. NaN only for an empty rerun list.
+    """
+    if not results:
+        return float("nan")
+    return sum(1 for r in results if r.object_boxes) / len(results)
+
+
+def mean_pairwise_centroid_distance(boxes: list[Box], image_size: tuple[int, int]) -> float:
+    """Mean pairwise box-centroid distance across reruns, normalized by the
+    image diagonal (Scale-up Phase 2.3).
+
+    A size-invariant companion to IoU: IoU collapses quickly for small boxes
+    that jitter by a few pixels, penalizing small PPE detections purely for
+    their size, whereas normalized centroid distance stays small when the
+    detections sit in the same place regardless of box size. 0.0 means the
+    centroids coincide across all reruns (stable); larger means more drift. NaN
+    for fewer than two boxes.
+    """
+    if len(boxes) < 2:
+        return float("nan")
+    dists = [
+        normalized_centroid_distance(a, b, image_size)
+        for a, b in itertools.combinations(boxes, 2)
+    ]
+    return sum(dists) / len(dists)
 
 
 def region_overlap_score(top_regions: list[Region]) -> float:

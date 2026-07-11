@@ -1,6 +1,12 @@
 """Unit tests for the three bounded-completeness verdicts."""
 
-from xai_pilot.metrics.completeness import classify_sample, classify_sample_worker_loss_corrected
+import pytest
+
+from xai_pilot.metrics.completeness import (
+    classify_sample,
+    classify_sample_worker_loss_corrected,
+    multi_hazard_verdict,
+)
 
 
 def test_grid_fallback_is_no_usable_explanation_even_if_answer_changed():
@@ -50,3 +56,23 @@ def test_corrected_grid_is_still_no_usable():
         "grid", True, True, flip_due_to_worker_loss_top1=True, flip_due_to_worker_loss_top2=True
     )
     assert v == "no_usable_explanation"
+
+
+# --- Phase 2.5: multi-hazard completeness -------------------------------------
+
+
+def test_multi_hazard_complete_when_every_hazard_supported():
+    assert multi_hazard_verdict({"rule_1": True, "rule_4": True}) == "complete"
+
+
+def test_multi_hazard_partial_when_some_supported():
+    assert multi_hazard_verdict({"rule_1": True, "rule_4": False}) == "partial"
+
+
+def test_multi_hazard_none_when_no_hazard_supported():
+    assert multi_hazard_verdict({"rule_1": False, "rule_3": False}) == "none"
+
+
+def test_multi_hazard_requires_at_least_two_hazards():
+    with pytest.raises(ValueError):
+        multi_hazard_verdict({"rule_1": True})

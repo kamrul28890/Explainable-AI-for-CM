@@ -14,7 +14,7 @@ from PIL import Image
 
 from xai_pilot.inference import AnswerResult, answer_rule
 from xai_pilot.prompts import RuleId
-from xai_pilot.regions import iou
+from xai_pilot.regions import iou, normalized_centroid_distance
 
 
 @dataclass
@@ -28,18 +28,31 @@ class RobustnessResult:
     # AND the worker became undetectable), so a "genuine" robustness rate can be
     # reported by excluding these from the raw answer-change rate.
     flip_due_to_worker_loss: bool = False
+    # Phase 2.4: size-invariant explanation drift (normalized centroid distance
+    # of the object box, NaN if either side lacks a box or image_size is unknown)
+    # plus an explicit disappearance flag, so a vanished box registers as maximal
+    # drift instead of dropping silently out of the IoU denominator.
+    object_centroid_drift: float = float("nan")
+    object_disappeared: bool = False
 
 
-def _robustness_from_results(baseline: AnswerResult, perturbed: AnswerResult) -> RobustnessResult:
+def _robustness_from_results(
+    baseline: AnswerResult, perturbed: AnswerResult, image_size: tuple[int, int] | None = None
+) -> RobustnessResult:
     """Compare normalized results without performing another model call.
 
     The first safety-object box is used because the pilot proxy and reports
     consistently treat it as the representative object detection. Missing
-    boxes produce NaN rather than being interpreted as zero overlap.
+    boxes produce NaN rather than being interpreted as zero overlap. When
+    `image_size` is given, a size-invariant centroid drift is also computed.
     """
+    both_objects = bool(baseline.object_boxes) and bool(perturbed.object_boxes)
     object_box_iou = (
-        iou(baseline.object_boxes[0], perturbed.object_boxes[0])
-        if baseline.object_boxes and perturbed.object_boxes
+        iou(baseline.object_boxes[0], perturbed.object_boxes[0]) if both_objects else float("nan")
+    )
+    object_centroid_drift = (
+        normalized_centroid_distance(baseline.object_boxes[0], perturbed.object_boxes[0], image_size)
+        if both_objects and image_size is not None
         else float("nan")
     )
     answer_changed = perturbed.answer != baseline.answer
@@ -50,6 +63,8 @@ def _robustness_from_results(baseline: AnswerResult, perturbed: AnswerResult) ->
         object_box_iou=object_box_iou,
         worker_lost=worker_lost,
         flip_due_to_worker_loss=answer_changed and worker_lost,
+        object_centroid_drift=object_centroid_drift,
+        object_disappeared=bool(baseline.object_boxes) and not perturbed.object_boxes,
     )
 
 
@@ -63,4 +78,4 @@ def evaluate(
 ) -> RobustnessResult:
     """Rerun answer_rule on perturbed_image and compare to the baseline result."""
     perturbed = answer_rule(model, processor, perturbed_image, rule_id, **run_kwargs)
-    return _robustness_from_results(baseline, perturbed)
+    return _robustness_from_results(baseline, perturbed, image_size=perturbed_image.size)

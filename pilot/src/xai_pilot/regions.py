@@ -50,9 +50,18 @@ def iou(box_a: Box, box_b: Box) -> float:
 
 
 def mask_region(
-    image: Image.Image, box: Box, mode: Literal["black", "blur"] = "black"
+    image: Image.Image, box: Box, mode: Literal["black", "blur", "inpaint"] = "black"
 ) -> Image.Image:
-    """Mask one absolute-pixel box region: black-fill or Gaussian blur."""
+    """Mask one absolute-pixel box region.
+
+    Modes (Phase 2.1 adds "inpaint" for mask-mode sensitivity):
+    - "black":  fill with black -- removes all evidence but is an out-of-
+      distribution artifact the model never sees in training.
+    - "blur":   heavy Gaussian blur -- a less destructive alternative.
+    - "inpaint": content-aware Telea inpainting (OpenCV) -- fills the region
+      from its surroundings, the least out-of-distribution mask, used to confirm
+      the descriptive-accuracy flip rate is not an artifact of black patches.
+    """
     out = image.convert("RGB").copy()
     x0, y0, x1, y1 = (int(round(v)) for v in box)
     x0, y0 = max(x0, 0), max(y0, 0)
@@ -60,18 +69,30 @@ def mask_region(
     if x1 <= x0 or y1 <= y0:
         return out
 
-    # Black masking removes both texture and color evidence. Blur masking is
-    # retained as a less destructive alternative for controlled experiments.
     if mode == "black":
         patch = Image.new("RGB", (x1 - x0, y1 - y0), (0, 0, 0))
     elif mode == "blur":
         region = out.crop((x0, y0, x1, y1))
         patch = region.filter(ImageFilter.GaussianBlur(radius=25))
+    elif mode == "inpaint":
+        return _inpaint_region(out, (x0, y0, x1, y1))
     else:
         raise ValueError(f"unknown mode: {mode}")
 
     out.paste(patch, (x0, y0))
     return out
+
+
+def _inpaint_region(image: Image.Image, box: tuple[int, int, int, int]) -> Image.Image:
+    """Telea-inpaint the box region, filling it from surrounding pixels."""
+    import cv2  # local import: OpenCV is only needed for this mask mode
+
+    x0, y0, x1, y1 = box
+    arr = np.array(image)  # RGB; channel order is irrelevant to inpainting
+    mask = np.zeros(arr.shape[:2], dtype=np.uint8)
+    mask[y0:y1, x0:x1] = 255
+    filled = cv2.inpaint(arr, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+    return Image.fromarray(filled)
 
 
 def grid_fallback_regions(image_size: tuple[int, int], grid: tuple[int, int] = (4, 4)) -> list[Box]:
@@ -113,6 +134,44 @@ def all_boxes_covered(
         any(boxes_overlap_or_close(s, r, distance_threshold=distance_threshold) for r in reference_boxes)
         for s in subject_boxes
     )
+
+
+def normalized_centroid_distance(box_a: Box, box_b: Box, image_size: tuple[int, int]) -> float:
+    """Distance between two box centroids, normalized by the image diagonal.
+
+    A size-invariant drift measure (Scale-up Phase 2.2/2.4): unlike IoU, it does
+    not collapse when two small boxes at the same location differ slightly in
+    extent. 0.0 means coincident centroids; larger means more positional drift.
+    """
+    ax = (box_a[0] + box_a[2]) / 2.0
+    ay = (box_a[1] + box_a[3]) / 2.0
+    bx = (box_b[0] + box_b[2]) / 2.0
+    by = (box_b[1] + box_b[3]) / 2.0
+    diagonal = float(np.hypot(image_size[0], image_size[1]))
+    return float(np.hypot(ax - bx, ay - by)) / diagonal
+
+
+def fraction_covered(
+    subject_boxes: list[Box], reference_boxes: list[Box], distance_threshold: float = 0.0
+) -> float:
+    """Fraction of subject boxes that overlap or are close to a reference box.
+
+    The continuous counterpart of all_boxes_covered (Scale-up Phase 2.1): where
+    that returns a single boolean, this returns a graded coverage signal in
+    [0, 1], so masking effects can be measured as a magnitude rather than only
+    as an answer flip. Returns NaN when there are no subject boxes (the fraction
+    is undefined, and a worker-less rerun must not be scored as full coverage).
+    """
+    if not subject_boxes:
+        return float("nan")
+    n_covered = sum(
+        any(
+            boxes_overlap_or_close(s, r, distance_threshold=distance_threshold)
+            for r in reference_boxes
+        )
+        for s in subject_boxes
+    )
+    return n_covered / len(subject_boxes)
 
 
 def _box_area(box: Box) -> float:

@@ -50,6 +50,27 @@ def test_occlude_area_matches_requested_fraction():
     assert abs(black_pixels - expected) < 100  # rounding to an integer side length
 
 
+def test_occlude_random_location_is_seeded_and_off_center(monkeypatch=None):
+    # Phase 2.4: random-location occlusion must be reproducible for a seed and
+    # (usually) not centered, so "covered the object" and "disrupted the whole
+    # scene" are no longer conflated as in the pilot's centered square.
+    image = Image.new("RGB", (100, 100), color=(255, 255, 255))
+    a = np.asarray(occlude(image, frac=0.1, location="random", seed=1))
+    b = np.asarray(occlude(image, frac=0.1, location="random", seed=1))
+    c = np.asarray(occlude(image, frac=0.1, location="random", seed=2))
+    assert np.array_equal(a, b)  # same seed -> identical
+    assert not np.array_equal(a, c)  # different seed -> different placement
+    # occluded area still matches the requested fraction
+    assert abs(int((a.sum(axis=-1) == 0).sum()) - 0.1 * 100 * 100) < 120
+
+
+def test_occlude_center_matches_default():
+    image = Image.new("RGB", (60, 60), color=(255, 255, 255))
+    default = np.asarray(occlude(image, frac=0.2))
+    centered = np.asarray(occlude(image, frac=0.2, location="center"))
+    assert np.array_equal(default, centered)
+
+
 def test_contrast_shift_factor_one_is_unchanged():
     image = Image.new("RGB", (10, 10), color=(50, 150, 50))
     same = contrast_shift(image, factor=1.0)

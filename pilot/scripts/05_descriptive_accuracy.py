@@ -12,9 +12,15 @@ import sys
 import pandas as pd
 
 from xai_pilot import config
-from xai_pilot.config import FIGURES_DIR, REGION_RANKING, REPORT_WORKER_LOSS_CORRECTED, RESULTS_DIR
+from xai_pilot.config import (
+    FIGURES_DIR,
+    REGION_RANKING,
+    REPORT_WORKER_LOSS_CORRECTED,
+    RESULTS_DIR,
+    TEXT_ABLATION_PHRASE,
+)
 from xai_pilot.data import load_construction_site
-from xai_pilot.inference import AnswerResult
+from xai_pilot.inference import AnswerResult, answer_rule_text_ablated, graded_score_for
 from xai_pilot.metrics.descriptive_accuracy import evaluate
 from xai_pilot.model import load_florence2
 from xai_pilot.prompts import RULE_OBJECT_LABEL, rule_object_labels
@@ -29,6 +35,9 @@ def main(
     region_ranking: str = REGION_RANKING,
     report_worker_loss_corrected: bool = REPORT_WORKER_LOSS_CORRECTED,
     decoding: str = None,
+    mask_mode: str = "black",
+    report_graded: bool = False,
+    report_text_ablation: bool = False,
 ) -> int:
     """Measure answer changes after masking the top one and two regions.
 
@@ -94,11 +103,14 @@ def main(
             confidence=float(row["confidence"]),
             worker_boxes=worker_boxes,
             object_boxes=object_boxes,
+            # Recompute the continuous baseline score from the saved boxes so
+            # graded_score_drop is well-defined without re-running the baseline.
+            graded_score=graded_score_for(rule_id, worker_boxes, object_boxes, (image.width, image.height)),
         )
 
         # `evaluate` applies cumulative masks: first top-1, then top-1 plus
         # top-2, with a fresh safety-proxy inference after each condition.
-        result = evaluate(model, processor, image, rule_id, baseline, regions)
+        result = evaluate(model, processor, image, rule_id, baseline, regions, mask_mode=mask_mode)
 
         record = {
             "image_id": image_id,
@@ -122,6 +134,28 @@ def main(
                     "flip_due_to_worker_loss_top2": result.flip_due_to_worker_loss_top2,
                 }
             )
+        if report_graded:
+            record.update(
+                {
+                    "baseline_graded_score": baseline.graded_score,
+                    "graded_score_drop_top1": result.graded_score_drop_top1,
+                    "graded_score_drop_top2": result.graded_score_drop_top2,
+                    "non_monotonic": result.non_monotonic,
+                }
+            )
+        if report_text_ablation:
+            # PROXY APPROXIMATION of native-VQA text-token ablation: reuse the
+            # baseline worker detection, swap the specific object phrase for a
+            # concept-free placeholder, and re-decide. Reported separately.
+            text_ablated_answer, _ = answer_rule_text_ablated(
+                model, processor, image, rule_id, worker_boxes, TEXT_ABLATION_PHRASE
+            )
+            record.update(
+                {
+                    "text_ablated_answer": text_ablated_answer,
+                    "text_ablation_flip": text_ablated_answer != baseline.answer,
+                }
+            )
         out_rows.append(record)
 
         # Prefer visually informative answer-flip cases over arbitrary samples.
@@ -136,19 +170,37 @@ def main(
     parts = [p for p in (
         region_ranking if region_ranking != "area" else "",
         "greedy" if decoding != "beam" else "",
+        mask_mode if mask_mode != "black" else "",
         "wlc" if report_worker_loss_corrected else "",
+        "graded" if report_graded else "",
+        "textabl" if report_text_ablation else "",
     ) if p]
     suffix = ("_" + "_".join(parts)) if parts else ""
     out_csv = RESULTS_DIR / f"descriptive_accuracy{suffix}.csv"
     out_df = pd.DataFrame(out_rows)
     out_df.to_csv(out_csv, index=False)
-    print(f"Ranking policy: {region_ranking}")
+    print(f"Ranking policy: {region_ranking} | mask mode: {mask_mode}")
     print(f"Wrote {len(out_df)} rows to {out_csv}")
     print(f"Saved {visualized} answer-flip overlay images to {fig_dir}")
 
     print()
     print(f"Overall top-1 descriptive accuracy (raw): {out_df['answer_changed_top1'].mean():.1%}")
     print(f"Overall top-2 descriptive accuracy (raw): {out_df['answer_changed_top2'].mean():.1%}")
+    if report_graded:
+        gd1 = out_df["graded_score_drop_top1"].dropna()
+        n_nonmono = int(out_df["non_monotonic"].sum())
+        print()
+        print(f"Graded-score drop top-1 (mean over {len(gd1)} scored): {gd1.mean():.3f}")
+        print(f"Samples with a non-zero graded drop but NO answer flip: "
+              f"{int(((out_df['graded_score_drop_top1'].fillna(0) > 0) & ~out_df['answer_changed_top1']).sum())}")
+        print(f"Non-monotonic (top-2 un-flips top-1) samples: {n_nonmono}")
+    if report_text_ablation:
+        tflip = out_df["text_ablation_flip"].mean()
+        print()
+        print("TEXT-ABLATION (proxy approximation -- Florence-2 is a grounding proxy, NOT native-VQA;")
+        print(f"  swapped the specific object phrase for '{TEXT_ABLATION_PHRASE}'. Report separately.):")
+        print(f"  text-ablation answer-flip rate: {tflip:.1%}")
+        print(f"  (compare to visual-ablation top-1 flip rate: {out_df['answer_changed_top1'].mean():.1%})")
     if report_worker_loss_corrected:
         # Genuine flip = answer changed AND not attributable to worker loss.
         genuine_top1 = out_df["answer_changed_top1"] & ~out_df["flip_due_to_worker_loss_top1"]
@@ -187,9 +239,30 @@ if __name__ == "__main__":
         default=config.DECODING,
         help="Grounding decoding policy (default: config.DECODING).",
     )
+    parser.add_argument(
+        "--mask-mode",
+        choices=["black", "blur", "inpaint"],
+        default="black",
+        help="Masking style for the region ablation (default: black, frozen).",
+    )
+    parser.add_argument(
+        "--report-graded",
+        action="store_true",
+        default=False,
+        help="Log graded-score drop + non-monotonic flag and report their stats.",
+    )
+    parser.add_argument(
+        "--report-text-ablation",
+        action="store_true",
+        default=False,
+        help="Add the proxy text-ablation probe (reported separately from native-VQA).",
+    )
     args = parser.parse_args()
     sys.exit(main(
         region_ranking=args.region_ranking,
         report_worker_loss_corrected=args.report_worker_loss_corrected,
         decoding=args.decoding,
+        mask_mode=args.mask_mode,
+        report_graded=args.report_graded,
+        report_text_ablation=args.report_text_ablation,
     ))

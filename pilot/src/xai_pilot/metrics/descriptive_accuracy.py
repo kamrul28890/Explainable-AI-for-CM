@@ -38,6 +38,15 @@ class DescriptiveAccuracyResult:
     worker_lost_top2: bool = False
     flip_due_to_worker_loss_top1: bool = False
     flip_due_to_worker_loss_top2: bool = False
+    # Phase 2.1: continuous magnitude of the masking effect (baseline graded
+    # score minus masked graded score), so a mask that reduces coverage without
+    # flipping the boolean answer still registers. NaN if either side is NaN.
+    graded_score_drop_top1: float = float("nan")
+    graded_score_drop_top2: float = float("nan")
+    # Phase 2.1: True when masking top-1 flipped the answer but also masking
+    # top-2 un-flipped it -- the non-monotonic fallback-interaction signature
+    # that should never happen if masking only ever removes evidence.
+    non_monotonic: bool = False
 
 
 def _descriptive_from_results(
@@ -65,6 +74,12 @@ def _descriptive_from_results(
         worker_lost_top2=worker_lost_top2,
         flip_due_to_worker_loss_top1=changed_top1 and worker_lost_top1,
         flip_due_to_worker_loss_top2=changed_top2 and worker_lost_top2,
+        graded_score_drop_top1=baseline.graded_score - result_top1.graded_score,
+        graded_score_drop_top2=baseline.graded_score - result_top2.graded_score,
+        # Non-monotonic: masking more (top-2) reverted a flip that masking less
+        # (top-1) produced. Removing evidence should only ever preserve or add
+        # flips, so this flags the fallback-interaction artifact for audit.
+        non_monotonic=changed_top1 and not changed_top2,
     )
 
 
@@ -75,16 +90,22 @@ def evaluate(
     rule_id: RuleId,
     baseline: AnswerResult,
     top_regions: list[Region],
+    mask_mode: str = "black",
     **run_kwargs,
 ) -> DescriptiveAccuracyResult:
-    """Mask top-1, then top-1+top-2 regions; rerun answer_rule after each."""
+    """Mask top-1, then top-1+top-2 regions; rerun answer_rule after each.
+
+    `mask_mode` (Phase 2.1) selects the masking style ("black" frozen default,
+    "blur", or "inpaint") so flip-rate sensitivity to the mask itself can be
+    measured; black patches are out-of-distribution artifacts.
+    """
     # The top-2 condition is cumulative by design: it removes both the first
     # and second ranked regions rather than testing region two in isolation.
-    top1_masked = mask_region(image, top_regions[0].box, mode="black")
+    top1_masked = mask_region(image, top_regions[0].box, mode=mask_mode)
     result_top1 = answer_rule(model, processor, top1_masked, rule_id, **run_kwargs)
 
     if len(top_regions) > 1:
-        top2_masked = mask_region(top1_masked, top_regions[1].box, mode="black")
+        top2_masked = mask_region(top1_masked, top_regions[1].box, mode=mask_mode)
         result_top2 = answer_rule(model, processor, top2_masked, rule_id, **run_kwargs)
     else:
         # Only one region existed at all -- the top-2 condition degenerates to top-1.

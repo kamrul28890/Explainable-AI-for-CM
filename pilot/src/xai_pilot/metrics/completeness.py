@@ -63,3 +63,27 @@ def classify_sample_worker_loss_corrected(
     if genuine_top1 or genuine_top2:
         return "explanation_supported"
     return "explanation_weak"
+
+
+MultiHazardVerdict = Literal["complete", "partial", "none"]
+
+
+def multi_hazard_verdict(rule_supported: dict[str, bool]) -> MultiHazardVerdict:
+    """Whether an image's explanation captures all, some, or none of its hazards
+    (Scale-up Phase 2.5).
+
+    `rule_supported` maps each rule the image violates to whether masking that
+    rule's own explanation region flips that rule's answer (worker-loss-
+    corrected). "complete" means every violated hazard is independently
+    supported by its region -- the multi-hazard completeness the proposal
+    promised; "partial" means at least one but not all; "none" means no hazard's
+    region was load-bearing. Requires at least two hazards.
+    """
+    if len(rule_supported) < 2:
+        raise ValueError("multi_hazard_verdict needs at least two violated rules")
+    values = list(rule_supported.values())
+    if all(values):
+        return "complete"
+    if any(values):
+        return "partial"
+    return "none"

@@ -27,7 +27,7 @@ from PIL import Image
 
 from xai_pilot.model import run_task
 from xai_pilot.prompts import PERSON_PHRASE, RULE_4_PROXIMITY_PAIR, RULE_QUERIES, RuleId
-from xai_pilot.regions import all_boxes_covered, boxes_overlap_or_close
+from xai_pilot.regions import all_boxes_covered, boxes_overlap_or_close, fraction_covered
 
 Box = tuple[float, float, float, float]
 
@@ -52,6 +52,13 @@ class AnswerResult:
     `boxes` contains all regions used by downstream region ranking, while the
     worker/object lists remain separate so robustness and stability can detect
     semantically important failures such as losing the worker detection.
+
+    `graded_score` (Phase 2.1) is a continuous [0, 1] compliance/safety signal
+    (higher = safer): for presence rules it is the fraction of workers with a
+    nearby safety object; for rule_4 it is the fraction of workers *not* near an
+    excavator. It is NaN when there is no worker to score. Masking/perturbation
+    metrics compare graded_score deltas to measure effect magnitude rather than
+    only a boolean answer flip, recovering statistical power.
     """
 
     answer: str
@@ -60,6 +67,44 @@ class AnswerResult:
     inference_ms: float = 0.0
     worker_boxes: list[Box] = field(default_factory=list)
     object_boxes: list[Box] = field(default_factory=list)
+    graded_score: float = float("nan")
+
+
+def _presence_verdict(
+    worker_boxes: list[Box], object_boxes: list[Box], distance_threshold: float
+) -> tuple[str, float]:
+    """Pure verdict for a presence rule: (answer, graded_score).
+
+    Compliant only when every detected worker has a nearby safety object (graded
+    score 1.0). With no workers detected, falls back to the scene-level check
+    (compliant iff the object exists anywhere) and returns a NaN graded score,
+    since a per-worker fraction is undefined. Preserves the frozen boolean
+    answer exactly (compliant iff the graded fraction is 1.0).
+    """
+    if not worker_boxes:
+        return ("compliant" if object_boxes else "violation"), float("nan")
+    frac = fraction_covered(worker_boxes, object_boxes, distance_threshold=distance_threshold)
+    return ("compliant" if frac >= 1.0 else "violation"), frac
+
+
+def _rule4_verdict(
+    worker_boxes: list[Box], excavator_boxes: list[Box], distance_threshold: float
+) -> tuple[str, float]:
+    """Pure verdict for rule_4 proximity: (answer, graded_score).
+
+    Hazard when any worker is near any excavator. graded_score is the *safe*
+    fraction (1 - fraction of workers near an excavator), so higher stays safer
+    across all rules; NaN when there is no worker to score. Preserves the frozen
+    boolean answer exactly (hazard iff any worker is near an excavator).
+    """
+    near_frac = fraction_covered(worker_boxes, excavator_boxes, distance_threshold=distance_threshold)
+    hazard = any(
+        boxes_overlap_or_close(w, e, distance_threshold=distance_threshold)
+        for w in worker_boxes
+        for e in excavator_boxes
+    )
+    graded = float("nan") if near_frac != near_frac else 1.0 - near_frac
+    return ("hazard" if hazard else "safe"), graded
 
 
 def _detect(model, processor, image: Image.Image, phrase: str, **run_kwargs):
@@ -70,6 +115,56 @@ def _detect(model, processor, image: Image.Image, phrase: str, **run_kwargs):
     det = parsed[DETECTION_TASK]
     boxes = [tuple(b) for b in det["bboxes"]]
     return boxes, confidence
+
+
+def graded_score_for(
+    rule_id: RuleId,
+    worker_boxes: list[Box],
+    object_boxes: list[Box],
+    image_size: tuple[int, int],
+) -> float:
+    """Recompute the continuous graded score from already-detected boxes.
+
+    Lets a metric that reconstructs a baseline from saved worker/object boxes
+    (rather than re-running the model) obtain the same graded score answer_rule
+    would have produced, using the rule's own resolution-scaled threshold.
+    """
+    width, height = image_size
+    if rule_id == "rule_4":
+        threshold = PROXIMITY_FRACTION * max(width, height)
+        return _rule4_verdict(worker_boxes, object_boxes, distance_threshold=threshold)[1]
+    threshold = PRESENCE_PROXIMITY_FRACTION[rule_id] * max(width, height)
+    return _presence_verdict(worker_boxes, object_boxes, distance_threshold=threshold)[1]
+
+
+def answer_rule_text_ablated(
+    model,
+    processor,
+    image: Image.Image,
+    rule_id: RuleId,
+    worker_boxes: list[Box],
+    ablation_phrase: str,
+    **run_kwargs,
+) -> tuple[str, float]:
+    """Text-ablation analog of answer_rule for the grounding proxy (Phase 2.1).
+
+    Replaces the rule's specific object phrase (e.g. "hard hat") with a concept-
+    free placeholder (e.g. "object") and re-decides the rule, reusing the
+    baseline worker detection because the image is unchanged. This is the
+    closest a grounding proxy can come to a native-VQA "remove the query token"
+    ablation; it is NOT equivalent -- it measures whether the specific object
+    word (rather than any detectable object) drives the compliance answer -- and
+    its results are always reported separately from native-VQA text ablation.
+
+    Returns (answer, graded_score).
+    """
+    ablated_object_boxes, _ = _detect(model, processor, image, ablation_phrase, **run_kwargs)
+    max_dim = max(image.width, image.height)
+    if rule_id == "rule_4":
+        threshold = PROXIMITY_FRACTION * max_dim
+        return _rule4_verdict(worker_boxes, ablated_object_boxes, distance_threshold=threshold)
+    threshold = PRESENCE_PROXIMITY_FRACTION[rule_id] * max_dim
+    return _presence_verdict(worker_boxes, ablated_object_boxes, distance_threshold=threshold)
 
 
 def answer_rule(
@@ -112,7 +207,7 @@ def _answer_presence_rule(
     if not worker_boxes:
         # No worker detected at all -- can't ask "does every worker have X",
         # so fall back to the scene-level existence check as a degenerate case.
-        answer = "compliant" if object_boxes else "violation"
+        answer, graded = _presence_verdict([], object_boxes, distance_threshold=0.0)
         return AnswerResult(
             answer=answer,
             boxes=object_boxes,
@@ -120,13 +215,13 @@ def _answer_presence_rule(
             inference_ms=elapsed_ms,
             worker_boxes=[],
             object_boxes=object_boxes,
+            graded_score=graded,
         )
 
     # Scale thresholds by the longer image dimension so the same rule behaves
     # consistently across source images with different pixel resolutions.
     distance_threshold = PRESENCE_PROXIMITY_FRACTION[rule_id] * max(image.width, image.height)
-    covered = all_boxes_covered(worker_boxes, object_boxes, distance_threshold=distance_threshold)
-    answer = "compliant" if covered else "violation"
+    answer, graded = _presence_verdict(worker_boxes, object_boxes, distance_threshold=distance_threshold)
     return AnswerResult(
         answer=answer,
         boxes=worker_boxes + object_boxes,
@@ -134,6 +229,7 @@ def _answer_presence_rule(
         inference_ms=elapsed_ms,
         worker_boxes=worker_boxes,
         object_boxes=object_boxes,
+        graded_score=graded,
     )
 
 
@@ -151,12 +247,7 @@ def _answer_rule_4(model, processor, image: Image.Image, **run_kwargs) -> Answer
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     distance_threshold = PROXIMITY_FRACTION * max(image.width, image.height)
-    hazard = any(
-        boxes_overlap_or_close(w, e, distance_threshold=distance_threshold)
-        for w in worker_boxes
-        for e in excavator_boxes
-    )
-    answer = "hazard" if hazard else "safe"
+    answer, graded = _rule4_verdict(worker_boxes, excavator_boxes, distance_threshold=distance_threshold)
     confidence = (worker_conf + excavator_conf) / 2
     return AnswerResult(
         answer=answer,
@@ -165,4 +256,5 @@ def _answer_rule_4(model, processor, image: Image.Image, **run_kwargs) -> Answer
         inference_ms=elapsed_ms,
         worker_boxes=worker_boxes,
         object_boxes=excavator_boxes,
+        graded_score=graded,
     )

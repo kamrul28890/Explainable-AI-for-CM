@@ -5,6 +5,8 @@ answer_rule with phrasing_index=1 on the unperturbed image, using the
 second phrasing already enumerated per rule in prompts.RULE_QUERIES.
 """
 
+import random
+
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 
@@ -25,14 +27,34 @@ def low_light(image: Image.Image, gamma: float = 2.5) -> Image.Image:
     return Image.fromarray((arr * 255).astype(np.uint8))
 
 
-def occlude(image: Image.Image, frac: float = 0.2) -> Image.Image:
-    """Black out a centered square covering `frac` of the image's area."""
+def occlude(
+    image: Image.Image,
+    frac: float = 0.2,
+    location: str = "center",
+    seed: int = 0,
+) -> Image.Image:
+    """Black out a square covering `frac` of the image's area.
+
+    `location="center"` (default, frozen pilot) centers the square;
+    `"random"` places it at a seeded random position (Scale-up Phase 2.4), so a
+    *targeted* occlusion that covers the object can be distinguished from a
+    random-location occlusion that merely disrupts the scene -- the pilot's
+    always-centered square conflated the two.
+    """
     out = image.convert("RGB").copy()
     width, height = out.size
     # Area = side^2, so the square-root converts the requested image-area
     # fraction into a pixel side length for arbitrary aspect ratios.
     side = int(round((frac * width * height) ** 0.5))
-    x0, y0 = (width - side) // 2, (height - side) // 2
+    side = min(side, width, height)
+    if location == "center":
+        x0, y0 = (width - side) // 2, (height - side) // 2
+    elif location == "random":
+        rng = random.Random(seed)
+        x0 = rng.randint(0, max(0, width - side))
+        y0 = rng.randint(0, max(0, height - side))
+    else:
+        raise ValueError(f"unknown occlusion location: {location}")
     patch = Image.new("RGB", (side, side), (0, 0, 0))
     out.paste(patch, (x0, y0))
     return out

@@ -22,13 +22,36 @@ import pandas as pd
 from PIL import Image, ImageDraw
 
 from xai_pilot import config
-from xai_pilot.config import FIGURES_DIR, REPORT_WORKER_LOSS_CORRECTED, RESULTS_DIR
+from xai_pilot.config import FIGURES_DIR, REPORT_WORKER_LOSS_CORRECTED, RESULTS_DIR, SEED
 from xai_pilot.data import load_construction_site
 from xai_pilot.inference import AnswerResult, answer_rule
 from xai_pilot.metrics.robustness import evaluate
 from xai_pilot.model import load_florence2
 from xai_pilot.perturbations import blur, contrast_shift, low_light, occlude, paste_patch
+from xai_pilot.regions import mask_region
 from xai_pilot.viz import overlay_boxes, save_figure
+
+# Phase 2.4 dose-response severity grids (plan item 4.4). Each entry is a
+# (perturbation, severity, location, apply) tuple; `apply(image, object_box)`
+# returns the perturbed image (object_box is used only by targeted occlusion).
+def _severity_conditions():
+    conds = []
+    for k in (4, 8, 16):
+        conds.append(("blur", k, "-", lambda img, box, k=k: blur(img, ksize=k)))
+    for g in (1.5, 2.5, 4.0):
+        conds.append(("gamma", g, "-", lambda img, box, g=g: low_light(img, gamma=g)))
+    for f in (0.15, 0.3, 0.5):
+        conds.append(("contrast", f, "-", lambda img, box, f=f: contrast_shift(img, factor=f)))
+    for af in (0.1, 0.2, 0.35):
+        conds.append(("occlude", af, "center",
+                      lambda img, box, af=af: occlude(img, frac=af, location="center")))
+        conds.append(("occlude", af, "random",
+                      lambda img, box, af=af: occlude(img, frac=af, location="random", seed=SEED)))
+    # Targeted occlusion covers the object's own box (only where one exists), so
+    # "covered the object" is separated from "disrupted the scene".
+    conds.append(("occlude_targeted", float("nan"), "object",
+                  lambda img, box: mask_region(img, box, "black") if box else None))
+    return conds
 
 N_VISUALIZE_PER_PERTURBATION = 2
 N_PATCH_STRETCH = 20
@@ -74,7 +97,66 @@ def _head_box(worker_box, scale: float = 0.22) -> tuple[float, float, float, flo
     return (head_x0, wy0, head_x0 + head_w, wy0 + head_h)
 
 
-def main(report_worker_loss_corrected: bool = REPORT_WORKER_LOSS_CORRECTED, decoding: str = None) -> int:
+def _run_severity_sweep(model, processor, preds_df, images_by_id) -> int:
+    """Phase 2.4 dose-response sweep: every perturbation at multiple magnitudes,
+    recording answer-level and (size-invariant) explanation-level change."""
+    conditions = _severity_conditions()
+    out_rows = []
+    for i, row in preds_df.iterrows():
+        image_id = row["image_id"]
+        rule_id = row["assigned_rule_id"]
+        image = images_by_id[image_id]
+        baseline = _baseline_from_row(row)
+        object_box = baseline.object_boxes[0] if baseline.object_boxes else None
+
+        for name, severity, location, apply in conditions:
+            perturbed = apply(image, object_box)
+            if perturbed is None:
+                continue  # targeted occlusion with no object box to cover
+            result = evaluate(model, processor, perturbed, rule_id, baseline)
+            out_rows.append(
+                {
+                    "image_id": image_id,
+                    "assigned_rule_id": rule_id,
+                    "primary_class": row["primary_class"],
+                    "perturbation": name,
+                    "severity": severity,
+                    "location": location,
+                    "answer_changed": result.answer_changed,
+                    "object_box_iou": result.object_box_iou,
+                    "object_centroid_drift": result.object_centroid_drift,
+                    "object_disappeared": result.object_disappeared,
+                    "worker_lost": result.worker_lost,
+                    "flip_due_to_worker_loss": result.flip_due_to_worker_loss,
+                    "confidence_drop": result.confidence_drop,
+                }
+            )
+        if (i + 1) % 20 == 0:
+            print(f"{i + 1}/{len(preds_df)} samples done...")
+
+    out_df = pd.DataFrame(out_rows)
+    out_csv = RESULTS_DIR / "robustness_sweep.csv"
+    out_df.to_csv(out_csv, index=False)
+    print(f"\nWrote {len(out_df)} rows to {out_csv}")
+
+    # Dose-response: answer-change and explanation-drift by perturbation x severity.
+    print("\nDose-response (answer-change rate | mean centroid drift | disappearance rate):")
+    grp = out_df.groupby(["perturbation", "severity", "location"], dropna=False)
+    for (pert, sev, loc), g in grp:
+        print(f"  {pert:17s} sev={sev!s:5s} {loc:6s}: "
+              f"flip={g['answer_changed'].mean():5.1%}  "
+              f"drift={g['object_centroid_drift'].mean():.3f}  "
+              f"vanish={g['object_disappeared'].mean():5.1%}")
+
+    # Targeted vs random occlusion at matched area fractions.
+    print("\nTargeted-object occlusion vs random-location occlusion:")
+    occ = out_df[out_df["perturbation"].isin(["occlude", "occlude_targeted"])]
+    print(occ.groupby(["location"])["answer_changed"].mean().to_string())
+    return 0
+
+
+def main(report_worker_loss_corrected: bool = REPORT_WORKER_LOSS_CORRECTED, decoding: str = None,
+         severity_sweep: bool = False) -> int:
     """Run image, prompt, and bounded synthetic-patch robustness checks.
 
     `report_worker_loss_corrected` (Phase 1.4) adds a flip_due_to_worker_loss
@@ -101,6 +183,9 @@ def main(report_worker_loss_corrected: bool = REPORT_WORKER_LOSS_CORRECTED, deco
             images_by_id[row["image_id"]] = row["image"]
         if len(images_by_id) >= len(target_ids):
             break
+
+    if severity_sweep:
+        return _run_severity_sweep(model, processor, preds_df, images_by_id)
 
     fig_dir = FIGURES_DIR / "robustness"
     fig_dir.mkdir(parents=True, exist_ok=True)
@@ -280,8 +365,15 @@ if __name__ == "__main__":
         default=config.DECODING,
         help="Grounding decoding policy (default: config.DECODING).",
     )
+    parser.add_argument(
+        "--severity-sweep",
+        action="store_true",
+        default=False,
+        help="Run the Phase 2.4 dose-response severity sweep (writes robustness_sweep.csv).",
+    )
     args = parser.parse_args()
     sys.exit(main(
         report_worker_loss_corrected=args.report_worker_loss_corrected,
         decoding=args.decoding,
+        severity_sweep=args.severity_sweep,
     ))

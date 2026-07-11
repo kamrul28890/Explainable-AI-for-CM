@@ -3,12 +3,16 @@
 import numpy as np
 from PIL import Image
 
+import math
+
 from xai_pilot.regions import (
     all_boxes_covered,
     boxes_overlap_or_close,
+    fraction_covered,
     grid_fallback_regions,
     iou,
     mask_region,
+    normalized_centroid_distance,
     standardize_regions,
 )
 
@@ -39,6 +43,27 @@ def test_mask_region_black_changes_only_that_region():
     outside_corner = masked_arr[0:5, 0:5]
     assert inside.mean() < 10
     assert outside_corner.mean() > 190
+
+
+def test_mask_region_inpaint_fills_from_surroundings_not_black():
+    # A bright field with a black square; inpainting the square should fill it
+    # from the bright surroundings (content-aware), not leave it black like the
+    # out-of-distribution black mask.
+    arr = np.full((40, 40, 3), 200, dtype=np.uint8)
+    arr[15:25, 15:25] = 0
+    image = Image.fromarray(arr)
+    inpainted = mask_region(image, (15, 15, 25, 25), mode="inpaint")
+    box = np.array(inpainted)[15:25, 15:25]
+    assert box.mean() > 150  # filled bright, not black
+    assert inpainted.size == image.size
+
+
+def test_mask_region_rejects_unknown_mode():
+    import pytest
+
+    image = Image.fromarray(np.full((10, 10, 3), 200, dtype=np.uint8))
+    with pytest.raises(ValueError):
+        mask_region(image, (1, 1, 5, 5), mode="nonsense")
 
 
 def test_grid_fallback_regions_covers_image():
@@ -82,6 +107,48 @@ def test_all_boxes_covered_false_when_no_reference_boxes():
 
 def test_all_boxes_covered_vacuously_true_when_no_subject_boxes():
     assert all_boxes_covered([], [(0, 0, 10, 10)])
+
+
+# --- Phase 2.1: graded (continuous) coverage signal ---------------------------
+
+
+def test_fraction_covered_all_subjects_matched_is_one():
+    workers = [(0, 0, 10, 10), (50, 50, 60, 60)]
+    objects = [(2, 2, 8, 8), (52, 52, 58, 58)]
+    assert fraction_covered(workers, objects) == 1.0
+
+
+def test_fraction_covered_half_matched_is_half():
+    workers = [(0, 0, 10, 10), (50, 50, 60, 60)]
+    objects = [(2, 2, 8, 8)]  # covers only the first worker
+    assert fraction_covered(workers, objects) == 0.5
+
+
+def test_fraction_covered_no_reference_boxes_is_zero():
+    assert fraction_covered([(0, 0, 10, 10)], []) == 0.0
+
+
+def test_fraction_covered_no_subject_boxes_is_nan():
+    # No workers -> the fraction is undefined, not vacuously 1.0, so masking
+    # magnitude on a worker-less rerun is not silently counted as full coverage.
+    assert math.isnan(fraction_covered([], [(0, 0, 10, 10)]))
+
+
+def test_fraction_covered_respects_distance_threshold():
+    workers = [(0, 0, 10, 10)]
+    objects = [(12, 0, 20, 10)]  # 2px gap
+    assert fraction_covered(workers, objects, distance_threshold=5.0) == 1.0
+    assert fraction_covered(workers, objects, distance_threshold=1.0) == 0.0
+
+
+def test_normalized_centroid_distance_identical_is_zero():
+    assert normalized_centroid_distance((0, 0, 10, 10), (0, 0, 10, 10), (100, 100)) == 0.0
+
+
+def test_normalized_centroid_distance_known_shift():
+    # Centroids at (5,5) and (35,5): distance 30 / diagonal ~141.42 = 0.2121.
+    d = normalized_centroid_distance((0, 0, 10, 10), (30, 0, 40, 10), (100, 100))
+    assert abs(d - 30 / (100 * 2 ** 0.5)) < 1e-9
 
 
 def test_standardize_regions_ranks_model_boxes_by_area_descending():

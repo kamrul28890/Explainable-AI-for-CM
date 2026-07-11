@@ -12,6 +12,7 @@ fresh calibration for each of those two call types specifically, rather than
 silently assuming they cost the same as Day 3's beam-search calls.
 """
 
+import argparse
 import sys
 import time
 
@@ -21,7 +22,8 @@ import pandas as pd
 from xai_pilot.attribution import cross_attention_heatmap
 from xai_pilot.config import FIGURES_DIR, RESULTS_DIR
 from xai_pilot.data import load_construction_site
-from xai_pilot.metrics.efficiency import aggregate_timings, extrapolate
+from xai_pilot.inference import answer_rule
+from xai_pilot.metrics.efficiency import aggregate_timings, extrapolate, summarize_timings, time_call_cuda
 from xai_pilot.metrics.stability import run_n_times
 from xai_pilot.model import load_florence2
 from xai_pilot.prompts import PERSON_PHRASE, RULE_4_PROXIMITY_PAIR, RULE_QUERIES
@@ -29,6 +31,49 @@ from xai_pilot.prompts import PERSON_PHRASE, RULE_4_PROXIMITY_PAIR, RULE_QUERIES
 N_CALIBRATION = 15
 N_FULL_STUDY = 1000
 DETECTION_TASK = "<OPEN_VOCABULARY_DETECTION>"
+
+
+def _run_benchmark(warmup: int, n_benchmark: int) -> int:
+    """Phase 2.6: real per-sample timing with a standardized GPU-synced boundary,
+    separating GPU-compute time from end-to-end wall-clock."""
+    preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
+    subset = preds_df.head(warmup + n_benchmark)
+    target_ids = set(subset["image_id"])
+
+    print("Loading Florence-2-base-ft...")
+    model, processor = load_florence2()
+    # Pre-fetch images so I/O is outside the timed region (proving GPU-bound is
+    # only meaningful once data loading is excluded -- local parquet cache).
+    ds = load_construction_site(split="test", streaming=True)
+    images_by_id = {}
+    for row in ds:
+        if row["image_id"] in target_ids:
+            images_by_id[row["image_id"]] = row["image"]
+        if len(images_by_id) >= len(target_ids):
+            break
+
+    rows = []
+    for _, row in subset.iterrows():
+        image = images_by_id[row["image_id"]]
+        rule_id = row["assigned_rule_id"]
+        _, gpu_ms, wall_ms = time_call_cuda(
+            lambda img=image, r=rule_id: answer_rule(model, processor, img, r)
+        )
+        rows.append({"image_id": row["image_id"], "assigned_rule_id": rule_id,
+                     "gpu_ms": gpu_ms, "wall_ms": wall_ms})
+
+    df = pd.DataFrame(rows)
+    out_csv = RESULTS_DIR / "efficiency_benchmark.csv"
+    df.to_csv(out_csv, index=False)
+    gpu = summarize_timings(df["gpu_ms"].tolist(), warmup=warmup)
+    wall = summarize_timings(df["wall_ms"].tolist(), warmup=warmup)
+    print(f"\nWrote {len(df)} rows to {out_csv}  (first {warmup} discarded as warm-up)")
+    print(f"\nPer-sample GPU-compute time (ms): mean={gpu['mean_ms']:.1f}  median={gpu['median_ms']:.1f}  p90={gpu['p90_ms']:.1f}")
+    print(f"Per-sample end-to-end wall time (ms): mean={wall['mean_ms']:.1f}  median={wall['median_ms']:.1f}  p90={wall['p90_ms']:.1f}")
+    ratio = gpu["mean_ms"] / wall["mean_ms"] if wall["mean_ms"] else float("nan")
+    print(f"GPU-compute / wall-clock ratio: {ratio:.2f}  "
+          f"({'GPU-bound' if ratio > 0.85 else 'CPU/IO-bound'} -- images pre-cached, I/O excluded)")
+    return 0
 
 
 def _phrase_for_top_region(rule_id: str, top_label: str) -> str:
@@ -40,8 +85,14 @@ def _phrase_for_top_region(rule_id: str, top_label: str) -> str:
     return RULE_QUERIES[rule_id][0]
 
 
-def main() -> int:
-    """Combine recorded timings with bounded calibration measurements."""
+def main(benchmark: bool = False, warmup: int = 5, n_benchmark: int = 60) -> int:
+    """Combine recorded timings with bounded calibration measurements.
+
+    With `benchmark` (Phase 2.6), instead runs a real per-sample timing pass with
+    a standardized GPU-synced boundary and reports GPU-compute vs wall-clock.
+    """
+    if benchmark:
+        return _run_benchmark(warmup, n_benchmark)
     # Convert numeric columns explicitly because reading with dtype=str keeps
     # identifiers stable but would otherwise make arithmetic concatenate text.
     preds_df = pd.read_csv(RESULTS_DIR / "baseline_predictions.csv", dtype=str)
@@ -180,4 +231,14 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        default=False,
+        help="Run the Phase 2.6 real per-sample timing (GPU-compute vs wall-clock).",
+    )
+    parser.add_argument("--warmup", type=int, default=5, help="Warm-up samples to discard.")
+    parser.add_argument("--n-benchmark", type=int, default=60, help="Timed samples after warm-up.")
+    args = parser.parse_args()
+    sys.exit(main(benchmark=args.benchmark, warmup=args.warmup, n_benchmark=args.n_benchmark))

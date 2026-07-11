@@ -17,6 +17,15 @@ MODEL_ID = "microsoft/Florence-2-base-ft"
 SEED = 42
 SAMPLES_PER_CLASS = 50
 
+# Neutral placeholder phrase for the descriptive-accuracy TEXT-ablation probe
+# (Scale-up Phase 2.1). Florence-2 is a grounding proxy, not a native-VQA model,
+# so a true "drop the query token" ablation is not well-defined; the closest
+# analog is to ground a concept-free phrase in place of the rule's specific
+# object and see whether the compliance answer still holds. This is a PROXY
+# APPROXIMATION and its numbers are reported separately from any native-VQA
+# text-ablation (Phase 5). See inference.answer_rule_text_ablated.
+TEXT_ABLATION_PHRASE = "object"
+
 # Candidate-region ranking policy for masking/overlap metrics (Scale-up
 # Phase 1.1). Default "area" reproduces the frozen 163-sample pilot record
 # byte-for-byte; the scale run overrides this to "rule_aware" (via the metric
