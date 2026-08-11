@@ -1,0 +1,83 @@
+\chapter{Efficiency: Real Per-Sample Timing, GPU-Compute vs.\ Wall-Clock (Phase 2.6)}
+\label{chap:p2-6}
+
+\section{Goal}
+
+The pilot's efficiency numbers were built from a 15-sample calibration and a linear extrapolation, with
+no separation of GPU-compute time from end-to-end wall-clock and no standardized timing boundary. The
+plan (item 4.6) asks for real per-sample timing with an explicit boundary (generate-only, device
+synchronized, warm-up discarded), a GPU-compute-vs-wall-clock split to prove the workload is GPU-bound,
+and --- deferred to the cluster --- a batched re-benchmark at multiple scales and a re-cost after the
+gradient-attribution (D1) and dense-captioning (D4) decisions.
+
+\section{What Was Done}
+
+Two utilities were added. \texttt{summarize\_timings} discards a configurable number of warm-up
+measurements (cold caches, kernel autotuning) and reports mean, median, and p90, so tail cost is visible
+rather than hidden in a single calibrated mean. \texttt{time\_call\_cuda} wraps a call with a
+standardized boundary: \texttt{torch.cuda.synchronize()} before and after, CUDA events to measure the
+GPU-busy time, and \texttt{perf\_counter} for total wall time. The GPU time is the interval the GPU is
+actually executing kernels; the wall time is everything. Their ratio is the GPU-bound-ness. Script~08
+gained a \texttt{-{}-benchmark} mode that pre-fetches images (so I/O is outside the timed region ---
+the local parquet cache makes this valid), discards warm-up samples, times each real sample, and reports
+the split; the frozen calibration path is unchanged. Three unit tests cover the warm-up discarding and
+p90.
+
+\section{Results}
+
+Timing 60 real samples (after 5 discarded warm-up samples), with the standardized boundary:
+
+\begin{center}
+\begin{tabular}{p{5.2cm}p{2.2cm}p{2.2cm}p{2.2cm}}
+\toprule
+\textbf{measure} & \textbf{mean} & \textbf{median} & \textbf{p90} \\
+\midrule
+GPU-compute time (ms/sample)    & 264.7 & 254.0 & 299.5 \\
+end-to-end wall time (ms/sample) & 264.8 & 254.1 & 299.9 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Real per-sample timing under the standardized GPU-synced boundary. GPU-compute and
+wall-clock are essentially identical.}
+\label{tab:p26-timing}
+\end{center}
+
+The GPU-compute-to-wall-clock ratio is \textbf{1.00}: the CUDA-event GPU time and the total wall time
+coincide to within measurement noise. With images pre-fetched from the local cache and excluded from the
+timed region, essentially all per-sample cost is GPU kernel execution --- there is no meaningful
+CPU, Python, or I/O overhead left to shave. This is the direct, measured confirmation of the claim the
+pilot could only assert: the pipeline is GPU-bound, and the local data cache (Phase~3) has removed the
+streaming I/O that would otherwise contend. The real per-sample figure, 264.7~ms mean with a 299.5~ms
+p90, replaces the pilot's calibrated point estimate and makes the tail explicit; at this cost one metric
+pass over the full 3{,}004-image test split is about 13 GPU-minutes, extrapolated from a measured
+per-sample number rather than a 15-sample calibration.
+
+\section{What Is Deliberately Deferred}
+
+Two of the plan's efficiency asks belong to hardware this pilot does not have and decisions not yet
+taken, and are recorded as scale-run steps rather than forced here. The batched, multi-scale re-benchmark
+(1k / 2.5k / 10k on the target cluster, to expose memory fragmentation and thermal effects that a
+single-GPU per-sample number cannot) requires the cluster. And the re-cost after D1 (gradient attribution,
+which the plan estimates at $10$--$50\times$ the forward-pass cost) and D4 (dense captioning, whose longer
+outputs make the decode loop no longer free) cannot be measured until those decisions are made and their
+code exists. The measurement machinery built here --- the synchronized boundary, warm-up discarding, and
+the GPU-vs-wall split --- is exactly what those re-benchmarks will reuse; only the workload changes.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard.} Synchronizing the device around a timed region, discarding warm-up, and reporting a
+tail percentile are basic GPU-benchmarking hygiene that the pilot's calibration skipped.
+
+\textbf{Non-standard, and the contribution.} Reporting GPU-compute and wall-clock as \emph{separate}
+measured quantities, and using their ratio as an explicit GPU-bound-ness test, turns ``we believe it is
+GPU-bound'' into a number (1.00). It also draws the line honestly at what a single-GPU pilot can measure:
+the per-sample cost is real and reported, while the cluster-scale and post-D1/D4 costs are named as
+pending rather than extrapolated from a machine and a workload that do not yet exist.
+
+\section{Implications}
+
+Every metric script can now be timed at its true per-sample cost with a consistent boundary, and the
+GPU-bound result means the scale run's budget is governed by GPU throughput and batching, not I/O ---
+which is what makes the deferred cluster batched benchmark the right next measurement. This closes
+Phase~2: all six metrics now carry validity corrections (rule-aware, worker-loss-corrected, size-invariant,
+dose-response, multi-hazard) and a real efficiency instrument, on a pipeline that still reproduces the
+frozen pilot byte-for-byte under its default flags.

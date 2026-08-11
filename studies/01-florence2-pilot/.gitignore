@@ -1,0 +1,14 @@
+.venv/
+
+# Only the BULK dataset is excluded (~4.5 GB, re-downloadable with
+# scripts/download_data.py). Previously this line read "data/", which silently
+# excluded pilot_samples.csv and safety_prompts.json as well -- the two small
+# files that define the frozen 163-sample pilot. Without them a clone could not
+# reproduce the published run, so they are tracked.
+data/constructionsite/
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.egg-info/
+.pytest_cache/

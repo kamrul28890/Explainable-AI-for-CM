@@ -1,0 +1,123 @@
+\chapter{Constructing a Balanced, Rule-Mapped Pilot Sample (Day 2)}
+\label{chap:day02}
+
+\section{Motivation}
+
+With the environment established in Chapter~1, the pilot needed a fixed, finite sample to evaluate
+against, rather than an open-ended stream of dataset rows. ConstructionSite 10k's test split
+contains thousands of images covering four safety conditions of interest --- PPE violations, fall
+hazards, struck-by risk, and full compliance --- in proportions set by the dataset itself, not by
+the pilot's evaluation needs. Drawing a plain random sample from that split risks a sample
+dominated by whichever class happens to be most common, leaving the rarer classes too thin to
+support any later per-class analysis. Day 2's task was therefore to construct a sample that is
+(i) balanced across the four classes the pilot cares about, (ii) explicitly mapped to the specific
+safety rule each sample is meant to test, and (iii) reproducible from a fixed seed, before any
+inference or evaluation work began.
+
+\section{Implementation}
+
+Three functions, added to \texttt{data.py} in commit \texttt{c76a642}, carry Day 2's logic, together
+with a new \texttt{RULE\_QUERIES} table in \texttt{prompts.py} and a driver script,
+\texttt{scripts/02\_select\_samples.py}, that writes the resulting sample to
+\texttt{pilot\_samples.csv}.
+
+\texttt{classify\_image(row)} maps a dataset row's rule-violation fields to one of four classes.
+A row may violate zero, one, or several of the four safety rules; \texttt{classify\_image} returns
+a single \texttt{primary\_class}, taken as the highest-priority violated class according to
+\texttt{config.py}'s \texttt{CLASS\_PRIORITY = ["ppe\_violation", "fall\_hazard",
+"struck\_by\_risk", "compliant"]}. A row that violates both rule~1 and rule~3, for example, is
+classified \texttt{ppe\_violation} rather than \texttt{fall\_hazard}, because \texttt{ppe\_violation}
+sits earlier in the priority list. Separately, \texttt{violated\_rule\_ids} records every rule the
+row actually violates, not only the one that determined \texttt{primary\_class}.
+
+\texttt{assign\_rule\_id} then picks the one rule each sample is tested against in Days 3--10.
+\texttt{config.py}'s \texttt{RULE\_TO\_CLASS} maps \texttt{rule\_1\_violation} to
+\texttt{ppe\_violation}, \texttt{rule\_2\_violation} and \texttt{rule\_3\_violation} both to
+\texttt{fall\_hazard}, and \texttt{rule\_4\_violation} to \texttt{struck\_by\_risk}. For a violation
+sample, the assigned rule is the one unambiguous violated rule that maps to its
+\texttt{primary\_class}. Compliant samples have no ground-truth rule to assign, since by
+definition they violate none; these are instead round-robined evenly across
+\texttt{COMPLIANT\_ROUND\_ROBIN = ["rule\_1", "rule\_2", "rule\_3", "rule\_4"]}. This round-robin is
+a deliberate design choice: it gives balanced "model correctly says compliant" coverage for each
+rule, rather than testing the same rule against every compliant image and leaving the other three
+rules with no compliant counterexamples at all.
+
+\texttt{select\_balanced\_sample} performs the actual selection in a single streaming pass over the
+dataset. For each of the four classes, a reservoir of candidate samples is kept, capped at
+\texttt{n\_per\_class * 10} (500 candidates) to bound memory while streaming. Once reservoirs are
+populated, the final sample is a seeded (\texttt{SEED = 42}) random draw of \texttt{n\_per\_class}
+(\texttt{SAMPLES\_PER\_CLASS = 50}) from each class's reservoir, making the selection reproducible
+from the same seed and dataset stream.
+
+\texttt{prompts.py} additionally introduces \texttt{RULE\_QUERIES}, two phrasings per presence-based
+rule used later to query Florence-2: \texttt{rule\_1: ["hard hat", "high-visibility vest"]},
+\texttt{rule\_2: ["safety harness", "fall-protection lanyard"]}, and \texttt{rule\_3: ["guardrail",
+"edge protection barrier"]}. \texttt{PERSON\_PHRASE = "worker"} and
+\texttt{RULE\_4\_PROXIMITY\_PAIR = ("worker", "excavator")} support rule~4's proximity-based check,
+which is structurally different from the presence checks used for rules 1--3. \texttt{RULE\_QUERIES}
+is not yet consumed on Day 2; it is written here so that Day 3's inference step has a single,
+already-defined source of query phrasings to draw from.
+
+\section{Results}
+
+\texttt{scripts/02\_select\_samples.py} streamed the ConstructionSite test split once and wrote the
+selected sample to \texttt{pilot\_samples.csv}. The result is 163 total rows, not the 200 originally
+planned (50 per class across four classes):
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Class} & \textbf{Count} \\
+\midrule
+\texttt{ppe\_violation} & 50 \\
+\texttt{fall\_hazard} & 50 \\
+\texttt{compliant} & 50 \\
+\texttt{struck\_by\_risk} & 13 \\
+\midrule
+\textbf{Total} & 163 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three of the four classes filled to the planned target of 50. \texttt{struck\_by\_risk} filled to
+only 13, capped by genuine scarcity in the underlying dataset rather than by any defect in the
+sampling procedure: the entire 3{,}004-image test split contains only 13 \texttt{struck\_by\_risk}
+examples in total, a fact confirmed directly by an exhaustive scan of the full split rather than
+assumed from the reservoir's behavior.
+
+\section{Problems Encountered and Resolutions}
+
+The shortfall in \texttt{struck\_by\_risk} samples was the one substantive problem encountered on
+Day 2. It surfaced as \texttt{select\_balanced\_sample}'s reservoir for that class filling to only
+13 candidates regardless of how much of the stream was consumed. Rather than treat this as a
+sampling bug to be patched, it was investigated directly: a full scan of the test split confirmed
+that 13 is the true population count for \texttt{struck\_by\_risk} in that split, not an artifact
+of the streaming or reservoir logic. \emph{Resolution}: proceed with \texttt{n=13} for
+\texttt{struck\_by\_risk} rather than block the pilot on a class the dataset cannot supply at the
+planned size. This shortfall is flagged explicitly as a limitation here, and it recurs in every
+later chapter's \texttt{struck\_by\_risk} numbers.
+
+\section{Standard vs. Non-Standard Choices}
+
+The sampling strategy is, in its broad outline, standard practice: stratified, class-balanced
+sampling implemented via per-class reservoir sampling with a fixed seed, so the same sample can be
+reconstructed from the same dataset stream. This part of the design follows well-established
+sampling methodology and is not particular to this pilot.
+
+The round-robin assignment of rules to compliant samples, by contrast, is non-standard: it is a
+domain-specific balancing choice, motivated by the absence of a natural ground-truth rule for
+compliant images, and is not a pattern found in generic sampling libraries. It was introduced here
+specifically so that each of the four safety rules receives roughly equal compliant-sample coverage
+for later "correctly identifies compliance" evaluation, rather than leaving that coverage to chance.
+
+\section{Implications for the Paper}
+
+The 13-vs-50 class imbalance in \texttt{struck\_by\_risk} is a property of the ConstructionSite 10k
+dataset itself, not a limitation of the sampling method used to draw from it, and should be reported
+as such in any paper's Dataset or Limitations section. Because the imbalance was confirmed by an
+exhaustive scan rather than inferred from the pilot's own reservoir behavior, it can be stated with
+confidence rather than hedged. This scarcity directly motivates an open question raised again in
+Chapter~14: whether a future iteration of this work should scale up data collection specifically for
+underrepresented classes such as \texttt{struck\_by\_risk}, or instead accept and explicitly correct
+for the imbalance during evaluation. With a fixed, balanced, rule-mapped sample of 163 images now in
+hand, the pilot's next step is to run baseline inference over that sample.

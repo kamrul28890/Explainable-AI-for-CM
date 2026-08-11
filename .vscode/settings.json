@@ -1,0 +1,26 @@
+{
+  // The pilot venv lives at pilot/.venv, not the workspace root, so VS Code does not
+  // discover it automatically and defaults to C:\Program Files\Python310 -- whose
+  // torch/torchvision are ABI-mismatched and abort the Jupyter kernel on import
+  // ("The Kernel crashed..."). Pointing at the venv explicitly prevents that.
+  "python.defaultInterpreterPath": "${workspaceFolder}/pilot/.venv/Scripts/python.exe",
+  "python.venvPath": "${workspaceFolder}/pilot",
+  "jupyter.notebookFileRoot": "${workspaceFolder}/pilot",
+
+  // Notebook text sizing. These are VIEWER settings -- they are not stored in the .ipynb
+  // and cannot be set from inside it.
+  //
+  // By default VS Code renders markdown at editor.fontSize * 1.2 while output falls back
+  // to editor.fontSize, so prose reads ~20% larger than the output beneath it. Pinning
+  // both to the same value makes body text and output text match; markdown headings still
+  // scale up relative to this base, which is the intended hierarchy.
+  "notebook.markup.fontSize": 14,
+  "notebook.output.fontSize": 14,
+  // Code cells use the editor font size; matching it keeps source, output, and prose
+  // all on one visual scale.
+  "editor.fontSize": 14,
+
+  // Output panes wrap rather than scroll horizontally, so the wide printed tables in the
+  // walkthrough notebook stay readable.
+  "notebook.output.wordWrap": true
+}

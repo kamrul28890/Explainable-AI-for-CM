@@ -1,0 +1,69 @@
+\chapter{Multi-Seed Selection: A Single SEED=42 Point Hides Draw Variation (Phase 3.2)}
+\label{chap:p3-2}
+
+\section{Goal}
+
+Every pilot number came from one seeded sample draw (SEED=42). The plan requires the scale run to repeat
+sample selection and every stochastic step across multiple seeds (recommended $\geq 5$) and report mean
+$\pm$ CI, not a single point, so that the reported metric reflects the estimator's variance across draws
+rather than the luck of one. This phase builds the multi-seed selection harness and quantifies how much
+the draw actually varies.
+
+\section{What Was Done}
+
+\texttt{config.SEEDS} defines the seed set (\{42, 43, 44, 45, 46\}). A pure, unit-tested
+\texttt{mean\_pairwise\_jaccard} measures how much two selections overlap. Script~02 gained a
+\texttt{-{}-seeds} mode that materializes the test split once, runs the balanced selection under each
+seed, and reports per-class counts and the mean pairwise Jaccard overlap of the selected image sets ---
+without writing a manifest, so the frozen \texttt{pilot\_samples.csv} is untouched.
+
+\section{Results}
+
+\begin{center}
+\begin{tabular}{p{5.6cm}p{6.0cm}}
+\toprule
+\textbf{quantity} & \textbf{across seeds \{42\ldots46\}} \\
+\midrule
+per-class counts                       & identical every seed (50 / 50 / 13 / 50) \\
+mean pairwise Jaccard of selections    & \textbf{0.222} \\
+distinct images used (5 seeds)         & 475 (vs 200 per seed) \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Multi-seed selection stability on the test split. Class balance is perfectly
+seed-invariant, but the specific images differ substantially between seeds (Jaccard 0.222), so five
+seeds collectively touch 475 distinct images.}
+\label{tab:p32-seeds}
+\end{center}
+
+The two facts pull in opposite directions, and both matter. The class \emph{balance} is identical every
+seed by construction --- 50 per class, and all 13 struck\_by\_risk every time --- so the selection is
+never accidentally imbalanced. But \emph{which} images fill each class varies a lot: any two seeds share
+only about a fifth of their selections, and the five seeds together use 475 distinct images to build a
+200-image subset. A metric computed on seed 42's draw is therefore one sample from a distribution over
+draws, and quoting it alone --- as the pilot did --- discards that variance. Running the metrics under
+each seed and combining them with the bootstrap CIs from Phase~3.1 is what turns a single point into the
+mean $\pm$ CI the plan requires.
+
+One detail the report also surfaces: struck\_by\_risk shows \emph{zero} seed variation because all 13 of
+its images are selected every time (the pool is smaller than the 50-per-class target). That is not
+stability --- it is exhaustion, and it is another face of the same under-powering the Phase~3.1 floor
+flagged: with only 13 images there is nothing left to vary, and no amount of re-seeding adds
+information. Only more data (the multi-label recovery of Phase~1.2 and the train split) can.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard.} Averaging over random seeds and reporting the spread is baseline reproducibility
+practice.
+
+\textbf{Non-standard.} Materializing the split once and re-selecting in memory keeps a five-seed sweep
+cheap, and reporting the Jaccard overlap makes the ``how much does the draw matter'' question a measured
+number (0.222) rather than an assumption. The harness is deliberately separated from the manifest writer
+so the multi-seed report never disturbs the frozen single-seed record.
+
+\section{Implications}
+
+The selection harness is multi-seed-ready; the scale run will run each metric under every seed and report
+mean $\pm$ CI via the Phase~3.1 bootstrap, replacing the pilot's single-point numbers. The struck-by
+exhaustion result is one more concrete argument for growing $n$ before that class's numbers are quoted.
+The remaining stochastic step to seed-sweep is stability's sampling, which already accepts a seed through
+the same path.

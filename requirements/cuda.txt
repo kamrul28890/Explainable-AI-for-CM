@@ -1,0 +1,27 @@
+# Windows / Linux with an NVIDIA GPU -- the COMPUTE machine.
+#
+# torch MUST be installed first and separately, because pip will otherwise resolve
+# it as a transitive dependency and silently install a CPU-only wheel. Everything
+# then runs on the CPU, roughly 50x slower, with no error message.
+#
+#   pip install torch==2.12.1 torchvision --index-url https://download.pytorch.org/whl/cu130
+#   pip install -r requirements/base.txt -r requirements/cuda.txt
+#
+# Pick the cuXXX tag matching your driver from https://download.pytorch.org/whl/
+# The versions below are the exact ones verified working on the reference machine:
+#
+#   Python 3.10.11 | torch 2.12.1+cu130 | CUDA build 13.0 | RTX 3070 (8 GB)
+#   transformers 4.49.0 | numpy 2.2.6 | pandas 2.3.3
+#
+# This machine runs every model-inference stage: both the frozen Florence-2 pilot
+# and all VQA stages of the new study. Attention extraction, image-token ablation
+# and bitsandbytes quantisation all require CUDA.
+
+# Declared so a mismatch is caught loudly rather than by a silent CPU fallback.
+# If pip reports a conflict here, torch was installed from the wrong index.
+torch==2.12.1
+torchvision
+
+# Distributed/offload helpers used when a model does not fit in VRAM in one piece.
+accelerate>=1.0
+safetensors>=0.4

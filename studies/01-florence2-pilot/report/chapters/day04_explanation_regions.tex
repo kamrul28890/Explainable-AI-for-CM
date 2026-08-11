@@ -1,0 +1,162 @@
+\chapter{Standardizing Explanation Regions for Masking-Based Tests (Day 4)}
+\label{chap:day04}
+
+\section{Motivation}
+
+Day 3 left every sample with a baseline judgment and, for rules~1--3, a person-relative detection
+process that grounds independent worker and safety-object boxes rather than asking a single
+scene-level existence question. Those boxes were produced to decide compliant/violation; they were
+not yet organized into anything a later explanation-testing method could consume. Descriptive
+Accuracy, the masking-based evaluation planned for Day 5, needs a single, well-defined region to
+mask per sample --- a candidate answer to "which part of the image does the model's judgment depend
+on?" --- and a procedure for actually producing the masked image. Day 4's task was to build that
+standardization layer: take Day 3's already-computed boxes, rank them into an ordered list of
+candidate explanation regions, and provide a masking primitive that blacks out (or blurs) the
+top-ranked region for re-inference. Day 3 and Day 4's work were developed together, per commit
+\texttt{6de76fb}, reflecting that the redesigned proxy and the regions layer that consumes its boxes
+were designed as a single piece of work rather than as two independent days.
+
+\section{Implementation}
+
+\texttt{regions.py} introduces a \texttt{Region} dataclass --- a \texttt{box}, a \texttt{source}
+field (\texttt{"model"} or \texttt{"grid"}), and a \texttt{label} --- as the standard unit the rest
+of the pilot's masking-based tests operate on. \texttt{standardize\_regions(boxes, labels,
+image\_size, grid=(4, 4))} is the layer's central function: it ranks model-returned boxes by
+\textbf{area, descending}, and returns them as a list of \texttt{Region} objects with
+\texttt{source="model"}. Florence-2's grounding output carries no attention or saliency map, so
+there is no real per-region importance score available to rank by; area is used as an explicit,
+acknowledged stand-in, on the assumption that a larger detection is more likely to be the salient
+one than a sliver. Only when the model returned \emph{zero} boxes at all does
+\texttt{standardize\_regions} fall back to an unranked $4\times4$ grid, via
+\texttt{grid\_fallback\_regions}, so that every sample still has some candidate region to mask even
+when grounding failed outright.
+
+Three smaller helpers round out the module: \texttt{iou()} computes intersection-over-union between
+two boxes; \texttt{mask\_region()} fills a given box with either a solid black patch or a
+Gaussian-blurred copy of the same region (\texttt{mode="black"} or \texttt{mode="blur"}); and
+\texttt{boxes\_overlap\_or\_close()} tests whether two boxes overlap or have edges within a distance
+threshold. The last of these underlies \texttt{all\_boxes\_covered()}, which is, in fact, the
+function that Chapter 3's redesigned \texttt{\_answer\_presence\_rule} actually calls to check that
+every detected worker is covered by a nearby safety-object box. That helper's home in
+\texttt{regions.py} rather than in Day 3's own module is the clearest evidence that Day 3's proxy
+redesign and Day 4's regions layer were not sequential, independent pieces of work but a single
+designed unit, split across two chapters here only for narrative pacing.
+
+\texttt{scripts/04\_extract\_regions.py} applies \texttt{standardize\_regions} to all 163 samples,
+reusing the \texttt{worker\_boxes} and \texttt{object\_boxes} already written to
+\texttt{results/baseline\_predictions.csv} by Day 3 --- no new GPU inference was needed for this
+step. For each sample it records the top-ranked region's source and label, and for the first ten
+samples it additionally saves a before/after masked-image pair, applying \texttt{mask\_region} in
+\texttt{"black"} mode to the top region, so the masking step itself can be sanity-checked visually
+before Day 5 relies on it.
+
+\section{Architecture: A New Masking Layer}
+
+Figure~\ref{fig:diagram-c} shows where this chapter's layer sits relative to Day 3's baseline.
+Day 3 produces grounded boxes and labels; Day 4 adds everything downstream of that point ---
+ranking the boxes into an ordered region list, and masking the top-ranked region to produce an
+image suitable for the re-inference step that Descriptive Accuracy will perform on Day 5. Nothing
+in this diagram changes how Day 3's boxes are produced; it only standardizes what is done with them
+afterward.
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=1.6cm]
+\node[block] (boxes) {Baseline boxes\\+ labels (Day 3)};
+\node[block, right=of boxes] (rank) {standardize\_regions\\(rank by area /\\grid fallback)};
+\node[block, right=of rank] (region) {Ranked\\Region list};
+\node[block, right=of region] (mask) {mask\_region\\(black / blur)};
+\node[block, right=of mask] (out) {Masked image\\for re-inference};
+\draw[arrow] (boxes) -- (rank);
+\draw[arrow] (rank) -- (region);
+\draw[arrow] (region) -- (mask);
+\draw[arrow] (mask) -- (out);
+\end{tikzpicture}%
+}
+\caption{Regions/masking layer added on top of Day 3's baseline grounding output.}
+\label{fig:diagram-c}
+\end{figure}
+
+\section{Worked Example}
+
+Figure~\ref{fig:day04-worked} revisits image 7's rule~1 (hard hat) sample, the same worked example
+used in Chapter 3, for narrative continuity. The left panel shows the top-ranked region --- the
+largest of the model-returned boxes, outlined for inspection --- overlaid on the original image; the
+right panel shows the result of \texttt{mask\_region} applied to that same box in
+\texttt{"black"} mode. The masked region corresponds exactly to the ranked top box and nothing else
+in the frame, confirming that the masking primitive is doing precisely what it is meant to do before
+it is relied on for the Descriptive Accuracy measurements in Chapter 5.
+
+\begin{figure}[h]
+\centering
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{regions/0000007_rule_1_before.png}
+\caption{Before: top-ranked region outlined.}
+\end{subcaptionblock}
+\hfill
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{regions/0000007_rule_1_after.png}
+\caption{After: top-ranked region masked.}
+\end{subcaptionblock}
+\caption{Image 7, rule~1 (hard hat): the region ranked first by area, before and after
+\texttt{mask\_region} blacks it out.}
+\label{fig:day04-worked}
+\end{figure}
+
+\section{Results}
+
+Running \texttt{standardize\_regions} over all 163 samples shows that a real model-returned box was
+available and ranked first for \textbf{159/163 samples (97.5\%)}; the remaining \textbf{4/163
+(2.5\%)} returned zero boxes and correctly fell back to the unranked grid. The model-box rate this
+high confirms that Day 3's grounding calls are, for the overwhelming majority of samples, supplying
+the regions layer with something real to rank, and that the grid fallback is functioning as the
+rare exception it was designed to be rather than as a frequently-used default. Visual inspection of
+2 of the 10 saved before/after pairs confirmed that \texttt{mask\_region} blacks out exactly the
+ranked top box and nothing else in the frame, as shown in Figure~\ref{fig:day04-worked}.
+
+\section{Problems Encountered and Resolutions}
+
+The central design problem on Day 4 was not a bug but a missing capability in the underlying model:
+Florence-2's grounding output provides no real saliency signal, no per-pixel or per-region
+importance score of the kind that an attention map or a gradient-based attribution method would
+supply. Without such a signal, there was no principled way to rank multiple candidate boxes by
+"how much the model's judgment depends on this region." The resolution was an explicit design
+decision, made and documented here rather than left implicit, to rank by box area as the best
+available stand-in --- on the working assumption that a larger detected region is more likely to be
+the one driving the judgment than a small one --- while flagging plainly that this is a stand-in,
+not a claim of true importance. \textbf{This choice is shown later in the pilot (Chapters 6, 7, and
+10) to systematically disadvantage small PPE objects}: a hard hat or harness is small relative to
+the worker or scene around it, so an area-based ranking will tend to rank larger, non-PPE boxes
+above the actual PPE object whenever both are present as candidates. That consequence is
+forward-referenced here, at the point the choice was made, so it reads in this report as a foreseen
+limitation rather than one discovered by accident downstream.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard}: using bounding-box masking or occlusion as an explanation-testing primitive is a
+long-established pattern in vision explainability, the same basic idea behind occlusion sensitivity
+maps --- block out a region, observe whether and how the model's output changes, and treat a change
+as evidence that the region mattered. Adopting that primitive here, rather than inventing a new
+testing mechanism, follows established practice.
+
+\textbf{Non-standard}: ranking candidate regions purely by box area as a substitute for a true
+importance score is not a published method, and is not presented as one. It is an explicit,
+acknowledged simplification, adopted because Florence-2's grounding output leaves no real
+saliency signal to rank by, and reported here as a designed-and-flagged limitation rather than
+folded silently into the pipeline as if it were equivalent to a genuine importance ranking.
+
+\section{Implications for the Paper}
+
+The area-ranking heuristic should be flagged explicitly in the paper as a limitation and
+future-work item: it is the single highest-leverage fix identified across the entire pilot (see
+Chapter 10, Finding 1, and Chapter 14's task list, item 3). Its effect is not confined to this
+chapter. Because \texttt{standardize\_regions}'s ranking feeds every later masking-based test built
+on top of it, the area-based choice made here is the mechanism behind the PPE-disadvantage findings
+reported in Chapters 6, 7, and 10: small, genuinely safety-relevant objects are structurally
+under-ranked relative to larger, often less relevant boxes, independent of how well any later
+evaluation metric itself is designed. Recording that link here, at the point of the original design
+decision, lets the paper present the limitation as anticipated and explained rather than as a
+finding that surfaces without an account of its cause.

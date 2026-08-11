@@ -1,0 +1,189 @@
+\chapter{Rule-Aware Region Ranking (Phase 1.1)}
+\label{chap:p1-1}
+
+\section{Goal}
+
+The pilot's single highest-leverage defect, identified in Chapter~10 of the pilot report and
+restated as item~3.1 of the scale-up plan, is that candidate explanation regions were ranked by
+pixel \emph{area}. Florence-2 returns one box for the worker and one box for the queried safety
+object (a hard hat, a harness, a guardrail, an excavator); the worker's whole-body box is almost
+always larger than a hard hat or a harness worn on that body, so area ranking put the \emph{worker}
+at rank~1 in 96\% of PPE (rule\_1) samples. Every downstream masking and overlap metric then
+perturbed or measured the worker box instead of the safety object the rule is actually about.
+
+The pilot report converted this observation into a falsifiable prediction, which is the target this
+phase must hit. Splitting the 163 pilot samples by which entity was ranked top-1, masking the worker
+flipped the answer in only 37.5\% of cases versus 49.4\% for the actual safety object --- an
+\textbf{11.9 percentage-point gap} that the report attributed entirely to the ranking heuristic
+promoting the wrong entity, not to any property of the model. The prediction: once ranking stops
+systematically promoting the worker, that gap should ``narrow substantially, if not close
+outright.''
+
+\section{What Was Done}
+
+\subsection{A ranking policy, selected by flag, defaulting to the frozen behavior}
+
+\texttt{regions.standardize\_regions} gained a \texttt{region\_ranking} parameter taking one of three
+values:
+
+\begin{itemize}
+  \item \texttt{"area"} --- the frozen pilot behavior: model boxes sorted by descending area. This
+  remains the default so that every recorded pilot number reproduces byte-for-byte.
+  \item \texttt{"rule\_aware"} --- regions whose label is the rule's queried safety object are
+  promoted above all others; within each tier, boxes are still ordered by descending area. This is
+  the scale-up policy.
+  \item \texttt{"attention"} --- reserved for Phase~4, where cross-attention / Integrated-Gradients
+  mass will supply a real per-region importance signal. Until that signal exists, the mode raises
+  \texttt{NotImplementedError} rather than silently falling back to area, so that no run can quietly
+  produce area-ranked numbers while believing they are attention-ranked.
+\end{itemize}
+
+The two-tier sort is implemented as two stable sorts: first by area (descending), then by a tier key
+(0 if the region's label is the rule's object, 1 otherwise). Python's stable sort preserves the area
+ordering \emph{inside} each tier, so the result is exactly ``objects first, largest object first;
+then everything else, largest first.'' \texttt{rule\_aware} requires a non-empty set of object
+labels and raises \texttt{ValueError} if none is supplied, again refusing to degrade silently.
+
+\subsection{One source of truth for the object-class map}
+
+The rule$\rightarrow$object-label map (\{rule\_1: hard hat, rule\_2: harness, rule\_3: guardrail,
+rule\_4: excavator\}) had been copy-pasted inline into three separate metric scripts
+(\texttt{04\_extract\_regions}, \texttt{05\_descriptive\_accuracy}, \texttt{07\_stability\_test}).
+It now lives once in \texttt{prompts.RULE\_OBJECT\_LABEL}, with a helper
+\texttt{rule\_object\_labels(rule\_id)} returning the object-label set that \texttt{rule\_aware}
+ranking consumes. The three scripts import the shared map instead of redeclaring it --- eliminating a
+triplicated literal that was itself a latent instance of the hardcoded-assumption class of bug
+Phase~1.7 targets.
+
+\subsection{Configuration and record protection}
+
+\texttt{config.REGION\_RANKING} holds the default policy (\texttt{"area"}). Scripts 04, 05, and 07
+each gained a \texttt{-{}-region-ranking} command-line flag defaulting to that config value. Critically,
+any non-default run writes to a \emph{mode-suffixed} output file
+(\texttt{descriptive\_accuracy\_rule\_aware.csv}, not \texttt{descriptive\_accuracy.csv}), so a
+scale-up validation run can never overwrite the frozen pilot record it is being compared against.
+
+\subsection{Test-first}
+
+Seven unit tests were written for the new behavior and watched to fail before any implementation
+existed: object-over-larger-worker promotion, area ordering within each tier, grid fallback under
+rule\_aware, the empty-\texttt{object\_labels} guard, the unknown-mode guard, and the
+\texttt{attention} not-yet-implemented guard, plus a test pinning the default to area ranking.
+
+\section{Results}
+
+\subsection{The ranking now selects the right entity}
+
+Re-ranking the 163 pilot samples' already-extracted boxes (no model re-inference needed for this
+part) shows the policy doing exactly what it should. Among the 159 samples that had a model box at
+all (four fell back to the grid under both policies):
+
+\begin{center}
+\begin{tabular}{p{6.2cm}p{3.2cm}p{3.2cm}}
+\toprule
+\textbf{Top-1 region is\ldots} & \textbf{area (frozen)} & \textbf{rule\_aware} \\
+\midrule
+the worker body          & 50.3\% & 0.6\% \\
+the rule's queried object (rule\_1/2/3) & --- & 100\% \\
+the rule's queried object (rule\_4)     & --- & 96\% \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Which entity the ranking promotes to rank~1, across the 159 model-box pilot
+samples. Under area ranking the worker body was top-1 in just over half of all samples; under
+rule\_aware it is top-1 in one.}
+\label{tab:p11-entity}
+\end{center}
+
+For PPE (rule\_1) specifically --- the case the pilot cares most about, and the case the old ranking
+handled worst --- the top region changed in 92.1\% of samples. It changed far less for rule\_3
+(6.5\%) and rule\_4 (0\%), which is correct behavior, not a weakness: guardrails and excavators are
+often already the largest box in frame, so area ranking and rule-aware ranking agree on them. The
+fix moves precisely the samples that needed moving.
+
+\subsection{The 11.9-point gap closes}
+
+Reproducing the pilot report's worker-vs-object split on the actual re-run descriptive-accuracy
+results:
+
+\begin{center}
+\begin{tabular}{p{4.4cm}p{4.4cm}p{4.4cm}}
+\toprule
+\textbf{} & \textbf{area (frozen)} & \textbf{rule\_aware} \\
+\midrule
+top-1 = worker: flip rate & 30.0\% ($n{=}80$) & 0.0\% ($n{=}1$) \\
+top-1 = object: flip rate & 43.0\% ($n{=}79$) & 39.2\% ($n{=}158$) \\
+worker-vs-object gap & $+13.0$ pp & eliminated (no worker group left) \\
+\bottomrule
+\end{tabular}
+\captionof{table}{The worker-vs-object descriptive-accuracy gap, before and after. Under area
+ranking, 80 of 159 samples masked the worker; under rule\_aware, one does. The systematic
+gap is gone because the confound that produced it --- the ranking's inconsistency about which entity
+it promotes --- is gone.}
+\label{tab:p11-gap}
+\end{center}
+
+Two honest notes on these numbers. First, the frozen gap reproduces here as 13.0~pp using the raw
+top-1 answer-flip signal, versus the report's 11.9~pp, which was computed on the bounded-completeness
+``supported'' verdict (a signal that also folds in the top-2 mask). It is the same phenomenon
+measured one step upstream; the magnitude agrees to within a point. Second, the object-group flip
+rate drops slightly, from 43.0\% to 39.2\%, once ranking is fixed. This is not a regression: the 79
+samples that previously masked the worker (mostly PPE) now join the object group, and their genuine
+object-mask flip rate is lower than the rate of the samples that already had a large object on top.
+The fix does not inflate the metric --- it de-contaminates it, and de-contamination reveals that
+masking a small PPE object flips the proxy less often than the old, worker-contaminated aggregate
+suggested. PPE's own descriptive accuracy nonetheless rises from 27.0\% to 33.3\% now that its top-1
+mask lands on the hard hat rather than the person.
+
+\subsection{The frozen record is intact}
+
+Running \texttt{04\_extract\_regions.py -{}-region-ranking area} regenerated
+\texttt{region\_extraction.csv} byte-for-byte identical to the committed pilot file (empty
+\texttt{git diff}), confirming the refactor did not disturb the default path. The full unit suite is
+green at 68 tests (61 original plus the 7 added here).
+
+\section{A Problem This Surfaced, and Its Resolution}
+
+Masking metrics carry a known artifact from the pilot: masking the \emph{worker} box can make the
+worker undetectable on the rerun, which reroutes \texttt{\_answer\_presence\_rule} into a degenerate
+scene-level fallback and flips the answer for a reason unrelated to the safety concept. The pilot
+measured this ``worker-loss'' signature as 15 samples where masking top-1-plus-top-2 \emph{un-flips}
+an answer that masking top-1 alone had flipped.
+
+After rule-aware ranking, that count rose to 22, not fell. This looks alarming until traced: it is
+the same artifact \emph{relocating}, not worsening. Under area ranking the worker was top-1, so
+worker-loss struck at the top-1 mask; under rule-aware ranking the worker is now top-2, so worker-loss
+strikes at the top-2 mask instead. The number of contaminated samples is similar; the stage at which
+the contamination appears has moved because the worker moved down the ranking.
+
+The resolution is architectural, not a patch to this phase: Phase~1.1's job is to make the metric
+test the \emph{right box}, and it does. De-contaminating the worker-loss fallback is a separate,
+explicitly-scoped item (Phase~1.4, worker-loss instrumentation), which will record post-mask worker
+boxes and report each metric twice --- raw and worker-loss-corrected. This phase's result should
+therefore be read as ``the ranking is now correct,'' and the aggregate descriptive-accuracy figure
+should not be treated as trustworthy until Phase~1.4 lands. Keeping the two fixes as distinct items,
+rather than entangling them, is what makes each independently verifiable.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard.} Ranking explanation regions by semantic relevance to the query, rather than by
+raw size, is ordinary practice; area was only ever a stopgap the pilot adopted because Florence-2's
+grounding path exposes no native importance score.
+
+\textbf{Non-standard, and the actual discipline.} Three choices go beyond the obvious fix. The old
+behavior is preserved exactly, behind a default-valued flag, so the pilot record remains a
+reproducible baseline rather than being overwritten by the improvement. Non-default runs are
+physically prevented from clobbering that record by output-file suffixing. And the not-yet-built
+\texttt{attention} mode fails loudly instead of silently falling back to area --- encoding the
+principle that a metric must never quietly report a different computation than the one its
+configuration claims. These are the habits that let a scale-up change a pipeline's behavior without
+losing the ability to prove what the old behavior was.
+
+\section{Implications}
+
+Rule-aware ranking unblocks every masking and overlap metric (descriptive accuracy, sparsity,
+stability, completeness) to operate on the safety object rather than the worker body, and it does so
+with no additional model calls --- purely a re-ordering of boxes Florence-2 has already returned. The
+pilot report's falsifiable prediction is met: the 11.9-point worker-vs-object gap closes outright.
+The immediate caveat carried forward is that the worker-loss fallback, now relocated to the top-2
+stage, must be instrumented (Phase~1.4) before the corrected descriptive-accuracy, robustness, and
+completeness aggregates can be quoted.

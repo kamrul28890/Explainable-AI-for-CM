@@ -1,0 +1,75 @@
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage[section]{placeins}
+\usepackage{subcaption}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\definecolor{briefingnavy}{HTML}{17365D}
+\definecolor{briefingblue}{HTML}{2F75B5}
+\definecolor{briefinggray}{HTML}{5B6573}
+\definecolor{briefingrule}{HTML}{CAD5E2}
+
+\setmainfont{TeX Gyre Termes}
+\setsansfont{TeX Gyre Heros}
+\setmonofont{TeX Gyre Cursor}[Scale=0.88]
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.52em}
+\setlength{\emergencystretch}{2em}
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\renewcommand{\arraystretch}{1.16}
+
+\setlist[itemize]{leftmargin=1.45em,itemsep=0.25em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=1.55em,itemsep=0.25em,topsep=0.25em}
+
+\titleformat{\section}
+  {\Large\bfseries\sffamily\color{briefingnavy}}
+  {\thesection}{0.65em}{}
+  [\vspace{0.15em}\color{briefingrule}\titlerule]
+\titleformat{name=\section,numberless}
+  {\Large\bfseries\sffamily\color{briefingnavy}}
+  {}{0em}{}
+  [\vspace{0.15em}\color{briefingrule}\titlerule]
+\titleformat{\subsection}
+  {\large\bfseries\sffamily\color{briefingblue}}
+  {\thesubsection}{0.65em}{}
+\titleformat{name=\subsection,numberless}
+  {\large\bfseries\sffamily\color{briefingblue}}
+  {}{0em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\sffamily\color{briefinggray}}
+  {\thesubsubsection}{0.65em}{}
+
+\captionsetup{
+  font=small,
+  labelfont={bf,color=briefingnavy},
+  textfont={color=briefinggray},
+  justification=centering,
+  singlelinecheck=false
+}
+\captionsetup[subfigure]{font=footnotesize,justification=centering}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=briefingnavy,
+  urlcolor=briefingblue,
+  citecolor=briefingnavy,
+  pdfborder={0 0 0}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\color{briefinggray}Explainable-AI Construction-Safety VLM Study}
+\fancyhead[R]{\small\sffamily\color{briefinggray}Meeting Briefing}
+\fancyfoot[C]{\small\sffamily\color{briefinggray}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{briefingrule}\leaders\hrule height \headrulewidth\hfill}}
+\setlength{\headheight}{20pt}
+
+\AtBeginDocument{
+  \renewcommand{\contentsname}{Briefing Outline}
+}

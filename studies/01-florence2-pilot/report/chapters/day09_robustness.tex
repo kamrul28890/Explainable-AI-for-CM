@@ -1,0 +1,469 @@
+\chapter{Robustness to Perturbation and Prompt Rewording: When a Stable Answer Hides a Drifted Explanation (Day 9)}
+\label{chap:day09}
+
+\section{Motivation}
+
+Robustness is one of the six metrics defined for evaluating black-box explainable-AI frameworks
+\citep{arreche2024exai}: does a judgment, and the explanation behind it, survive small, realistic
+perturbations to the input, or does it depend brittlely on exact pixel values and exact wording?
+Chapters 3--8 each established a different facet of how Florence-2 behaves on a single, fixed input
+--- its baseline answers, its grounded regions, its masking sensitivity, its attention concentration,
+its stochastic-decoding stability, its computational cost --- but none of them perturbed the
+\emph{input itself} and asked whether the answer and the explanation move together, move separately,
+or do not move at all. Day 9's task was to answer exactly that question, along two axes: realistic
+image perturbations (blur, lighting, occlusion, contrast) and prompt rewording (asking the same
+safety question in different words). The result is the richest chapter in this pilot, both in volume
+of findings and in the weight one of them carries: \textbf{a stable final answer can sit directly on
+top of an explanation that has completely drifted}, a result that reframes how every other chapter's
+numbers should be read.
+
+\section{Implementation}
+
+\texttt{perturbations.py} implements four Level-1 image perturbations and one stretch-test
+compositing operation. \textbf{\texttt{blur}} applies Gaussian blur with \texttt{ksize=8.0}.
+\textbf{\texttt{low\_light}} applies gamma correction with \texttt{gamma=2.5}, darkening the image.
+\textbf{\texttt{occlude}} draws a centered black square covering \texttt{frac=0.2} of the image's
+area. \textbf{\texttt{contrast\_shift}} scales pixel values around the mid-point by
+\texttt{factor=0.3}. \textbf{\texttt{paste\_patch}} composites an arbitrary patch image onto an
+arbitrary box and is used only by the stretch test described in
+Section~\ref{sec:day09-stretch}, not by the four Level-1 perturbations.
+
+\texttt{robustness.py}'s \texttt{RobustnessResult} dataclass records four fields per rerun:
+\texttt{answer\_changed} (did the final yes/no safety-rule answer flip), \texttt{confidence\_drop}
+(baseline confidence minus perturbed confidence; a negative value means confidence \emph{rose}),
+\texttt{object\_box\_iou} (intersection-over-union between the baseline's and the rerun's safety-object
+box, \texttt{NaN} if either side has no object box to compare), and \texttt{worker\_lost} --- a flag
+that fires specifically when the baseline run detected at least one worker but the perturbed rerun
+detected none. \texttt{worker\_lost} exists because Chapter~\ref{chap:day05} already found that
+masking the only detected worker reroutes \texttt{\_answer\_presence\_rule} into a degenerate
+scene-level fallback branch, flipping the answer for reasons disconnected from the safety concept
+actually being tested. The same risk applies to any perturbation that happens to make the worker
+undetectable, not only to a deliberate mask, so this chapter inherited Chapter~5's diagnostic rather
+than reinventing it.
+
+\texttt{scripts/09\_robustness\_test.py} ran three test families over the 163-sample pilot. \textbf{Level
+1} reruns all 163 samples through each of the four image perturbations above, 652 reruns in total.
+\textbf{Level 2} reruns 138 of the 163 samples with the rule's second phrasing instead of an image
+change (\texttt{phrasing\_index=1}); rule\_4 is excluded, because \texttt{answer\_rule} routes rule\_4
+to \texttt{\_answer\_rule\_4}, which has no \texttt{phrasing\_index} parameter at all --- rule\_4 is a
+fixed proximity pair (worker, excavator), not a phrase list, so passing \texttt{phrasing\_index=1} for
+it would have silently been a no-op rerun of the exact same query, not a real test of wording
+sensitivity. This was caught before any aggregation code was written and rule\_4's 25 excluded rows
+are logged with \texttt{excluded\_reason="rule\_4\_has\_no\_second\_phrasing"} rather than silently
+scored as 0\% change, which would have understated rule\_4's true (untested) rewording sensitivity by
+fabricating a result for it. \textbf{The stretch test} is a 20-sample synthetic hard-hat-patch
+experiment, covered separately in Section~\ref{sec:day09-stretch}. All Level-1 and Level-2 reruns use
+the \textbf{same deterministic decoding as the logged baseline} (\texttt{num\_beams=3}, no sampling),
+a deliberate methodological choice: without it, any answer change observed here could be attributed
+either to the perturbation or to Chapter~\ref{chap:day07}'s already-documented sampling noise, and
+there would be no way to tell which. Holding decoding fixed isolates perturbation sensitivity as the
+only thing that can change between baseline and rerun.
+
+\section{Architecture: A Perturbation Layer}
+
+Figure~\ref{fig:diagram-e} lays out the three parallel branches \texttt{09\_robustness\_test.py}
+runs over each baseline sample: a Level-1 image-perturbation branch, a Level-2 reworded-prompt
+branch that leaves the image untouched, and a patch-stretch branch that composites a synthetic
+hard-hat patch onto the image before rerunning. All three branches converge on the same comparison
+step against the logged baseline, computing \texttt{answer\_changed}, \texttt{confidence\_drop},
+\texttt{object\_box\_iou}, and \texttt{worker\_lost} uniformly regardless of which branch produced
+the rerun.
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=1.6cm,
+    block/.append style={minimum width=3.6cm, minimum height=1.3cm}]
+\node[block] (img) {Original image};
+\node[block, below=2.0cm of img, xshift=-5.2cm] (l1) {blur / low\_light /\\occlude / contrast\_shift};
+\node[block, below=2.0cm of img] (l2) {phrasing\_index=1\\(no image change)};
+\node[block, below=2.0cm of img, xshift=5.2cm] (l3) {paste\_patch\\(head\_box, hard hat)};
+\node[block, below=1.8cm of l1] (rerun1) {answer\_rule rerun};
+\node[block, below=1.8cm of l2] (rerun2) {answer\_rule rerun};
+\node[block, below=1.8cm of l3] (rerun3) {answer\_rule rerun};
+\node[block, below=1.8cm of rerun2, minimum width=8.6cm, fill=rulegray] (cmp) {Compare to baseline:\\answer\_changed, confidence\_drop,\\object\_box\_iou, worker\_lost};
+\draw[arrow] (img) -- (l1);
+\draw[arrow] (img) -- (l2);
+\draw[arrow] (img) -- (l3);
+\draw[arrow] (l1) -- (rerun1);
+\draw[arrow] (l2) -- (rerun2);
+\draw[arrow] (l3) -- (rerun3);
+\draw[arrow] (rerun1) -- (cmp);
+\draw[arrow] (rerun2) -- (cmp);
+\draw[arrow] (rerun3) -- (cmp);
+\end{tikzpicture}%
+}
+\caption{Perturbation layer: three parallel robustness branches, Level 1/Level 2/patch-stretch.}
+\label{fig:diagram-e}
+\end{figure}
+
+Note that Level 2's branch is the only one of the three that leaves the image itself unperturbed ---
+the input change is entirely in the text prompt, not the pixels --- which is why it sits in the
+middle of the diagram with no image transformation drawn inside its top-row node, only the
+\texttt{phrasing\_index=1} relabeling. The patch-stretch branch (right) is structurally a
+Level-1-style image perturbation but is kept visually and analytically separate because, unlike
+blur/low\_light/occlude/contrast\_shift, it targets one specific rule (rule\_1) and one specific
+region (the approximate head box) by construction, rather than perturbing the whole frame uniformly.
+
+\section{Results}
+
+Table~\ref{tab:day09-headline} reports the headline \texttt{answer\_changed} rate for each of the
+five perturbation types, alongside the three diagnostic columns that distinguish \emph{why} an
+answer changed from merely \emph{whether} it changed.
+
+\begin{center}
+\begin{tabular}{p{3.0cm}p{2.0cm}p{1.7cm}p{3.2cm}p{2.1cm}}
+\toprule
+\textbf{Perturbation} & \textbf{answer\_\allowbreak changed} & \textbf{worker\_\allowbreak lost} & \textbf{mean confidence\_\allowbreak drop} & \textbf{mean object\_\allowbreak box\_iou} \\
+\midrule
+occlude & \textbf{28.2\%} & 8.6\% & $-0.012$ (rose) & 0.530 \\
+reworded\_\allowbreak prompt & 27.5\% & 0.0\% & $-0.053$ (rose) & 0.333 \\
+blur & 27.0\% & 0.0\% & 0.013 & 0.287 \\
+low\_light & 11.7\% & 0.6\% & 0.011 & 0.816 \\
+contrast\_\allowbreak shift & 10.4\% & 0.0\% & 0.008 & 0.825 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{\texttt{answer\_changed} rate by perturbation, with the three diagnostic columns
+that explain \emph{why}: \texttt{worker\_lost} (the Chapter-5 fallback-rerouting risk),
+mean \texttt{confidence\_drop} (negative means confidence rose), and mean \texttt{object\_box\_iou}
+(lower means the object box moved more).}
+\label{tab:day09-headline}
+\end{center}
+
+Brightness and contrast changes are the mildest perturbations: object boxes barely move
+(\texttt{object\_box\_iou} above 0.8 for both) and answers rarely flip (10--12\%). Blur, occlusion,
+and prompt rewording are all substantially more disruptive --- answer-change rates between 27\% and
+28\%, roughly $2.5\times$ low\_light and contrast\_shift's rates --- but, as Findings 1--4 below show
+in turn, \textbf{for three different reasons, not one}. Treating "blur, occlude, and reworded\_prompt
+are all about equally disruptive" as a single finding would flatten three structurally different
+phenomena into one number; the rest of this chapter is about pulling them back apart.
+
+\section{Finding 1: Occlusion's Fallback Artifact}
+\label{sec:day09-finding1}
+
+Occlude's 28.2\% answer-change rate is not uniformly "genuine sensitivity to a covered region."
+\textbf{Of occlude's 46 answer-flip cases, 9 (20\%) also have \texttt{worker\_lost=True}} --- the
+occluded rerun's fresh detection found no worker at all, routing \texttt{\_answer\_presence\_rule}
+into its scene-level fallback branch for reasons disconnected from whether the safety object itself
+was actually still visible. The \texttt{worker\_lost} rate under occlude is also far from uniform
+across rules: rule\_2 19.2\%, rule\_4 16.0\%, rule\_3 8.2\%, rule\_1 1.6\% --- a more than
+tenfold spread between the highest and lowest rule, all under the identical occlusion transform.
+
+\textbf{Traced concretely on image \texttt{0000341} (rule\_3, baseline ``compliant'').}
+Figure~\ref{fig:day09-finding1} shows the before/after pair. Before occlusion, \textbf{both baseline
+detections were already wrong}: the box labeled "worker" is actually a false positive on the
+excavator's cab window, and the box answering the guardrail query is the entire excavator
+silhouette, not a guardrail at all. Both boxes happened to satisfy the geometric coverage check the
+rule applies, producing a "compliant" answer that was correct only by accident. After occlusion,
+\textbf{both} detections vanish --- \texttt{worker\_lost=True}, \texttt{object\_box\_iou=NaN} ---
+even though the occluded square does not fully cover either of the original (wrong) boxes.
+Occlusion is disrupting Florence-2's whole-scene grounding context, not merely blacking out the
+literal pixels the two boxes occupied. With no object box surviving the rerun, the fallback branch
+defaults to "violation" purely because no object box was found, flipping
+\texttt{answer\_changed=True}.
+
+\begin{figure}[h]
+\centering
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{robustness/verify/0000341_before.png}
+\caption{Before: both the "worker" box (a false positive on the excavator's cab window) and the
+guardrail-query box (the entire excavator silhouette) are wrong, but geometrically satisfy the
+coverage check.}
+\end{subcaptionblock}
+\hfill
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{robustness/verify/0000341_after_occlude.png}
+\caption{After occlude: both detections vanish (\texttt{worker\_lost=True},
+\texttt{object\_box\_iou=NaN}), even though the occluded square does not fully cover either
+original box.}
+\end{subcaptionblock}
+\caption{Image \texttt{0000341}, rule~3: occlusion's fallback artifact, traced. The flip to
+"violation" reflects a degenerate fallback branch firing because no object box survived, not a
+correct detection that the guardrail became occluded.}
+\label{fig:day09-finding1}
+\end{figure}
+
+Read in an aggregate table alone, this case is indistinguishable from "the model correctly noticed
+the safety equipment became occluded." \textbf{It is not.} It is the same degenerate-fallback
+mechanism Chapter~\ref{chap:day05} already flagged for deliberate masking, here triggered by a
+perturbation instead. The two settings differ only in what disabled the detection --- a hand-drawn
+mask there, a black occlusion square here --- not in the underlying failure mode, which is that
+\texttt{\_answer\_presence\_rule}'s fallback branch answers from the mere absence of any object box,
+with no way to distinguish "the safety object is genuinely gone" from "the detector lost its grip on
+the whole scene." Any future Bounded Completeness analysis (Chapter~\ref{chap:day10}) needs to apply
+this same \texttt{worker\_lost} check rather than reporting a raw \texttt{no\_usable\_explanation}
+rate blindly, since some fraction of "no usable explanation" cases will be this same fallback
+artifact rather than a genuine absence of grounding.
+
+\section{Finding 2: A Stable Answer Hiding a Drifted Explanation}
+\label{sec:day09-finding2}
+
+\textbf{This is the central result of Chapter~9, and arguably of the entire pilot.} Quantified
+across all 611 stable-answer rows that have a comparable object box on both sides (baseline and
+rerun both detected at least one object box, and the answer itself did not change):
+\textbf{28.3\% have \texttt{object\_box\_iou < 0.3}} --- the answer stayed exactly the same, but the
+box the model points to as evidence moved to something close to unrelated. This is wildly uneven by
+perturbation, as Table~\ref{tab:day09-finding2} shows.
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Perturbation} & \textbf{\% of stable answers with \texttt{object\_box\_iou < 0.3}} \\
+\midrule
+blur & \textbf{58.8\%} \\
+reworded\_prompt & 56.7\% \\
+occlude & 32.4\% \\
+low\_light & 5.7\% \\
+contrast\_shift & 2.8\% \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Of samples whose final answer did not change, the percentage whose evidence box
+nonetheless drifted to \texttt{object\_box\_iou < 0.3}, by perturbation.}
+\label{tab:day09-finding2}
+\end{center}
+
+Under blur and reworded\_prompt, \textbf{more than half} of all stable-answer samples are hiding a
+near-total relocation of the evidence box. This is not a tail effect or a rare edge case; it is the
+majority behavior for two of the five perturbation types.
+
+\textbf{Traced concretely on image \texttt{0000034} (rule\_2, baseline ``compliant'',
+\texttt{answer\_changed=False}).} Figure~\ref{fig:day09-finding2} shows the before/after pair: the
+single best image in this pilot for demonstrating that answer-level robustness alone is not enough.
+The worker's entire baseline box sits \textbf{inside} the occluded square. A reasonable expectation
+would be that occluding the worker entirely either loses the detection (\texttt{worker\_lost=True})
+or, at minimum, forces the evidence box somewhere conspicuously different in a way that shows up as
+an obvious failure. Neither happens cleanly: the rerun still reports \texttt{worker\_lost=False},
+because it found \emph{a} worker box somewhere in the image, and the final answer is unchanged ---
+yet \texttt{object\_box\_iou=0.005}. The object box moved to a near-completely different location in
+the frame, while every answer-facing signal --- the final yes/no answer, the \texttt{worker\_lost}
+flag --- reports business as usual.
+
+\begin{figure}[h]
+\centering
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{robustness/verify/0000034_before.png}
+\caption{Before: the worker's baseline box, fully visible.}
+\end{subcaptionblock}
+\hfill
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{robustness/verify/0000034_after_occlude.png}
+\caption{After occlude: the worker's entire baseline box sits inside the occluded square; the
+rerun still finds \emph{a} worker box (\texttt{worker\_lost=False}) and the answer is unchanged ---
+but \texttt{object\_box\_iou=0.005}, an almost total relocation.}
+\end{subcaptionblock}
+\caption{Image \texttt{0000034}, rule~2: \textbf{the centerpiece finding of this chapter.} An
+answer-level robustness number alone would call this sample perfectly robust. It is not, at the
+explanation level.}
+\label{fig:day09-finding2}
+\end{figure}
+
+\textbf{An answer-level robustness number alone would call this sample perfectly robust; it is not,
+at the explanation level.} This is the strongest single result in the pilot motivating the report of
+answer-level and explanation-level robustness as \textbf{two separate numbers, never blended into
+one}. A single blended robustness score computed only from \texttt{answer\_changed} would report
+\texttt{0000034} as a clean, unremarkable success --- and would do so for 28.3\% of all stable-answer
+rows across the dataset, systematically certifying as "robust" a population of samples whose
+explanations have, in fact, drifted to evidence the model is no longer actually looking at. This
+mirrors Chapter~\ref{chap:day06}'s decision to report visual and text attribution as two separate,
+never-merged streams: here, the two streams that must not be merged are what the model
+\emph{answers} and what the model \emph{points to as why}, and Finding~2 is the directly-traced,
+concrete failure case that motivates keeping them apart, rather than an assertion of that separation
+on principle alone.
+
+\section{Finding 3: Not All Phrasings Are Synonyms}
+
+Level-2 answer-change rate, broken down by rule, surfaces a pattern that initially looks like
+rewording sensitivity but is better read as a prompt-design issue specific to one rule:
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Rule} & \textbf{reworded\_prompt answer\_changed} \\
+\midrule
+rule\_2 (harness / lanyard) & \textbf{50.0\%} \\
+rule\_1 (hard hat / vest) & 31.7\% \\
+rule\_3 (guardrail / edge barrier) & 10.2\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+rule\_3's two phrasings ("guardrail" versus "edge protection barrier") are near-synonymous, and
+Florence-2 grounds them consistently --- only a 10.2\% answer-change rate. rule\_2's two phrasings
+are \textbf{not} really synonyms in the way rule\_3's are: a safety harness is a body garment worn
+by the worker, and a fall-protection lanyard is the tether attached to that garment. These are two
+different physical objects that happen to co-occur in the same PPE concept, not one object referred
+to by two interchangeable names. Asking Florence-2 to ground "harness" versus "lanyard" can
+legitimately produce two different bounding boxes on the same scene without either grounding being
+wrong --- the model is correctly answering two slightly different questions, not failing to
+recognize that one question was reworded. This is a prompt-design caveat for future revisions of
+\texttt{prompts.py}, not a model robustness failure: rule\_2's two "phrasings" should probably be
+treated as two distinct concepts rather than as wording variants of a single concept, the next time
+\texttt{RULE\_QUERIES} is revised.
+
+\section{Finding 4: An Uncalibrated Confidence Proxy}
+
+Mean \texttt{confidence\_drop} is \emph{negative} for both occlude ($-0.012$) and reworded\_prompt
+($-0.053$) --- average confidence went \textbf{up}, not down, after the perturbation, despite both
+perturbations having among the highest answer-change rates in Table~\ref{tab:day09-headline}. If
+confidence behaved as a correctness signal, the perturbations that most disrupt the answer should be
+the ones that most erode confidence; instead, the two most disruptive perturbations are associated
+with the model growing \emph{more} confident on average. This confirms, again, what
+Chapters~\ref{chap:day03} and~\ref{chap:day05} already cautioned: Florence-2's reported "confidence"
+is a mean token-generation-probability proxy, not a calibrated correctness signal. Removing visual
+information (occlusion) or changing the query wording can make the model surer of a different, not
+necessarily more correct, detection --- confidence tracks how decisively the decoder committed to
+\emph{some} answer, not whether that answer is right.
+
+\section{Stretch Test: A Synthetic Hard-Hat Patch}
+\label{sec:day09-stretch}
+
+The stretch test pastes a synthetic hard-hat patch over the approximate head region of 20
+\texttt{ppe\_violation}/rule\_1 candidates and asks whether the patch flips the answer from
+"violation" to "compliant" --- a small, bounded probe of whether Florence-2's grounding can be
+spoofed by a crude, synthetic visual cue, scoped deliberately small per
+\texttt{technical-limitations-take-and-mitigation.md}'s guidance that a "Level 3" spoofing test
+should be a small part of this pilot, not a full promise of a demonstrated vulnerability.
+
+\textbf{The denominator-correction story.} The naive headline number is a 15\% (3/20) flip rate.
+That number was caught and corrected before being reported, because it silently mixes two
+populations that should not be combined. \textbf{16 of the 20 candidates already had a baseline
+proxy answer of "compliant,"} despite all 20 being dataset-labeled \texttt{ppe\_violation} --- a
+known sensitivity gap in the grounding-proxy method (the same class of issue
+Chapters~\ref{chap:day05} and~\ref{chap:day07} have already documented elsewhere), not something
+this patch test is designed to measure. For those 16 candidates, "fooling" the model into saying
+"compliant" is not a meaningful concept, because the proxy already says "compliant" before the
+patch is applied at all; counting them in the denominator dilutes the real signal with samples where
+the supposed "fooling" outcome was already the status quo. \textbf{Restricting to the 4 candidates
+the proxy already called "violation"} --- the only 4 where a flip to "compliant" actually means
+something --- \textbf{3 of 4 (75\%) flipped to "compliant" after the patch was applied.}
+\texttt{09\_robustness\_test.py} now prints both numbers explicitly, the naive 15\% (3/20) and the
+denominator-corrected 75\% (3/4), rather than reporting only the naive figure.
+
+$n=4$ is far too small to generalize beyond "plausible, worth a larger run," and the four traced
+cases show no clean placement-to-flip correlation, summarized in
+Table~\ref{tab:day09-patchstretch}.
+
+\begin{center}
+\begin{tabular}{lp{8.6cm}c}
+\toprule
+\textbf{Image} & \textbf{Patch placement} & \textbf{Flipped to "compliant"?} \\
+\midrule
+\texttt{0000233} & off-target (torso/shoulder, not head --- a crude \texttt{\_head\_box}
+approximation, no pose estimation) & yes \\
+\texttt{0000641} & on-target (squarely on the head) & no \\
+\texttt{0001431} & on-target & yes \\
+\texttt{0001842} & on-target, scene already has many real hard-hat wearers & yes \\
+\bottomrule
+\end{tabular}
+\captionof{table}{The 4 patch-stretch candidates for which a flip is a meaningful outcome (baseline
+proxy answer already "violation"), with patch placement traced individually against the flip
+outcome.}
+\label{tab:day09-patchstretch}
+\end{center}
+
+Figure~\ref{fig:day09-stretch} shows the two cases that make the placement question concrete: a
+well-placed patch (\texttt{0000641}) that failed to fool the model, against an off-target patch
+(\texttt{0000233}) that succeeded.
+
+\begin{figure}[h]
+\centering
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{robustness/verify/0000233_patch_before.png}
+\caption{\texttt{0000233} before: baseline "violation."}
+\end{subcaptionblock}
+\hfill
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{robustness/verify/0000233_patch_after.png}
+\caption{\texttt{0000233} after: patch placed off-target (torso/shoulder, not head) --- flipped to
+"compliant" anyway.}
+\end{subcaptionblock}
+
+\vspace{0.6em}
+
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{robustness/verify/0000641_patch_before.png}
+\caption{\texttt{0000641} before: baseline "violation."}
+\end{subcaptionblock}
+\hfill
+\begin{subcaptionblock}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{robustness/verify/0000641_patch_after.png}
+\caption{\texttt{0000641} after: patch placed squarely on-target (the head) --- did \emph{not}
+flip.}
+\end{subcaptionblock}
+\caption{The counterintuitive on-target/off-target pair: a well-placed patch (bottom) failed to
+fool the model, while an off-target patch (top) succeeded.}
+\label{fig:day09-stretch}
+\end{figure}
+
+A well-placed patch failed to fool the model while an off-target one succeeded --- the flip does not
+cleanly track anatomically correct placement in either direction. Florence-2's "hard hat" grounding
+appears generally imprecise about \emph{where} on a person the visual cue needs to be, sometimes too
+lenient (an off-target patch still registers as "compliant") and sometimes not lenient enough
+(an on-target patch on \texttt{0000641} did not). This is exactly the kind of result
+\texttt{technical-limitations-take-and-mitigation.md} anticipated for a bounded stretch task: a real,
+traceable signal, explicitly not strong enough to claim a demonstrated real-world spoofing
+vulnerability from $n=4$.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard}: perturbation-based robustness testing --- blur, noise, occlusion, and related
+image transformations rerun through the same model and compared against a baseline --- is itself
+standard practice, the same family of method behind robustness as one of the six metrics defined for
+black-box XAI evaluation \citep{arreche2024exai}. Holding decoding deterministic and identical to
+the logged baseline across all reruns, specifically to avoid confounding perturbation sensitivity
+with Chapter~\ref{chap:day07}'s already-documented sampling-noise sensitivity, follows that
+established practice rather than departing from it.
+
+\textbf{Non-standard}: the explicit separation of answer-level and explanation-level robustness into
+\textbf{two never-blended numbers} is this chapter's central methodological contribution, motivated
+directly by Finding~2's traced concrete failure case (image \texttt{0000034}) rather than asserted on
+principle alone. The six-metric framework's robustness definition does not by itself mandate this
+split; the natural default is a single \texttt{answer\_changed} rate, and that default is exactly
+what would have certified 28.3\% of stable-answer samples as fully robust despite a near-total
+evidence-box relocation underneath. The denominator-correction in the patch-stretch test (restricting
+to the 4 candidates for which a flip is a meaningful outcome, rather than reporting the naive 15\%
+over all 20) is this chapter's second non-standard, reportable choice: catching a vacuous-denominator
+issue before publishing a headline number, rather than after.
+
+\section{Implications for the Paper}
+
+\textbf{Findings 1 and 2, taken together, make the strongest single argument in this pilot for the
+paper's central thesis that answer-level metrics are necessary but not sufficient for VLM
+explainability.} Finding~1 shows that an answer-level metric can flip for a reason that has nothing
+to do with the safety concept being tested (a degenerate fallback branch, not genuine sensitivity to
+the occluded region). Finding~2 shows the complementary failure: an answer-level metric can stay
+\emph{perfectly stable} while the explanation underneath it relocates almost completely. Read
+side by side, the two findings close off both directions an answer-only evaluation could fail in ---
+an answer that changes for the wrong reason, and an answer that does not change despite the
+explanation collapsing --- and neither failure mode is visible from \texttt{answer\_changed} alone in
+either case. \textbf{This chapter's two traced case studies, \texttt{0000341} (Finding~1) and
+\texttt{0000034} (Finding~2), are the best candidates in the entire pilot for the paper's
+qualitative-analysis figure}: both are visually self-explanatory before/after pairs that make an
+abstract methodological point concrete in a single glance, without requiring the reader to parse an
+aggregate table first.
+
+The answer-level-versus-explanation-level split established here recurs as this pilot's central
+cross-chapter theme: Chapter~\ref{chap:day10}'s Bounded Completeness analysis, Chapter~11's
+cross-metric rollup, and Chapter~14's open questions for Professor Abdallah all return to this same
+distinction, and this chapter is where it was first motivated by a directly-traced failure rather than
+introduced as an abstract design choice. Three secondary points should also carry forward.
+\textbf{First}, Finding~3's caution that rule\_2's two phrasings ground genuinely different physical
+objects (a harness and a lanyard), not two wordings of one concept, should inform any future revision
+of \texttt{prompts.py} before rule\_2's rewording rate is cited as evidence of model instability.
+\textbf{Second}, Finding~4's confirmation that the confidence proxy is uncalibrated --- rising, not
+falling, under exactly the two most disruptive perturbations --- reinforces the standing
+recommendation, carried since Chapter~\ref{chap:day03}, that this pilot's "confidence" figure never
+be reported as a correctness or trust signal in the paper without that caveat attached explicitly.
+\textbf{Third}, the patch-stretch test's denominator-correction is worth stating as a general
+methodological note in the paper's own methods section: any spoofing- or adversarial-style probe of a
+binary safety classifier must first verify what fraction of its candidate set already sits on the
+target side of the decision before computing a "fooling rate," or risk silently diluting a real
+signal with samples for which the test's notion of "fooling" was never well-defined to begin with.
