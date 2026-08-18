@@ -29,6 +29,31 @@ GENERATION = {
     "max_new_tokens": 128,
 }
 
+# COMPUTE DTYPE AND ATTENTION KERNEL ARE CORRECTNESS SETTINGS, NOT TUNING KNOBS.
+#
+# Qwen2.5-VL is trained in bfloat16. bf16 and fp16 are both 16 bits, but fp16
+# spends them on precision rather than range, and large attention logits overflow
+# it. Measured on three images, reason-first, 640-block budget:
+#
+#   fp16 + eager   ->  empty output; 128 special tokens, decodes to ''   0/3 correct
+#   bf16 + eager   ->  text, but corrupted: spurious "addCriterion"
+#                      tokens injected mid-sentence, "a a", "left left"   2/3 correct
+#   bf16 + sdpa    ->  clean                                             3/3 correct
+#
+# So the two defects are independent: fp16 causes overflow, and the eager kernel
+# corrupts the token stream even once bf16 has fixed the overflow. Run with fp16
+# and a working model looks blind.
+#
+# ATTENTION_IMPL_FOR_READING is separate because reading attention (Sparsity,
+# metric 2)
+# requires attn_implementation="eager", which is the kernel that corrupts
+# generation. The backend therefore never GENERATES under eager: it generates with
+# sdpa and, where attention is needed, re-runs a single teacher-forced forward pass
+# over the already-produced sequence.
+COMPUTE_DTYPE = "bfloat16"
+ATTENTION_IMPL = "sdpa"          # generation path
+ATTENTION_IMPL_FOR_READING = "eager"   # single forward pass only, never generation
+
 
 @dataclass(frozen=True)
 class ModelSpec:
