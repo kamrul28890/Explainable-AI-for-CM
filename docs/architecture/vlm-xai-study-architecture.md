@@ -1312,6 +1312,51 @@ seeds and report mean ± interval, not a single lucky run.
 | 10 | Rare hazards underpowered | Limits conclusions | Unavoidable; pool train+test and state the ceiling |
 | 11 | `max_pixels` differs between models | Comparison confounded by input size, not model quality | Fix it identically across all three; record it in every output file |
 
+### 12.1 Stage 0 outcome — measured, not predicted
+
+Run on 30 gate images (20 violation, 10 compliant), Qwen2.5-VL-7B-4bit, bf16+sdpa,
+`max_pixels` = 640 blocks, reason-first format.
+
+```
+small-object detection : 89%  (n=9)        threshold to proceed: 80%
+overall accuracy       : 73%
+  sensitivity          : 95%  (n=20)
+  specificity          : 30%  (n=10)
+  YES share of replies : 87%
+median latency         : 2.9 s             budget: 6.0 s
+parse rate             : 100%
+peak VRAM              : 7.0 GB
+attention available    : True
+VERDICT: GO
+```
+
+**Risks retired:** #1 (small-object detection survives quantisation and capping),
+#2 (7B-4bit fits at 640 blocks), #3 (attention extractable), #4 (token ablation
+implemented), #5 (parse rate 100%), #6 (2.9 s/call → ~22 h for the full battery,
+inside the §13 budget), #7 (peak 7.0 GB, no spill).
+
+**Risk #7 stays amber:** peak VRAM is 7.0 GB against a 7.0 GB budget on an 8.6 GB
+card. There is no headroom for a longer prompt or a larger image, and Windows'
+driver fallback spills silently to shared memory rather than raising, which costs
+roughly 30× in speed without any error. Monitor peak memory per stage.
+
+**The 89% must be read next to the 87%.** A model that answered YES to everything
+would score 100% small-object detection, 0% specificity and 67% overall. This
+model scores 89% / 30% / 73% — better than that degenerate baseline, but by about
+six points. So the small-object result is partly a YES bias and only partly
+detection. It is not vacuous (the model answered NO to one small-object case and
+to 3 of 10 compliant images), but the gate's headline number alone would overstate
+what was demonstrated. Sensitivity, specificity and the YES share are therefore
+reported together everywhere, and the false-alarm rate is a headline number in its
+own right (§5.3).
+
+**What Stage 0 does not establish.** It measures `rule_1` only, on 30 images, with
+the reference annotations treated as correct. Several of the ten "compliant" images
+that drew a YES may contain hazards no annotator marked — §5.5 puts 47% of the
+corpus at self-declared "poor info" — and nothing here can separate model
+false-alarms from annotation misses. That separation needs the human audit of §5.5,
+not a larger gate.
+
 ---
 
 ## 13. Execution order and time budget

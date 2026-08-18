@@ -1,48 +1,125 @@
-"""Stage 0 -- the feasibility gate. Run this before building anything else.
+"""Stage 0 -- the feasibility gate. Run before building anything else.
 
-Purpose: kill or rescope the study cheaply. The decisive question is whether a
-quantised model can still detect small hard hats -- if it cannot, rule_1 is invalid
-and so is most of the study.
+Decides whether the study is viable. The decisive question is whether a quantised
+model can still detect small hard hats: if it cannot, rule_1 is invalid and so is
+most of the study.
 
-The stop rules are fixed in the architecture document (section 8, Stage 0) *before*
-any numbers are seen. That is deliberate: writing them in advance prevents
-rationalising a bad result afterwards.
+Thresholds are fixed in the architecture document BEFORE any numbers are seen.
+Do not tune them to fit an observed result -- that is what they exist to prevent.
 
-    python scripts/00_feasibility_gate.py --tier auto
-
-Requires CUDA. See docs/setup/SETUP.md, "Which machine runs what".
+    python scripts/00_feasibility_gate.py --tier qwen7b-4bit
 """
 import argparse
+import csv
 import sys
+from pathlib import Path
 
-# Decision thresholds, quoted from the architecture document. Do not tune these to
-# fit an observed result -- that is what they exist to prevent.
-DETECTION_PROCEED = 0.80      # >= this: proceed
-DETECTION_LIMITATION = 0.50   # >= this: proceed, record as a stated limitation
-LATENCY_BUDGET_S = 6.0        # above this: rescope before committing
+STUDY_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(STUDY_ROOT / "src"))
+
+# PRE-REGISTERED. Not to be adjusted after seeing results.
+DETECTION_PROCEED = 0.80
+DETECTION_LIMITATION = 0.50
+LATENCY_BUDGET_S = 6.0
+VRAM_BUDGET_GB = 7.0
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--tier", default="auto", help="model tier, or 'auto' to detect")
-    ap.add_argument("--n", type=int, default=30, help="images to test")
-    ap.parse_args()
+    ap.add_argument("--tier", default="qwen7b-4bit")
+    ap.add_argument("--out", default=str(STUDY_ROOT / "results" / "stage0_feasibility.csv"))
+    args = ap.parse_args()
 
-    print(__doc__)
-    print("NOT YET IMPLEMENTED.\n")
-    print("To implement, this stage must:")
-    print("  1. load each candidate model at its target quantisation")
-    print("  2. ask rule_1 on 30 hand-picked images")
-    print("     (10 clear hard hats, 10 clear violations, 10 small/distant workers)")
-    print("  3. report the small-hard-hat detection rate")
-    print("  4. time 20 calls for a real seconds-per-call figure")
-    print("  5. confirm attention can be extracted and image tokens ablated")
-    print("  6. record peak VRAM at the chosen max_pixels")
-    print(f"\nStop rules: detect >= {DETECTION_PROCEED:.0%} proceed; "
-          f">= {DETECTION_LIMITATION:.0%} proceed with a stated limitation; "
-          f"below that, STOP.")
-    print(f"Latency above {LATENCY_BUDGET_S:.0f}s/call means rescope first.")
-    return 1
+    from xai_pilot.data import load_construction_site
+    from xai_vlm.backends.qwen import QwenBackend
+
+    gate = list(csv.DictReader(
+        (STUDY_ROOT / "data" / "gate_images.csv").open(encoding="utf-8")))
+    wanted = {g["image_id"] for g in gate}
+    images = {}
+    for row in load_construction_site(split="test", streaming=True):
+        if row["image_id"] in wanted:
+            images[row["image_id"]] = row["image"].convert("RGB")
+        if len(images) >= len(wanted):
+            break
+
+    print(f"loading {args.tier} ...")
+    backend = QwenBackend(tier=args.tier)
+
+    rows, latencies = [], []
+    for g in gate:
+        img = images.get(g["image_id"])
+        if img is None:
+            continue
+        a = backend.answer(img, "rule_1")
+        latencies.append(a.latency_ms / 1000.0)
+        rows.append({
+            "image_id": g["image_id"], "expected": g["expected"],
+            "predicted": a.verdict or "UNPARSED", "correct": a.verdict == g["expected"],
+            "norm_area": g["norm_area"], "latency_s": round(a.latency_ms / 1000.0, 2),
+            "has_region": a.region is not None, "parse_strict": a.parse_strict,
+            "rationale": a.rationale[:120], "raw": a.raw_text[:200],
+        })
+        print(f"  {g['image_id']}  exp={g['expected']}  got={a.verdict}  "
+              f"{a.latency_ms/1000:.1f}s")
+
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    with open(args.out, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+
+    # --- verdict -----------------------------------------------------------
+    small = [r for r in rows if r["norm_area"] and float(r["norm_area"]) < 0.01
+             and r["expected"] == "YES"]
+    small_rate = sum(r["correct"] for r in small) / len(small) if small else float("nan")
+    overall = sum(r["correct"] for r in rows) / len(rows)
+    median_latency = sorted(latencies)[len(latencies) // 2]
+    parse_rate = sum(1 for r in rows if r["predicted"] != "UNPARSED") / len(rows)
+    peak = backend.peak_memory_gb()
+
+    # Sensitivity and specificity separately. small_rate alone cannot distinguish
+    # "detects small hazards" from "answers YES to everything" -- a model that
+    # always said YES would score 100% on it. The false-alarm rate is what makes
+    # the small-object number interpretable, so it is reported beside it.
+    pos = [r for r in rows if r["expected"] == "YES"]
+    neg = [r for r in rows if r["expected"] == "NO"]
+    sens = sum(r["correct"] for r in pos) / len(pos) if pos else float("nan")
+    spec = sum(r["correct"] for r in neg) / len(neg) if neg else float("nan")
+    yes_share = sum(1 for r in rows if r["predicted"] == "YES") / len(rows)
+
+    print("\n" + "=" * 66)
+    print(f"small-object detection : {small_rate:.0%}  (n={len(small)})")
+    print(f"overall accuracy       : {overall:.0%}")
+    print(f"  sensitivity          : {sens:.0%}  (n={len(pos)})")
+    print(f"  specificity          : {spec:.0%}  (n={len(neg)})")
+    print(f"  YES share of replies : {yes_share:.0%}   <- 100% would make the")
+    print(f"                                        small-object number vacuous")
+    print(f"median latency         : {median_latency:.1f}s")
+    print(f"parse rate             : {parse_rate:.0%}")
+    print(f"peak VRAM              : {peak:.1f} GB")
+    print(f"attention available    : {backend.attention(list(images.values())[0], 'rule_1') is not None}")
+    print("=" * 66)
+
+    if small_rate != small_rate or small_rate < DETECTION_LIMITATION:
+        print("VERDICT: STOP. Raise max_pixels or drop to 3B-8bit and retest.")
+        return 1
+    if small_rate < DETECTION_PROCEED:
+        print("VERDICT: GO, with small-object sensitivity as a stated limitation.")
+    else:
+        print("VERDICT: GO.")
+    if spec == spec and spec < 0.5:
+        print(f"NOTE: specificity {spec:.0%} means the small-object result is partly "
+              "explained by a YES bias, not only by detection. Report both together, "
+              "and treat the false-alarm rate as a headline number (arch doc 5.3).")
+    if median_latency > LATENCY_BUDGET_S:
+        est = median_latency * 27450 / 3600
+        print(f"WARNING: at {median_latency:.1f}s/call the full study is ~{est:.0f}h. "
+              "Rescope: robustness subset -> stability subset -> third model. "
+              "Never cut Stage 4.")
+    if peak > VRAM_BUDGET_GB:
+        print(f"WARNING: peak VRAM {peak:.1f} GB is close to the limit; lower max_pixels.")
+    return 0
 
 
 if __name__ == "__main__":
