@@ -52,6 +52,10 @@ ipykernel<7
 # --- model-specific helpers ------------------------------------------------
 einops
 timm
+# Qwen2.5-VL's image preprocessing (smart_resize, dynamic resolution handling).
+# Without it the processor cannot build vision inputs, and Stage 0 fails on the
+# very first call.
+qwen-vl-utils>=0.0.8
 
 # --- testing ---------------------------------------------------------------
 pytest>=8.0
