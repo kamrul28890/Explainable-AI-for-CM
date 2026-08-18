@@ -123,6 +123,34 @@ class QwenBackend:
         parsed = parse_response(raw, image.size)
         return Answer.from_parsed(parsed, raw_text=raw, latency_ms=latency_ms)
 
+    def answer_masked(self, image: Image.Image, rule_id: RuleId, region: Box,
+                      method: str = "black", **kw) -> Answer:
+        """Ask again with `region` removed.
+
+        "black"   patch-aligned fill -- comparable with prior work, but creates an
+                  artefact no photograph contains.
+        "inpaint" reconstruct from surroundings -- least out-of-distribution pixels.
+        "tokens"  drop the image tokens for those patches before the language model
+                  runs. No pixels are modified at all, so no artefact can exist.
+                  This is the primary, artefact-free measure.
+        """
+        from xai_pilot.regions import mask_region
+
+        from xai_vlm.masking import snap_to_patch_grid
+
+        snapped = snap_to_patch_grid(region, image.size)
+
+        if method in {"black", "blur", "inpaint"}:
+            masked = mask_region(image, snapped, mode=method)
+            out = self.answer(masked, rule_id, **kw)
+            out.intervention = method
+            return out
+
+        if method == "tokens":
+            return self._answer_token_ablated(image, rule_id, snapped, **kw)
+
+        raise ValueError(f"unknown masking method {method!r}")
+
     def _merge_size(self) -> int:
         return getattr(self.model.config.vision_config, "spatial_merge_size", 2)
 
