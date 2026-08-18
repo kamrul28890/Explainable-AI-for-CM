@@ -16,6 +16,7 @@ import csv
 import hashlib
 import json
 import os
+import statistics
 from pathlib import Path
 from typing import Optional
 
@@ -131,3 +132,69 @@ class RunState:
     def _write(self, data: dict) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+
+
+# PRE-REGISTERED, fixed before any Stage 2 numbers were seen -- the same discipline
+# the Stage 0 gate thresholds were set under. Not to be tuned to fit a run.
+PARSE_RATE_FLOOR = 0.95
+
+# 2 x LATENCY_BUDGET_S (6.0), not 2 x the observed Stage 0 median (2.9). Twice the
+# observed median is 5.8 s, which sits *below* the budget the study already declared
+# acceptable, so normal variation across a larger image set would abort healthy runs.
+# The failure this catches -- Windows' driver silently spilling to shared memory
+# rather than raising OOM -- costs roughly 30x, so it breaches 12.0 s unambiguously.
+LATENCY_CEILING_S = 12.0
+
+# Guards evaluate rows from the CURRENT PROCESS only, and not until this many exist.
+# A resumed run is therefore never aborted by history it cannot change, and a short
+# --limit smoke run never trips them.
+GUARD_MIN_ROWS = 100
+
+
+class GuardTripped(RuntimeError):
+    """A pre-registered quality guard failed; the run stops."""
+
+
+class Guards:
+    """Running quality checks over the rows this process has produced."""
+
+    def __init__(self, parse_rate_floor: float = PARSE_RATE_FLOOR,
+                 latency_ceiling_s: float = LATENCY_CEILING_S,
+                 min_rows: int = GUARD_MIN_ROWS):
+        self.parse_rate_floor = parse_rate_floor
+        self.latency_ceiling_s = latency_ceiling_s
+        self.min_rows = min_rows
+        self.n = 0
+        self._ok = 0
+        self._latencies: list[float] = []
+
+    def record(self, parsed_ok: bool, latency_s: float) -> None:
+        self.n += 1
+        self._ok += bool(parsed_ok)
+        self._latencies.append(latency_s)
+
+    @property
+    def parse_rate(self) -> float:
+        return self._ok / self.n if self.n else float("nan")
+
+    @property
+    def median_latency_s(self) -> float:
+        return statistics.median(self._latencies) if self._latencies else float("nan")
+
+    def check(self) -> None:
+        if self.n < self.min_rows:
+            return
+        if self.parse_rate < self.parse_rate_floor:
+            raise GuardTripped(
+                f"parse rate {self.parse_rate:.1%} is below the pre-registered "
+                f"floor of {self.parse_rate_floor:.0%} over {self.n} rows. The "
+                "prompt is degrading; every further row would be unusable. Fix the "
+                "prompt, then start a fresh output file."
+            )
+        if self.median_latency_s > self.latency_ceiling_s:
+            raise GuardTripped(
+                f"median latency {self.median_latency_s:.1f}s exceeds "
+                f"{self.latency_ceiling_s:.1f}s over {self.n} rows. This is the "
+                "signature of a silent spill into shared memory -- lower "
+                "MAX_PIXELS or free VRAM, then resume."
+            )
