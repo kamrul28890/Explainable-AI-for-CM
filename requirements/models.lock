@@ -1,0 +1,29 @@
+# Model weight revisions, pinned by commit SHA.
+#
+# Hugging Face repo ids are mutable: `Qwen/Qwen2.5-VL-7B-Instruct` today and the
+# same id in six months can be different weights. An unpinned "latest" silently
+# changes results and is among the most common reproducibility failures in ML
+# work, so the exact revision behind every reported number is recorded here.
+#
+# Format:  <tier>  <repo_id>  <revision_sha>
+#
+# `verified` below means the weights were downloaded and this SHA was read back
+# from the on-disk snapshot metadata, not merely queried from the Hub.
+
+# --- downloaded and verified on this machine -------------------------------
+# Study 2 primary arm. SHA confirmed against
+# models/qwen7b-4bit/.cache/huggingface/download/*.metadata after download.
+qwen7b-4bit   Qwen/Qwen2.5-VL-7B-Instruct                 cc594898137f460bfe9f0759e9844b3ce807cfb5  # verified 2026-08-17
+
+# --- resolved from the Hub, not yet downloaded here -------------------------
+# Recorded now so a later download can be pinned to the same revision this study
+# was designed against, rather than to whatever `main` points at that day.
+qwen3b-8bit   Qwen/Qwen2.5-VL-3B-Instruct                 66285546d2b821cf421d4f5eb2576359d3770cd3
+mlx-3b-4bit   mlx-community/Qwen2.5-VL-3B-Instruct-4bit   46d4cf06a06ffc1a766c214174f9cbed2f45bcab
+mlx-7b-4bit   mlx-community/Qwen2.5-VL-7B-Instruct-4bit   fdcc572e8b05ba9daeaf71be8c9e4267c826ff9b
+florence2     microsoft/Florence-2-base-ft                f6c1a25888ffc1d945ee8a1a77ac833c7303d46e
+
+# NOTE: scripts/download_data.py does not yet pass `revision=` to
+# snapshot_download, so it currently fetches `main` and this file is a record
+# rather than an enforced constraint. Wiring it in is a one-line change and is
+# tracked separately.
