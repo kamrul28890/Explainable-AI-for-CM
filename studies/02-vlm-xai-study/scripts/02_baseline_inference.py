@@ -9,6 +9,7 @@ from two different configurations would look complete and be wrong.
 import argparse
 import csv
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 STUDY_ROOT = Path(__file__).resolve().parents[1]
@@ -83,6 +84,32 @@ def make_work_fn(backend, image_source):
     return work
 
 
+def stream_rows_in_dataset_order(manifest_rows, loader):
+    """Yield (manifest_row, image) in dataset streaming order, one pass.
+
+    The naive alternative -- look each image up by id -- re-streams the whole split
+    per image, which is thousands of full passes. Iterating the split once and
+    emitting whatever manifest rows match is why resume is keyed on
+    (image_id, rule_id) and never on position: this order is not manifest order.
+    """
+    by_image = defaultdict(list)
+    for row in manifest_rows:
+        by_image[row["image_id"]].append(row)
+
+    remaining = len(by_image)
+    for rec in loader(split="test", streaming=True):
+        rows = by_image.pop(rec["image_id"], None)
+        if not rows:
+            continue
+        image = rec["image"]
+        image = image.convert("RGB") if hasattr(image, "convert") else image
+        for row in rows:
+            yield row, image
+        remaining -= 1
+        if remaining == 0:
+            return
+
+
 def _progress(summary: dict) -> None:
     g = summary["guards"]
     print(f"  {summary['done']:>6} done  {summary['skipped']:>6} skipped  "
@@ -91,12 +118,18 @@ def _progress(summary: dict) -> None:
 
 
 def run(*, manifest_path, backend, image_source, out_csv, state_json, model, seed,
-        limit, resume, force_resume, checkpoint_every) -> dict:
-    """Drive run_stage over the manifest. Separated from main() so it is testable."""
-    with Path(manifest_path).open(newline="", encoding="utf-8") as fh:
-        rows = list(csv.DictReader(fh))
-    if limit is not None:
-        rows = rows[:limit]
+        limit, resume, force_resume, checkpoint_every, rows=None) -> dict:
+    """Drive run_stage over the manifest. Separated from main() so it is testable.
+
+    `rows` lets main() supply a generator that streams the split once and keeps a
+    single image resident. When omitted the manifest is read directly, which is
+    what the tests use with an in-memory image source.
+    """
+    if rows is None:
+        with Path(manifest_path).open(newline="", encoding="utf-8") as fh:
+            rows = list(csv.DictReader(fh))
+        if limit is not None:
+            rows = rows[:limit]
 
     return run_stage(
         rows,
@@ -178,25 +211,31 @@ def main() -> int:
     from xai_vlm.backends.qwen import QwenBackend
 
     with manifest.open(newline="", encoding="utf-8") as fh:
-        wanted = {r["image_id"] for r in csv.DictReader(fh)}
-    print(f"manifest: {len(wanted)} distinct images")
-
-    # One image at a time. Stage 0 held every gate image in a dict, which was fine
-    # for 39 images and is not for thousands.
-    def image_source(image_id):
-        for rec in load_construction_site(split="test", streaming=True):
-            if rec["image_id"] == image_id:
-                return rec["image"].convert("RGB")
-        return None
+        manifest_rows = list(csv.DictReader(fh))
+    if args.limit is not None:
+        manifest_rows = manifest_rows[:args.limit]
+    print(f"manifest: {len(manifest_rows)} rows, "
+          f"{len({r['image_id'] for r in manifest_rows})} distinct images")
 
     print(f"loading {args.model} ...")
     backend = QwenBackend(tier=args.model)
 
+    # One image resident at a time. Stage 0 held every gate image in a dict, which
+    # was fine for 39 images and is not for thousands.
+    cache: dict = {}
+
+    def rows_with_images():
+        for row, image in stream_rows_in_dataset_order(manifest_rows,
+                                                       load_construction_site):
+            cache.clear()
+            cache[row["image_id"]] = image
+            yield row
+
     summary = run(
-        manifest_path=manifest, backend=backend, image_source=image_source,
+        manifest_path=manifest, backend=backend, image_source=cache.get,
         out_csv=out_csv, state_json=state_json, model=args.model, seed=args.seed,
         limit=args.limit, resume=args.resume, force_resume=args.force_resume,
-        checkpoint_every=args.checkpoint_every,
+        checkpoint_every=args.checkpoint_every, rows=rows_with_images(),
     )
     print(f"\ndone={summary['done']}  skipped={summary['skipped']}  "
           f"errors={summary['errors']}")

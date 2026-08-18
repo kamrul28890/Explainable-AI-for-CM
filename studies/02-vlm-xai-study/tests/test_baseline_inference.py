@@ -88,3 +88,34 @@ def test_limit_caps_rows_and_resume_continues_past_it(tmp_path):
     written = list(csv.DictReader(out_csv.open(encoding="utf-8")))
     assert len(written) == 6
     assert len({r["image_id"] for r in written}) == 6
+
+
+def test_dataset_is_streamed_exactly_once(tmp_path):
+    manifest = _manifest_file(tmp_path, n=6)
+    rows = list(csv.DictReader(manifest.open(encoding="utf-8")))
+    passes = []
+
+    def loader(split="test", streaming=True):
+        passes.append(1)
+        for i in range(6):
+            yield {"image_id": f"{i:04d}", "image": Image.new("RGB", (8, 8))}
+
+    out = list(baseline.stream_rows_in_dataset_order(rows, loader))
+    assert len(passes) == 1, "the split must be streamed once, not once per image"
+    assert {r["image_id"] for r, _ in out} == {f"{i:04d}" for i in range(6)}
+
+
+def test_rows_for_one_image_are_grouped(tmp_path):
+    rows = [
+        {"image_id": "0001", "rule_id": "rule_1"},
+        {"image_id": "0002", "rule_id": "rule_1"},
+        {"image_id": "0001", "rule_id": "rule_3"},
+    ]
+
+    def loader(split="test", streaming=True):
+        for i in (1, 2):
+            yield {"image_id": f"{i:04d}", "image": Image.new("RGB", (8, 8))}
+
+    out = list(baseline.stream_rows_in_dataset_order(rows, loader))
+    assert len(out) == 3
+    assert [r["image_id"] for r, _ in out][:2] == ["0001", "0001"]
