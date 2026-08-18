@@ -39,6 +39,41 @@ MANIFEST_FIELDS = [
 # The Stage 0 median, used only to project wall clock before any GPU time is spent.
 STAGE0_MEDIAN_S = 2.9
 
+# BOTH SPLITS. The sample is the full 10,013-record corpus (architecture doc 5.2,
+# 6.2 and the Stage 1 procedure), not the 3,004-record test split.
+#
+# There is no contamination to avoid: the model is evaluated zero-shot and is never
+# trained on any of this data, so "train" is simply more evaluation material.
+#
+# Scanning `test` alone is not merely smaller, it is unreportable. Violations per
+# split (architecture doc 5.3):
+#
+#              test   train   total
+#   rule_1      324     677    1001
+#   rule_3       63     109     172
+#   rule_2       25      59      84
+#   rule_4       24      46      70
+#
+# rule_2 and rule_4 would sit at n=25 and n=24, below the pilot's MIN_N_FLOOR of
+# 30, so two of the four rules could not be reported at all.
+SPLITS = ("test", "train")
+
+
+def scan_records(loader, splits: tuple[str, ...] = SPLITS) -> list[dict]:
+    """Read metadata for every record in every split.
+
+    The image column is dropped before iteration where the loader supports it.
+    Carrying it would decode all 10,013 JPEGs only to discard them.
+    """
+    records: list[dict] = []
+    for split in splits:
+        ds = loader(split=split, streaming=True)
+        if hasattr(ds, "remove_columns"):
+            ds = ds.remove_columns(["image"])
+        for rec in ds:
+            records.append({k: v for k, v in rec.items() if k != "image"})
+    return records
+
 
 def _row_for(rec: dict, rule_id: str, is_control: bool, stratum: str) -> dict:
     is_violation = not is_control
@@ -115,10 +150,8 @@ def main() -> int:
 
     from xai_pilot.data import load_construction_site
 
-    print("scanning the test split (metadata only) ...")
-    records = []
-    for rec in load_construction_site(split="test", streaming=True):
-        records.append({k: v for k, v in rec.items() if k != "image"})
+    print(f"scanning {' + '.join(SPLITS)} (metadata only) ...")
+    records = scan_records(load_construction_site)
     print(f"  {len(records)} records")
 
     hazard = [r for r in records if violated_rules(r)]

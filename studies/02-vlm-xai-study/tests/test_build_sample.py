@@ -97,3 +97,33 @@ def test_write_manifest_force_overwrites(tmp_path):
     build_sample.write_manifest(build_sample.build_rows(_records(2, 2), seed=42), path, force=True)
     rows = list(csv.DictReader(path.open(encoding="utf-8")))
     assert len(rows) < 12
+
+
+def test_scan_records_reads_every_split():
+    """The pre-registered sample is the full corpus, not one split.
+
+    Architecture doc 5.3 counts violations per split: test 436, train 891.
+    Scanning only `test` would put rule_2 (n=25) and rule_4 (n=24) below the
+    n=30 reporting floor and make two of the four rules unreportable.
+    """
+    seen = []
+
+    def loader(split="test", streaming=True):
+        seen.append(split)
+        yield {"image_id": f"{split}-0001", "image": "PIXELS", "illumination": "daylight"}
+
+    records = build_sample.scan_records(loader)
+
+    assert seen == ["test", "train"]
+    assert {r["image_id"] for r in records} == {"test-0001", "train-0001"}
+
+
+def test_scan_records_drops_the_image_column():
+    """Stage 1 is metadata only; carrying pixels would decode the whole corpus."""
+
+    def loader(split="test", streaming=True):
+        yield {"image_id": "0001", "image": "PIXELS", "illumination": "daylight"}
+
+    records = build_sample.scan_records(loader, splits=("test",))
+    assert "image" not in records[0]
+    assert records[0]["illumination"] == "daylight"
