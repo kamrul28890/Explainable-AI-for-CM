@@ -47,3 +47,64 @@ def test_done_keys_reads_existing_file_and_reopen_appends(tmp_path):
     rows = list(csv.DictReader(path.open(encoding="utf-8")))
     assert len(rows) == 2
     assert path.read_text(encoding="utf-8").count("image_id,rule_id,verdict") == 1
+
+
+# --- fingerprinting --------------------------------------------------------
+import json
+
+import pytest
+
+from xai_vlm.runner import FingerprintMismatch, RunState, manifest_sha256
+
+
+def _fp(**over):
+    fp = {"manifest_sha256": "abc", "model": "qwen7b-4bit", "max_pixels": 501760}
+    fp.update(over)
+    return fp
+
+
+def test_manifest_sha256_is_stable_and_content_sensitive(tmp_path):
+    a, b = tmp_path / "a.csv", tmp_path / "b.csv"
+    a.write_text("image_id,rule_id\n0001,rule_1\n", encoding="utf-8")
+    b.write_text("image_id,rule_id\n0001,rule_2\n", encoding="utf-8")
+    assert manifest_sha256(a) == manifest_sha256(a)
+    assert manifest_sha256(a) != manifest_sha256(b)
+
+
+def test_first_run_writes_the_state_file(tmp_path):
+    state = RunState(tmp_path / "run.state.json")
+    state.verify_or_create(_fp())
+    written = json.loads((tmp_path / "run.state.json").read_text(encoding="utf-8"))
+    assert written["model"] == "qwen7b-4bit"
+
+
+def test_matching_fingerprint_resumes_silently(tmp_path):
+    state = RunState(tmp_path / "run.state.json")
+    state.verify_or_create(_fp())
+    RunState(tmp_path / "run.state.json").verify_or_create(_fp())  # must not raise
+
+
+def test_changed_config_aborts_and_names_the_field(tmp_path):
+    state = RunState(tmp_path / "run.state.json")
+    state.verify_or_create(_fp())
+
+    with pytest.raises(FingerprintMismatch) as exc:
+        RunState(tmp_path / "run.state.json").verify_or_create(_fp(max_pixels=1003520))
+    assert "max_pixels" in str(exc.value)
+
+
+def test_changed_manifest_aborts(tmp_path):
+    state = RunState(tmp_path / "run.state.json")
+    state.verify_or_create(_fp())
+    with pytest.raises(FingerprintMismatch):
+        RunState(tmp_path / "run.state.json").verify_or_create(_fp(manifest_sha256="zzz"))
+
+
+def test_force_overrides_and_records_that_it_was_forced(tmp_path):
+    path = tmp_path / "run.state.json"
+    RunState(path).verify_or_create(_fp())
+    RunState(path).verify_or_create(_fp(max_pixels=1003520), force=True)
+
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert written["forced"] is True
+    assert written["max_pixels"] == 1003520

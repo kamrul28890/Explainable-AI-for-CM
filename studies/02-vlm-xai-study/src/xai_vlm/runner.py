@@ -13,6 +13,8 @@ with a GPU is logic that does not get tested.
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 import os
 from pathlib import Path
 from typing import Optional
@@ -71,3 +73,61 @@ class CheckpointWriter:
             self._fh.close()
             self._fh = None
             self._writer = None
+
+
+def manifest_sha256(path: Path) -> str:
+    """Content hash of the manifest, read in binary so line endings count."""
+    h = hashlib.sha256()
+    with Path(path).open("rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+class FingerprintMismatch(RuntimeError):
+    """The run on disk was produced under a different configuration.
+
+    Raised rather than warned about. A mismatch means the rows already written and
+    the rows about to be written answer different questions, and once concatenated
+    nothing downstream can separate them again.
+    """
+
+
+class RunState:
+    """The sidecar recording what configuration produced a results file."""
+
+    def __init__(self, path: Path):
+        self.path = Path(path)
+
+    def load(self) -> Optional[dict]:
+        if not self.path.exists():
+            return None
+        return json.loads(self.path.read_text(encoding="utf-8"))
+
+    def verify_or_create(self, fingerprint: dict, force: bool = False) -> None:
+        existing = self.load()
+        if existing is None:
+            self._write(dict(fingerprint))
+            return
+
+        diffs = [
+            f"  {k}: on disk {existing.get(k)!r} -> now {v!r}"
+            for k, v in fingerprint.items()
+            if existing.get(k) != v
+        ]
+        if diffs and not force:
+            raise FingerprintMismatch(
+                "this results file was produced under a different configuration:\n"
+                + "\n".join(diffs)
+                + "\n\nResuming would concatenate rows answering different questions.\n"
+                "Start a fresh output file, or pass --force-resume if you are "
+                "certain the difference does not affect the measurement."
+            )
+        if diffs:
+            merged = dict(fingerprint)
+            merged["forced"] = True
+            self._write(merged)
+
+    def _write(self, data: dict) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
