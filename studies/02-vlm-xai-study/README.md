@@ -16,11 +16,46 @@ safety judgement can be trusted — not just whether its answer is right.
 | `parsing.py` — reply parsing and parse-rate tracking | ✅ implemented and tested |
 | `sampling.py` — two-stratum sampling, prevalence reweighting | ✅ implemented and tested |
 | `backends/base.py` — the `Backend` protocol | ✅ interface defined |
-| `backends/qwen.py` — Qwen2.5-VL implementation | ⬜ not started (needs CUDA) |
-| `metrics/` — the seven metrics | ⬜ not started |
-| `scripts/` — stage runners | ⬜ skeletons only |
+| `backends/fake.py` — scripted backend for GPU-free testing | ✅ implemented and tested |
+| `backends/qwen.py` — Qwen2.5-VL implementation | ✅ implemented, 12 GPU tests pass |
+| `masking.py` — patch-grid alignment | ✅ implemented and tested |
+| `scripts/00_feasibility_gate.py` — Stage 0 | ✅ run; **VERDICT: GO** |
+| `metrics/` — the seven metrics | ⬜ not started (Plan 3) |
+| `scripts/01,02` — sampling and baseline | ⬜ skeletons only (Plan 2) |
 
-40 tests pass, none needing a GPU.
+74 tests pass: 62 without a GPU, 12 requiring `--gpu`.
+
+## Stage 0 result
+
+Qwen2.5-VL-7B-4bit, bf16+sdpa, `max_pixels` = 640 blocks, reason-first format:
+
+```
+small-object detection : 89%  (n=9)     threshold 80%   -> GO
+sensitivity            : 95%  (n=20)
+specificity            : 30%  (n=10)
+YES share of replies   : 87%
+median latency         : 2.9 s          budget 6.0 s
+parse rate             : 100%
+peak VRAM              : 7.0 GB
+attention available    : True
+```
+
+Read the 89% next to the 87%: an always-YES model would score 100% small-object
+detection, 0% specificity, 67% overall. This model beats that degenerate baseline
+by about six points, so the headline is partly a YES bias. See architecture doc
+§12.1 for the full reading, and `results/stage0_feasibility.csv` for per-image rows.
+
+## Settings that are correctness, not tuning
+
+Four defaults were changed after measurement, and each would have produced
+confident wrong numbers rather than a crash. Do not revert without re-measuring:
+
+| setting | why |
+|---|---|
+| `COMPUTE_DTYPE = bfloat16` | fp16 overflows; generation collapses to empty output |
+| `ATTENTION_IMPL = sdpa` | the eager kernel injects spurious tokens mid-sentence |
+| `MAX_PIXELS = 640` blocks | 1280 spills past the 8 GB card, ~30× slower, no gain in sensitivity |
+| `ANSWER` last in the format | with ANSWER first the verdict precedes the reasoning and contradicts it |
 
 ---
 
