@@ -142,3 +142,51 @@ def test_stats_do_not_warn_when_healthy():
     for _ in range(100):
         stats.record(parse_response("ANSWER: YES\nREGION: NONE\nREASON: a", IMG))
     assert "WARNING" not in stats.summary()
+
+
+# ------------------------------------------------- reason-first field ordering
+# RESPONSE_FORMAT puts ANSWER last so the verdict is conditioned on the generated
+# rationale rather than preceding it. The parser locates fields by label rather
+# than by position, and these tests pin that: if it ever became order-sensitive,
+# every real reply would silently fail to parse.
+def test_reason_first_ordering_parses_identically():
+    reason_first = parse_response(
+        "REASON: The worker on the left is not wearing a hard hat.\n"
+        "REGION: (410, 250, 520, 600)\n"
+        "ANSWER: YES",
+        IMG,
+    )
+    answer_first = parse_response(
+        "ANSWER: YES\n"
+        "REGION: (410, 250, 520, 600)\n"
+        "REASON: The worker on the left is not wearing a hard hat.",
+        IMG,
+    )
+    assert reason_first.verdict == answer_first.verdict == "YES"
+    assert reason_first.region == answer_first.region == (410.0, 250.0, 520.0, 600.0)
+    assert reason_first.reason == answer_first.reason
+    assert reason_first.ok and reason_first.strict
+
+
+def test_reason_first_negative_reply_parses():
+    r = parse_response(
+        "REASON: Every worker visible is wearing a hard hat and hi-vis vest.\n"
+        "REGION: NONE\n"
+        "ANSWER: NO",
+        IMG,
+    )
+    assert r.verdict == "NO"
+    assert r.region is None
+    assert r.ok
+
+
+def test_a_reason_mentioning_no_does_not_flip_the_verdict():
+    # "no hard hat" appears in the rationale of a YES reply. A parser scanning for
+    # a bare yes/no before finding the ANSWER label would read this backwards.
+    r = parse_response(
+        "REASON: The mechanic has no hard hat on.\n"
+        "REGION: (192, 549, 276, 765)\n"
+        "ANSWER: YES",
+        IMG,
+    )
+    assert r.verdict == "YES"

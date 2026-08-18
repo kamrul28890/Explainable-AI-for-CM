@@ -727,9 +727,9 @@ Every question is followed by this instruction:
 ```
 Answer in exactly this format:
 
-ANSWER: YES or NO
-REGION: (x0, y0, x1, y1) pixel coordinates of the single most relevant area, or NONE
 REASON: One sentence naming the specific person or location and what is wrong.
+REGION: (x0, y0, x1, y1) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES or NO
 ```
 
 **Why not "explain briefly"?** It is too vague to grade — one model writes three words,
@@ -744,6 +744,34 @@ what is wrong"* is enforceable, and it forces the model to produce exactly the t
 metric 7 needs: **a subject** (which worker/where) and **a predicate** (what is wrong). It
 makes a vague answer like *"the site is unsafe"* visibly non-compliant with the format
 rather than merely unhelpful.
+
+**Why ANSWER comes last.** This ordering is load-bearing, and it was corrected after
+measurement rather than chosen up front. With `ANSWER` first and greedy decoding, the model
+must commit to a verdict *before* generating the region and reason that would inform it. It
+then contradicts itself. On image `0000102`, annotated *"The mechanic in front of the truck
+is not wearing a hard hat"*, the answer-first format produced:
+
+```
+ANSWER: NO
+REGION: (194, 523, 260, 648)     <- IoU 0.33 against the annotated box
+REASON: The worker is not wearing a hard hat, which is required ...
+```
+
+The model **saw the hazard, described it correctly, and localised it** — then scored as a
+miss, because the verdict token alone decides. Over five violation images, answer-first
+scored 40% sensitivity and reason-first scored 100% on the same images.
+
+**The change is not free, and the cost is recorded honestly.** Putting `ANSWER` last shifts
+the operating point toward YES: specificity fell from 80% to 60% over five compliant images.
+Both figures rest on n=5 and are directional only; Stage 0 measures them at usable n. This is
+also why the compliant stratum exists — measured on violations alone, the reorder would have
+looked like a costless improvement instead of a trade.
+
+**A consequence for interpretation.** A verdict that disagrees with its own rationale is a
+faithfulness failure in its own right, and it is invisible to any metric that reads the
+verdict alone. Stage 0 therefore records the rationale and region alongside the verdict, so
+this failure mode stays measurable rather than being silently absorbed into an accuracy
+figure.
 
 ### 6.3 Comparing two texts that mean the same thing
 

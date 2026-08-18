@@ -40,12 +40,32 @@ class Rule:
 # than length: models are unreliable at counting words, and "one sentence naming
 # the specific person or location" is both enforceable and produces exactly the
 # two things metric 7 needs -- a subject and a predicate.
+#
+# ANSWER COMES LAST, AND THE ORDER IS LOAD-BEARING. With ANSWER first and greedy
+# decoding, the model must emit a verdict before generating the region and reason
+# that would inform it, and it then contradicts itself. Measured on image 0000102,
+# whose annotation reads "The mechanic in front of the truck is not wearing a hard
+# hat", the answer-first format produced:
+#
+#     ANSWER: NO
+#     REGION: (194, 523, 260, 648)      <- IoU 0.33 against the annotated box
+#     REASON: The worker is not wearing a hard hat, ...
+#
+# The model saw the hazard, described it correctly and localised it, then scored
+# as a miss on the verdict token alone. Across 5 violation images answer-first
+# scored 40% sensitivity; reason-first scored 100% on the same images.
+#
+# This is not free: reason-first shifts the operating point toward YES, and
+# specificity fell from 80% to 60% on 5 compliant images. Both figures come from
+# n=5 and are directional only -- Stage 0 measures them properly. The change is
+# recorded here because the ordering is a property of the measuring instrument,
+# not an implementation detail.
 RESPONSE_FORMAT = """
 Answer in exactly this format, with nothing before or after:
 
-ANSWER: YES or NO
-REGION: (x0, y0, x1, y1) pixel coordinates of the single most relevant area, or NONE
 REASON: One sentence naming the specific person or location and what is wrong.
+REGION: (x0, y0, x1, y1) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES or NO
 """.strip()
 
 
