@@ -185,6 +185,168 @@ class QwenBackend:
         side = int((MAX_PIXELS ** 0.5) // block)
         return (side, side)
 
+    def image_token_positions(self, inputs) -> "torch.Tensor":
+        """Indices of image-placeholder tokens in the prompt sequence.
+
+        Qwen2.5-VL is decoder-only: image tokens sit inline in the sequence rather
+        than in a separate encoder. So "attention to the image" means attention
+        from generated tokens to these positions, and ablation means dropping them.
+        """
+        image_token_id = getattr(self.model.config, "image_token_id", None)
+        if image_token_id is None:
+            image_token_id = self.processor.tokenizer.convert_tokens_to_ids(
+                "<|image_pad|>"
+            )
+        ids = inputs["input_ids"][0]
+        return (ids == image_token_id).nonzero(as_tuple=True)[0]
+
+    def _multimodal_embeds(self, inputs) -> "torch.Tensor":
+        """Token embeddings with vision features scattered into the image slots.
+
+        This replicates the merge inside Qwen2_5_VLForConditionalGeneration.forward:
+        embed_tokens() returns a PLACEHOLDER vector for every image token, and the
+        vision-tower output is scattered over those positions afterwards.
+
+        Building ablation inputs from embed_tokens() alone -- the obvious shortcut --
+        produces a sequence in which the model sees no image whatsoever. Every
+        ablation would then flip the answer regardless of which region was removed,
+        and Descriptive Accuracy would report near-perfect faithfulness while
+        measuring nothing at all.
+        """
+        embeds = self.model.model.embed_tokens(inputs["input_ids"])
+        image_embeds = self.model.visual(
+            inputs["pixel_values"], grid_thw=inputs["image_grid_thw"]
+        ).to(embeds.device, embeds.dtype)
+        image_token_id = getattr(self.model.config, "image_token_id")
+        mask = (inputs["input_ids"] == image_token_id).unsqueeze(-1).expand_as(embeds)
+        return embeds.masked_scatter(mask, image_embeds)
+
+    def attention(self, image: Image.Image, rule_id: RuleId, **kw
+                  ) -> Optional[np.ndarray]:
+        """Mean attention from the generated answer back to image patches.
+
+        Generation runs on the normal (sdpa) path, and attention is then read from
+        a SINGLE teacher-forced forward pass over the produced sequence. The eager
+        kernel that attention reading requires corrupts generation (see
+        config.COMPUTE_DTYPE), so nothing is ever generated under it. This also
+        measures attention for the answer actually given rather than for a separate
+        decode that might have gone somewhere else.
+
+        Returns None rather than a fabricated map if extraction is unavailable --
+        Sparsity is then reported only for backends where it genuinely works.
+        """
+        prompt = prompt_for(rule_id)
+        inputs = self._build_inputs(image, prompt)
+        positions = self.image_token_positions(inputs)
+        if len(positions) == 0:
+            return None
+
+        prompt_len = inputs["input_ids"].shape[1]
+        with torch.inference_mode():
+            generated = self.model.generate(**inputs, **{**GENERATION, **kw})
+        if generated.shape[1] <= prompt_len:
+            return None
+
+        rest = {k: v for k, v in inputs.items()
+                if k not in ("input_ids", "attention_mask")}
+        try:
+            with torch.inference_mode():
+                out = self.model(
+                    input_ids=generated,
+                    attention_mask=torch.ones_like(generated),
+                    output_attentions=True,
+                    **rest,
+                )
+        except (RuntimeError, TypeError):
+            return None
+
+        layers = getattr(out, "attentions", None)
+        if not layers:
+            return None
+
+        # Each layer is (batch, heads, query, key). Average over heads, keep the
+        # generated rows as queries and the image tokens as keys, then average over
+        # generated tokens and over layers.
+        acc, n = None, 0
+        for layer in layers:
+            a = layer[0].float().mean(dim=0)
+            sel = a[prompt_len:][:, positions]
+            if sel.numel() == 0:
+                continue
+            row = sel.mean(dim=0)
+            acc = row if acc is None else acc + row
+            n += 1
+        if acc is None or n == 0:
+            return None
+
+        flat = (acc / n).cpu().numpy()
+        rows, cols = self._grid_from_inputs(inputs)
+        if flat.size != rows * cols:
+            # Refuse to guess a layout rather than reshape into a wrong aspect.
+            return None
+        grid = flat.reshape(rows, cols)
+        peak = grid.max()
+        return grid / peak if peak > 0 else grid
+
+    def _answer_token_ablated(self, image: Image.Image, rule_id: RuleId,
+                              region: Box, **kw) -> Answer:
+        """Answer with the image tokens covering `region` removed.
+
+        No pixels are modified, so no out-of-distribution artefact can exist. This
+        is the cleanest available statement of "the model could not see this area".
+        """
+        prompt = prompt_for(rule_id)
+        inputs = self._build_inputs(image, prompt)
+        positions = self.image_token_positions(inputs)
+        if len(positions) == 0:
+            raise BackendUnavailable("no image tokens found; token ablation "
+                                     "unavailable for this model build")
+
+        # The grid comes from image_grid_thw, never from the pixel budget: under
+        # dynamic resolution it is not square, and a wrong `cols` would make divmod
+        # walk diagonally across the image.
+        rows, cols = self._grid_from_inputs(inputs)
+        w, h = image.size
+        x0, y0, x1, y1 = region
+
+        keep = torch.ones(len(positions), dtype=torch.bool)
+        for i in range(len(positions)):
+            r, c = divmod(i, cols)
+            px0, py0 = c * w / cols, r * h / rows
+            px1, py1 = (c + 1) * w / cols, (r + 1) * h / rows
+            if not (px1 <= x0 or px0 >= x1 or py1 <= y0 or py0 >= y1):
+                keep[i] = False
+
+        drop = positions[~keep.to(positions.device)]
+        if len(drop) == 0:
+            out = self.answer(image, rule_id, **kw)
+            out.intervention = "tokens"
+            return out
+
+        embeds = self._multimodal_embeds(inputs)
+        mask = torch.ones(inputs["input_ids"].shape[1], dtype=torch.bool,
+                          device=embeds.device)
+        mask[drop] = False
+        kept_embeds = embeds[:, mask, :]
+        kept_attention = inputs["attention_mask"][:, mask]
+
+        t0 = time.perf_counter()
+        with torch.inference_mode():
+            out = self.model.generate(
+                inputs_embeds=kept_embeds,
+                attention_mask=kept_attention,
+                **{**GENERATION, **kw},
+            )
+        latency_ms = (time.perf_counter() - t0) * 1000.0
+
+        # With inputs_embeds there is no prompt prefix in the output to strip.
+        raw = self.processor.batch_decode(
+            out, skip_special_tokens=True, clean_up_tokenization_spaces=False
+        )[0].strip()
+        parsed = parse_response(raw, image.size)
+        return Answer.from_parsed(parsed, raw_text=raw, latency_ms=latency_ms,
+                                  intervention="tokens")
+
     def peak_memory_gb(self) -> float:
         if not torch.cuda.is_available():
             return float("nan")
