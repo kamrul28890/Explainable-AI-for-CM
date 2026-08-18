@@ -18,7 +18,7 @@ import json
 import os
 import statistics
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Iterable, Optional
 
 # (image_id, rule_id) -- the natural key of a manifest row.
 #
@@ -198,3 +198,71 @@ class Guards:
                 "signature of a silent spill into shared memory -- lower "
                 "MAX_PIXELS or free VRAM, then resume."
             )
+
+
+def run_stage(
+    rows: Iterable[dict],
+    work_fn: Callable[[dict], dict],
+    out_csv: Path,
+    state_json: Path,
+    fieldnames: list[str],
+    fingerprint: dict,
+    *,
+    resume: bool = True,
+    force_resume: bool = False,
+    checkpoint_every: int = 100,
+    progress_fn: Optional[Callable[[dict], None]] = None,
+    guards: Optional[Guards] = None,
+) -> dict:
+    """Run `work_fn` over `rows`, checkpointing every row and skipping done work.
+
+    `work_fn` raising is not fatal: the row is recorded with its error and the run
+    continues, because one unreadable image should not end an overnight run. A
+    tripped guard *is* fatal, because it means every subsequent row would be
+    unusable too.
+    """
+    state = RunState(state_json)
+    state.verify_or_create(fingerprint, force=force_resume)
+
+    writer = CheckpointWriter(out_csv, fieldnames)
+    done = writer.done_keys() if resume else set()
+    guards = guards if guards is not None else Guards()
+
+    summary = {"done": 0, "skipped": 0, "errors": 0, "guards": guards}
+
+    try:
+        for row in rows:
+            key = (row["image_id"], row["rule_id"])
+            if key in done:
+                summary["skipped"] += 1
+                continue
+
+            try:
+                result = work_fn(row)
+                error = ""
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except GuardTripped:
+                raise
+            except Exception as exc:  # noqa: BLE001 -- deliberately broad, see docstring
+                result = {}
+                error = f"{type(exc).__name__}: {exc}"
+                summary["errors"] += 1
+
+            out_row = {**row, **result, "error": error}
+            writer.append(out_row)
+            summary["done"] += 1
+
+            guards.record(
+                parsed_ok=bool(out_row.get("verdict")) and not out_row.get("parse_error"),
+                latency_s=float(out_row.get("latency_ms") or 0.0) / 1000.0,
+            )
+
+            if summary["done"] % checkpoint_every == 0:
+                guards.check()
+                if progress_fn is not None:
+                    progress_fn(summary)
+    finally:
+        writer.close()
+
+    return summary

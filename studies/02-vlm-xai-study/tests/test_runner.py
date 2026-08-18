@@ -153,3 +153,113 @@ def test_latency_guard_tolerates_the_declared_budget():
     for _ in range(GUARD_MIN_ROWS):
         g.record(parsed_ok=True, latency_s=6.0)
     g.check()  # must not raise
+
+
+# --- run_stage -------------------------------------------------------------
+from xai_vlm.runner import run_stage
+
+ROW_FIELDS = ["image_id", "rule_id", "verdict", "latency_ms", "parse_error", "error"]
+
+
+def _manifest(n):
+    return [{"image_id": f"{i:04d}", "rule_id": "rule_1"} for i in range(n)]
+
+
+def _paths(tmp_path):
+    return tmp_path / "out.csv", tmp_path / "out.state.json"
+
+
+def test_crash_then_resume_covers_the_manifest_exactly_once(tmp_path):
+    out, state = _paths(tmp_path)
+    rows = _manifest(10)
+    fp = {"manifest_sha256": "abc"}
+
+    calls = []
+
+    def flaky(row):
+        if len(calls) == 4:
+            raise KeyboardInterrupt("simulated crash")
+        calls.append(row["image_id"])
+        return {"verdict": "YES", "latency_ms": 1.0}
+
+    with pytest.raises(KeyboardInterrupt):
+        run_stage(rows, flaky, out, state, ROW_FIELDS, fp)
+
+    def healthy(row):
+        calls.append(row["image_id"])
+        return {"verdict": "YES", "latency_ms": 1.0}
+
+    summary = run_stage(rows, healthy, out, state, ROW_FIELDS, fp)
+
+    written = list(csv.DictReader(out.open(encoding="utf-8")))
+    ids = [r["image_id"] for r in written]
+    assert sorted(ids) == sorted(r["image_id"] for r in rows)
+    assert len(ids) == len(set(ids)), "a resumed row was written twice"
+    assert summary["skipped"] == 4
+
+
+def test_resuming_a_complete_run_does_no_work(tmp_path):
+    out, state = _paths(tmp_path)
+    rows = _manifest(5)
+    fp = {"manifest_sha256": "abc"}
+    seen = []
+
+    def work(row):
+        seen.append(row["image_id"])
+        return {"verdict": "NO", "latency_ms": 1.0}
+
+    run_stage(rows, work, out, state, ROW_FIELDS, fp)
+    n_first = len(seen)
+    summary = run_stage(rows, work, out, state, ROW_FIELDS, fp)
+
+    assert len(seen) == n_first, "work_fn was called on an already-complete run"
+    assert summary["done"] == 0
+    assert summary["skipped"] == 5
+
+
+def test_fingerprint_mismatch_leaves_the_csv_untouched(tmp_path):
+    out, state = _paths(tmp_path)
+    rows = _manifest(3)
+
+    def work(row):
+        return {"verdict": "YES", "latency_ms": 1.0}
+
+    run_stage(rows, work, out, state, ROW_FIELDS, {"max_pixels": 501760})
+    before = out.read_text(encoding="utf-8")
+
+    with pytest.raises(FingerprintMismatch):
+        run_stage(rows, work, out, state, ROW_FIELDS, {"max_pixels": 1003520})
+
+    assert out.read_text(encoding="utf-8") == before
+
+
+def test_a_failing_row_is_recorded_and_the_run_continues(tmp_path):
+    out, state = _paths(tmp_path)
+    rows = _manifest(5)
+
+    def work(row):
+        if row["image_id"] == "0002":
+            raise ValueError("boom")
+        return {"verdict": "YES", "latency_ms": 1.0}
+
+    summary = run_stage(rows, work, out, state, ROW_FIELDS, {"a": 1})
+
+    written = {r["image_id"]: r for r in csv.DictReader(out.open(encoding="utf-8"))}
+    assert len(written) == 5, "the failing row must still be recorded"
+    assert "boom" in written["0002"]["error"]
+    assert written["0002"]["verdict"] == ""
+    assert summary["errors"] == 1
+
+
+def test_guard_trips_mid_run_and_keeps_completed_rows(tmp_path):
+    out, state = _paths(tmp_path)
+    rows = _manifest(300)
+
+    def work(row):
+        return {"verdict": "", "parse_error": "no verdict", "latency_ms": 1.0}
+
+    with pytest.raises(GuardTripped):
+        run_stage(rows, work, out, state, ROW_FIELDS, {"a": 1}, checkpoint_every=100)
+
+    written = list(csv.DictReader(out.open(encoding="utf-8")))
+    assert 100 <= len(written) < 300, "should stop at a checkpoint, not at the end"
