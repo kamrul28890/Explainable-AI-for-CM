@@ -758,14 +758,28 @@ REASON: The worker is not wearing a hard hat, which is required ...
 ```
 
 The model **saw the hazard, described it correctly, and localised it** — then scored as a
-miss, because the verdict token alone decides. Over five violation images, answer-first
-scored 40% sensitivity and reason-first scored 100% on the same images.
+miss, because the verdict token alone decides.
 
-**The change is not free, and the cost is recorded honestly.** Putting `ANSWER` last shifts
-the operating point toward YES: specificity fell from 80% to 60% over five compliant images.
-Both figures rest on n=5 and are directional only; Stage 0 measures them at usable n. This is
-also why the compliant stratum exists — measured on violations alone, the reorder would have
-looked like a costless improvement instead of a trade.
+**What the reorder actually buys, measured.** At n=8 per stratum, 640-block budget:
+
+| format | sensitivity | specificity | balanced accuracy |
+|---|---|---|---|
+| answer-first | 3/8 = 38% | 7/8 = 88% | **62%** |
+| reason-first | 8/8 = 100% | 2/8 = 25% | **62%** |
+
+**Balanced accuracy is identical.** The reorder does not improve the model's ability to
+discriminate; it moves the operating point, trading false negatives for false positives. An
+earlier n=5 run suggested a real accuracy gain — that was noise.
+
+**So why keep it?** Because metrics 1, 6 and 7 are *undefined on a NO answer* (§5.3): no
+region to mask, no rationale to grade. At 38% sensitivity, roughly three fifths of violation
+images would answer NO and vanish from the explanation metrics altogether — the study's
+primary measurements would be computed on a minority of the hazard stratum. Reason-first is
+chosen for **measurability, not accuracy**, and the higher false-alarm rate it produces is
+reported as a headline number rather than absorbed silently.
+
+This is also why the compliant stratum exists — measured on violations alone, the reorder
+would have looked like a costless improvement instead of a trade.
 
 **A consequence for interpretation.** A verdict that disagrees with its own rationale is a
 faithfulness failure in its own right, and it is invisible to any metric that reads the

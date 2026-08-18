@@ -52,14 +52,27 @@ class Rule:
 #     REASON: The worker is not wearing a hard hat, ...
 #
 # The model saw the hazard, described it correctly and localised it, then scored
-# as a miss on the verdict token alone. Across 5 violation images answer-first
-# scored 40% sensitivity; reason-first scored 100% on the same images.
+# as a miss on the verdict token alone.
 #
-# This is not free: reason-first shifts the operating point toward YES, and
-# specificity fell from 80% to 60% on 5 compliant images. Both figures come from
-# n=5 and are directional only -- Stage 0 measures them properly. The change is
-# recorded here because the ordering is a property of the measuring instrument,
-# not an implementation detail.
+# WHAT THE REORDER DOES AND DOES NOT DO. Re-measured at n=8 per stratum under the
+# corrected bf16+sdpa config, 640-block budget:
+#
+#                   sensitivity   specificity   balanced accuracy
+#   answer-first      3/8 = 38%     7/8 = 88%          62%
+#   reason-first      8/8 = 100%    2/8 = 25%          62%
+#
+# Balanced accuracy is IDENTICAL. The reorder does not improve discrimination; it
+# slides the operating point toward YES, trading false negatives for false
+# positives. An earlier n=5 measurement suggested a genuine accuracy gain -- that
+# was noise, and this comment previously overstated the effect.
+#
+# It is kept for a different reason: metrics 1, 6 and 7 are undefined on a NO
+# answer (no region to mask, no rationale to grade). At 38% sensitivity roughly
+# three fifths of violation images would answer NO and drop out of the explanation
+# metrics entirely, gutting the statistical power of the study's primary
+# measurements. Reason-first is chosen for MEASURABILITY, not accuracy, and the
+# resulting false-alarm rate is reported as a headline number in its own right
+# (architecture doc 5.3) rather than hidden.
 RESPONSE_FORMAT = """
 Answer in exactly this format, with nothing before or after:
 
