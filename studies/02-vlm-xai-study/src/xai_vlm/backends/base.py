@@ -99,11 +99,19 @@ class Backend(Protocol):
         """
         ...
 
-    def patch_grid(self) -> tuple[int, int]:
-        """(rows, cols) of the vision encoder's patch grid.
+    def patch_grid(self, image: Optional[Image.Image] = None) -> tuple[int, int]:
+        """(rows, cols) of the vision encoder's merged patch grid.
 
-        Needed to snap mask boundaries outward to patch borders: a mask cutting a
-        patch in half leaves a partial, ambiguous signal in it.
+        Needed to snap mask boundaries outward to patch borders (a mask cutting a
+        patch in half leaves a partial, ambiguous signal in it) and to map image
+        tokens back to pixels for ablation.
+
+        `image` is not optional in practice for any backend using dynamic
+        resolution. Qwen2.5-VL sizes its grid from the image's aspect ratio, so
+        the grid for a 1200x900 photo is 21x29 -- not square, and not derivable
+        from the pixel budget alone. Callers that map tokens to pixel regions MUST
+        pass the image; omitting it returns a nominal grid that is an
+        approximation only.
         """
         ...
 

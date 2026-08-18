@@ -66,5 +66,8 @@ class FakeBackend:
         grid[rows // 2 - 1: rows // 2 + 2, cols // 2 - 1: cols // 2 + 2] += 0.25
         return np.clip(grid / grid.max(), 0.0, 1.0)
 
-    def patch_grid(self) -> tuple[int, int]:
+    def patch_grid(self, image: Optional[Image.Image] = None) -> tuple[int, int]:
+        # The fake has a fixed grid by construction, so the image is ignored --
+        # but the signature must match the protocol or harness code written
+        # against a real backend cannot be exercised against this one.
         return self._grid

@@ -123,12 +123,37 @@ class QwenBackend:
         parsed = parse_response(raw, image.size)
         return Answer.from_parsed(parsed, raw_text=raw, latency_ms=latency_ms)
 
-    def patch_grid(self) -> tuple[int, int]:
-        """(rows, cols) of the merged patch grid at the pinned pixel budget."""
-        vc = self.model.config.vision_config
-        patch = getattr(vc, "patch_size", 14)
-        merge = getattr(vc, "spatial_merge_size", 2)
-        block = patch * merge
+    def _merge_size(self) -> int:
+        return getattr(self.model.config.vision_config, "spatial_merge_size", 2)
+
+    def _grid_from_inputs(self, inputs) -> tuple[int, int]:
+        """(rows, cols) of the merged grid for inputs already built.
+
+        image_grid_thw is (t, h, w) in PRE-merge patches; the language model sees
+        them merged 2x2. This is the authoritative grid -- everything mapping
+        tokens to pixels must come through here.
+        """
+        t, h, w = inputs["image_grid_thw"][0].tolist()
+        m = self._merge_size()
+        return (h // m, w // m)
+
+    def patch_grid(self, image: Optional[Image.Image] = None) -> tuple[int, int]:
+        """(rows, cols) of the merged patch grid.
+
+        Exact only when `image` is given. Qwen2.5-VL uses dynamic resolution, so
+        the grid follows the image's aspect ratio: a 1200x900 photo at the pinned
+        budget is 21x29, not square. Deriving a square grid from the pixel budget
+        gives a token COUNT within a fraction of a percent -- which is exactly why
+        it is dangerous, since nothing crashes -- but the wrong number of columns,
+        and divmod(i, cols) then walks diagonally across the image.
+        """
+        if image is not None:
+            return self._grid_from_inputs(
+                self.processor.image_processor(images=[image], return_tensors="pt")
+            )
+        # Nominal fallback. Approximate by construction: never map tokens to
+        # pixels with this.
+        block = getattr(self.model.config.vision_config, "patch_size", 14) * self._merge_size()
         side = int((MAX_PIXELS ** 0.5) // block)
         return (side, side)
 

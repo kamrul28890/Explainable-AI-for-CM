@@ -17,7 +17,23 @@ MODEL_DIR = REPO_ROOT / "models"
 # THIS VALUE IS FIXED ACROSS EVERY MODEL AND STAGE. Varying it would confound the
 # comparison with input size rather than model quality (architecture doc Risk #11).
 PATCH_BLOCK = 28 * 28
-MAX_PIXELS = 1280 * PATCH_BLOCK
+
+# 640 blocks, not 1280. Measured on 8 violation + 8 compliant images, bf16+sdpa,
+# reason-first:
+#
+#   blocks   grid      tokens   mean latency   peak VRAM   sensitivity
+#     1280   30x41       1230        112.3 s     9.5 GB     8/8 = 100%
+#      640   21x29        609          3.5 s     7.0 GB     8/8 = 100%
+#
+# Identical sensitivity at 32x the speed. 1280 exceeds the card and spills into
+# Windows' shared-memory fallback, which trades an OOM for a silent ~30x
+# slowdown; 640 fits. On the five compliant images both levels saw, specificity
+# was 2/5 vs 1/5 -- a one-image difference, noise at that n.
+#
+# This retires the small-object risk of architecture doc 7.4 for rule_1: the
+# hazards the model catches at full resolution it also catches at 640. It is what
+# makes the study feasible -- roughly 27 h for the full battery instead of 31 days.
+MAX_PIXELS = 640 * PATCH_BLOCK
 MIN_PIXELS = 256 * PATCH_BLOCK
 
 # Deterministic by default. Stability (metric 3) overrides these explicitly, which

@@ -23,7 +23,6 @@ mlx-3b-4bit   mlx-community/Qwen2.5-VL-3B-Instruct-4bit   46d4cf06a06ffc1a766c21
 mlx-7b-4bit   mlx-community/Qwen2.5-VL-7B-Instruct-4bit   fdcc572e8b05ba9daeaf71be8c9e4267c826ff9b
 florence2     microsoft/Florence-2-base-ft                f6c1a25888ffc1d945ee8a1a77ac833c7303d46e
 
-# NOTE: scripts/download_data.py does not yet pass `revision=` to
-# snapshot_download, so it currently fetches `main` and this file is a record
-# rather than an enforced constraint. Wiring it in is a one-line change and is
-# tracked separately.
+# ENFORCED: scripts/download_data.py reads this file and passes `revision=` to
+# snapshot_download. A tier with no entry here still downloads, but prints a
+# warning naming the omission rather than silently taking `main`.

@@ -56,9 +56,10 @@ def _pilot_data() -> Path:
 DATASET_ID = "LouisChen15/ConstructionSite"
 DATASET_DIR = _pilot_data()
 
-# Pinned by repo id. Revisions are pinned in requirements/models.lock so a rerun
-# months later gets identical weights -- an unpinned "latest" silently changes
-# results and is the most common reproducibility failure in ML work.
+# Pinned by repo id AND by revision. Revisions live in requirements/models.lock and
+# are passed to snapshot_download below, so a rerun months later gets identical
+# weights -- an unpinned "latest" silently changes results and is the most common
+# reproducibility failure in ML work.
 MODELS = {
     "qwen7b-4bit": "Qwen/Qwen2.5-VL-7B-Instruct",
     "qwen3b-8bit": "Qwen/Qwen2.5-VL-3B-Instruct",
@@ -157,6 +158,28 @@ def verify_dataset() -> int:
     return 0
 
 
+MODELS_LOCK = REPO_ROOT / "requirements" / "models.lock"
+
+
+def load_revisions() -> dict:
+    """tier -> pinned revision SHA, from requirements/models.lock.
+
+    Lines are `<tier>  <repo_id>  <sha>`; blanks and # comments are ignored, and
+    trailing `# verified ...` markers are stripped.
+    """
+    revisions = {}
+    if not MODELS_LOCK.exists():
+        return revisions
+    for line in MODELS_LOCK.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        parts = line.split()
+        if len(parts) >= 3:
+            revisions[parts[0]] = parts[2]
+    return revisions
+
+
 def download_models(tier: str) -> int:
     from huggingface_hub import snapshot_download
 
@@ -172,9 +195,19 @@ def download_models(tier: str) -> int:
         print(f"  {tier} already present at {target}")
         return 0
 
+    # An unpinned download takes whatever `main` points at today, which is how a
+    # study silently becomes unreproducible. Missing pin is a warning rather than
+    # an error so a new tier can still be fetched -- but it says so loudly.
+    revision = load_revisions().get(tier)
+    if revision is None:
+        print(f"  WARNING: no revision pinned for {tier!r} in {MODELS_LOCK.name}; "
+              f"fetching 'main'. Record the SHA there once downloaded.")
+    else:
+        print(f"  revision pinned: {revision}")
+
     target.mkdir(parents=True, exist_ok=True)
     print(f"  downloading {repo} -> {target}")
-    snapshot_download(repo_id=repo, local_dir=str(target))
+    snapshot_download(repo_id=repo, local_dir=str(target), revision=revision)
     print(f"  {tier} ready")
     return 0
 

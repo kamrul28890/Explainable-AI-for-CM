@@ -73,3 +73,19 @@ def test_unparseable_reply_yields_a_not_ok_answer(img):
     a = b.answer(img, "rule_1")
     assert not a.ok
     assert a.parse_error
+
+
+# ------------------------------------------------------- per-image patch grid
+# Qwen2.5-VL uses dynamic resolution: the merged patch grid depends on the
+# image's aspect ratio, so a no-argument patch_grid() cannot be exact. A 1200x900
+# image at the pinned budget is 21x29, NOT square -- and token ablation maps
+# tokens to pixels with divmod(i, cols), so a wrong `cols` silently masks the
+# wrong patches while still producing plausible numbers.
+def test_patch_grid_accepts_an_image_and_stays_positive(backend, img):
+    rows, cols = backend.patch_grid(img)
+    assert rows > 0 and cols > 0
+
+
+def test_patch_grid_without_an_image_still_works(backend):
+    rows, cols = backend.patch_grid()
+    assert rows > 0 and cols > 0
