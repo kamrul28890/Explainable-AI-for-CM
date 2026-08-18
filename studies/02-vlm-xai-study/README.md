@@ -25,7 +25,7 @@ safety judgement can be trusted — not just whether its answer is right.
 | `scripts/02_baseline_inference.py` — Stage 2 | ✅ implemented; smoke-run on GPU |
 | `metrics/` — the seven metrics | ⬜ not started (Plan 3) |
 
-108 tests pass: 96 without a GPU, 12 requiring `--gpu`.
+110 tests pass: 98 without a GPU, 12 requiring `--gpu`.
 
 ## Stage 1 result — the frozen sample
 
@@ -209,7 +209,7 @@ src/xai_vlm/
         qwen.py       Qwen2.5-VL
     metrics/          the seven metrics (to come)
 scripts/              numbered stage runners
-tests/                108 tests; 96 need no GPU, 12 need --gpu
+tests/                110 tests; 98 need no GPU, 12 need --gpu
 results/              output CSVs, including the frozen sample_manifest.csv
 ```
 
