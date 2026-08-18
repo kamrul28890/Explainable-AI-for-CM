@@ -57,7 +57,9 @@ Runs on any machine. Reads dataset metadata only; no model is loaded.
    cells (`illumination`, `camera_distance`, `view`).
 4. Per image, `rules_to_ask(row, seed)` returns `(rule_id, is_negative_control)`
    pairs — every violated rule, plus one applicable negative control.
-5. `expected_answer(rule_id, row)` supplies ground truth per pair.
+5. `expected_answer(rule_id, row)` supplies ground truth per pair. It is **not**
+   stored — see below — but every row is asserted against it at write time, so a
+   disagreement between the two independent code paths fails the scan loudly.
 6. Print `stratification_report(hazard, compliant)` and `summarize_strata(rows)`.
    **A `WARNING` in the report aborts** unless `--allow-imbalance` is passed: a
    compliant pool that could not supply the cells the hazard stratum needs makes
@@ -66,12 +68,20 @@ Runs on any machine. Reads dataset metadata only; no model is loaded.
 ### Output
 
 `results/sample_manifest.csv`, one row per image-rule pair, columns exactly the
-fields of `sampling.SampleRow` plus `expected`:
+fields of `sampling.SampleRow` — which are also exactly the columns the
+architecture document pre-registered in its Stage 1 section:
 
 ```
 image_id, rule_id, stratum, is_violation, is_negative_control,
-quality_of_info, illumination, camera_distance, view, expected
+quality_of_info, illumination, camera_distance, view
 ```
+
+**No `expected` column.** `is_violation` is per *rule*, not per image — the
+architecture document's worked example gives image `0000102` two rows, `rule_1`
+with `is_violation=True` and `rule_3` with `is_violation=False`. So ground truth is
+already present: `expected = "YES" if is_violation else "NO"`. Storing it a second
+time would add a field that can disagree with its own source, and would drift the
+file away from the schema the study pre-registered.
 
 Row count is not known in advance and is not asserted. Stratum H images contribute
 one row per violated rule plus one control; stratum C images contribute one control
@@ -197,8 +207,11 @@ verdict, region, rationale, confidence, raw_text,
 latency_ms, parse_strict, parse_error, error
 ```
 
-Fields map directly from `backends.base.Answer`; nothing is derived at write time,
-so the CSV stays a faithful record of what the model said.
+The model-reply fields map directly from `backends.base.Answer`; none of them are
+derived at write time, so the CSV stays a faithful record of what the model said.
+`expected` is carried here (unlike in the manifest) because a results file should
+be readable on its own, and it is computed from the manifest's `is_violation` at
+read time rather than stored twice on disk.
 
 `parse_error` and `error` are distinct and must not be merged. `parse_error` comes
 from `Answer` and means the model replied but the reply could not be parsed —
