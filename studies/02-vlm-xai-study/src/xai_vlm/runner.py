@@ -138,12 +138,25 @@ class RunState:
 # the Stage 0 gate thresholds were set under. Not to be tuned to fit a run.
 PARSE_RATE_FLOOR = 0.95
 
-# 2 x LATENCY_BUDGET_S (6.0), not 2 x the observed Stage 0 median (2.9). Twice the
-# observed median is 5.8 s, which sits *below* the budget the study already declared
-# acceptable, so normal variation across a larger image set would abort healthy runs.
-# The failure this catches -- Windows' driver silently spilling to shared memory
-# rather than raising OOM -- costs roughly 30x, so it breaches 12.0 s unambiguously.
-LATENCY_CEILING_S = 12.0
+# CALIBRATED FROM MEASURED IN-RUN LATENCY, not from the Stage 0 budget.
+#
+# The original value was 12.0 s = 2 x LATENCY_BUDGET_S (6.0), and 6.0 was itself
+# set against Stage 0's 2.9 s median. Every one of those numbers was measured on
+# single images with nothing else running, and that context does not survive
+# contact with a real run: the SAME images that answer in 3.1 s standalone take
+# 10-11 s inside a run. Measured healthy medians are 9.5 s and 10.9 s.
+#
+# So a 12.0 s ceiling sat roughly 10% above the healthy baseline and would abort
+# perfectly good runs on ordinary variation. 25.0 s is ~2.3x the measured baseline
+# and still well under the 34.0 s degradation actually observed, so it keeps a
+# real detector without firing on healthy work.
+#
+# The 3.5x standalone-vs-in-run gap is NOT understood. It is not VRAM (peak 6.97 GB
+# against 8 GB, stable), not system RAM (18 GB free), not image size, not reply
+# length. The leading unverified hypothesis is CPU contention between parquet
+# decoding and Qwen's CPU-side image preprocessing, which is inside the timed call.
+# Until that is settled this ceiling is empirical, not principled.
+LATENCY_CEILING_S = 25.0
 
 # Guards evaluate rows from the CURRENT PROCESS only, and not until this many exist.
 # A resumed run is therefore never aborted by history it cannot change, and a short
@@ -194,9 +207,14 @@ class Guards:
         if self.median_latency_s > self.latency_ceiling_s:
             raise GuardTripped(
                 f"median latency {self.median_latency_s:.1f}s exceeds "
-                f"{self.latency_ceiling_s:.1f}s over {self.n} rows. This is the "
-                "signature of a silent spill into shared memory -- lower "
-                "MAX_PIXELS or free VRAM, then resume."
+                f"{self.latency_ceiling_s:.1f}s over {self.n} rows, against a "
+                "measured healthy baseline of 9-11s.\n"
+                "Check, in this order: another process using the GPU "
+                "(nvidia-smi); free system RAM; then peak VRAM against the 8 GB "
+                "card. Completed rows are on disk -- resume once it is clear.\n"
+                "Do NOT lower MAX_PIXELS to work around this. It is a "
+                "pre-registered setting whose value was measured, and in the one "
+                "degradation observed so far VRAM was not the cause."
             )
 
 

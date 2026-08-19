@@ -263,3 +263,28 @@ def test_guard_trips_mid_run_and_keeps_completed_rows(tmp_path):
 
     written = list(csv.DictReader(out.open(encoding="utf-8")))
     assert 100 <= len(written) < 300, "should stop at a checkpoint, not at the end"
+
+
+def test_latency_guard_tolerates_the_measured_in_run_baseline():
+    """~11s is the real in-run baseline; 2.9s was measured in isolation.
+
+    Stage 0 timed single images with nothing else running. Inside a real run the
+    same images take 3.5x longer, so a ceiling derived from the isolated figure
+    aborts healthy runs.
+
+    Measured medians across healthy runs: 9.5s, 10.9s. 15s is well inside the
+    variation those imply, and must not abort.
+    """
+    g = Guards()
+    for _ in range(GUARD_MIN_ROWS):
+        g.record(parsed_ok=True, latency_s=15.0)
+    g.check()  # must not raise
+
+
+def test_latency_guard_still_catches_the_observed_spill():
+    """The 34s episode that actually happened must still abort."""
+    g = Guards()
+    for _ in range(GUARD_MIN_ROWS):
+        g.record(parsed_ok=True, latency_s=34.0)
+    with pytest.raises(GuardTripped):
+        g.check()
