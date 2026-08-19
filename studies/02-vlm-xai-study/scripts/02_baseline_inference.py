@@ -96,18 +96,40 @@ def stream_rows_in_dataset_order(manifest_rows, loader):
     for row in manifest_rows:
         by_image[row["image_id"]].append(row)
 
-    remaining = len(by_image)
-    for rec in loader(split="test", streaming=True):
-        rows = by_image.pop(rec["image_id"], None)
-        if not rows:
-            continue
-        image = rec["image"]
-        image = image.convert("RGB") if hasattr(image, "convert") else image
-        for row in rows:
-            yield row, image
-        remaining -= 1
-        if remaining == 0:
+    # EVERY split the study samples from, via the shared constant. Hardcoding
+    # "test" here while Stage 1 sampled both is what silently truncated a run to a
+    # third of the manifest -- see config.SPLITS.
+    for split in config.SPLITS:
+        if not by_image:
             return
+        for rec in loader(split=split, streaming=True):
+            rows = by_image.pop(rec["image_id"], None)
+            if not rows:
+                continue
+            image = rec["image"]
+            image = image.convert("RGB") if hasattr(image, "convert") else image
+            for row in rows:
+                yield row, image
+            if not by_image:
+                return
+
+
+def verify_coverage(manifest_path, out_csv) -> int:
+    """How many manifest rows are absent from the results file.
+
+    An independent check on the artifact rather than on the process. A run can
+    exit 0, report no errors and print a wholly plausible summary while having
+    covered part of the manifest -- rows that were never attempted are invisible
+    to the parse-rate and latency guards, because those only see attempts.
+    """
+    with Path(manifest_path).open(newline="", encoding="utf-8") as fh:
+        wanted = {(r["image_id"], r["rule_id"]) for r in csv.DictReader(fh)}
+    out_csv = Path(out_csv)
+    if not out_csv.exists():
+        return len(wanted)
+    with out_csv.open(newline="", encoding="utf-8") as fh:
+        got = {(r["image_id"], r["rule_id"]) for r in csv.DictReader(fh)}
+    return len(wanted - got)
 
 
 def _progress(summary: dict) -> None:
@@ -239,7 +261,28 @@ def main() -> int:
     )
     print(f"\ndone={summary['done']}  skipped={summary['skipped']}  "
           f"errors={summary['errors']}")
+
+    # Coverage BEFORE the summary. Statistics computed on a partial manifest look
+    # entirely reasonable, so the incompleteness has to be stated first or it will
+    # be read past.
+    missing = verify_coverage(manifest, out_csv)
+    if missing and args.limit is None:
+        print("\n" + "!" * 66, file=sys.stderr)
+        print(f"INCOMPLETE: {missing} of "
+              f"{missing + summary['done'] + summary['skipped']} manifest rows were "
+              "never attempted.", file=sys.stderr)
+        print("Every figure below is computed on a PARTIAL, and therefore biased, "
+              "subset. Do not report it.", file=sys.stderr)
+        print("Rerun the same command with --resume to finish; completed rows are "
+              "already on disk.", file=sys.stderr)
+        print("!" * 66 + "\n", file=sys.stderr)
+
     _summarise(out_csv)
+
+    if missing and args.limit is None:
+        print(f"\nINCOMPLETE -- {missing} rows outstanding. Rerun with --resume.",
+              file=sys.stderr)
+        return 1
     return 0
 
 

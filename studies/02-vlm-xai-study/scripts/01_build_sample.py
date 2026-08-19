@@ -19,6 +19,7 @@ from pathlib import Path
 STUDY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(STUDY_ROOT / "src"))
 
+from xai_vlm import config  # noqa: E402
 from xai_vlm.rules import expected_answer, rules_to_ask, violated_rules  # noqa: E402
 from xai_vlm.sampling import (  # noqa: E402
     match_compliant_sample,
@@ -44,14 +45,12 @@ MANIFEST_FIELDS = [
 # floor, not an estimate -- see README, "Running Stage 2".
 STAGE0_MEDIAN_S = 2.9
 
-# BOTH SPLITS. The sample is the full 10,013-record corpus (architecture doc 5.2,
-# 6.2 and the Stage 1 procedure), not the 3,004-record test split.
+# Which splits the sample is drawn from. Defined in config so Stage 2's image
+# source cannot drift from it -- see the note there; they did drift once, and the
+# result was a run that exited 0 having covered a third of the manifest.
 #
-# There is no contamination to avoid: the model is evaluated zero-shot and is never
-# trained on any of this data, so "train" is simply more evaluation material.
-#
-# Scanning `test` alone is not merely smaller, it is unreportable. Violations per
-# split (architecture doc 5.3):
+# Both splits, giving the full 10,013-record corpus (architecture doc 5.2, 6.2)
+# rather than the 3,004-record test split. Violations per split (arch doc 5.3):
 #
 #              test   train   total
 #   rule_1      324     677    1001
@@ -59,9 +58,9 @@ STAGE0_MEDIAN_S = 2.9
 #   rule_2       25      59      84
 #   rule_4       24      46      70
 #
-# rule_2 and rule_4 would sit at n=25 and n=24, below the pilot's MIN_N_FLOOR of
-# 30, so two of the four rules could not be reported at all.
-SPLITS = ("test", "train")
+# `test` alone would sit rule_2 at n=25 and rule_4 at n=24, below the pilot's
+# MIN_N_FLOOR of 30, making two of the four rules unreportable.
+SPLITS = config.SPLITS
 
 
 def scan_records(loader, splits: tuple[str, ...] = SPLITS) -> list[dict]:

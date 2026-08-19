@@ -18,6 +18,20 @@ MODEL_DIR = REPO_ROOT / "models"
 # comparison with input size rather than model quality (architecture doc Risk #11).
 PATCH_BLOCK = 28 * 28
 
+# WHICH SPLITS THE STUDY DRAWS FROM. Lives here because Stage 1 (sampling) and
+# Stage 2 (inference) must agree, and when they disagree nothing detects it.
+#
+# They did disagree once: Stage 1 was changed to scan both splits while Stage 2
+# still streamed only `test`. Every train-split image was silently never found,
+# its rows never ran, and the run exited 0 with a plausible summary computed on a
+# third of the manifest. Guards cannot catch that -- they only see rows that were
+# attempted. Hence one constant, imported by both.
+#
+# Both splits, not `test` alone: the model is evaluated zero-shot and never
+# trained on any of this data, so there is nothing to hold out, and `test` alone
+# puts rule_2 at n=25 and rule_4 at n=24, under the MIN_N_FLOOR of 30.
+SPLITS: tuple[str, ...] = ("test", "train")
+
 # 640 blocks, not 1280. Measured on 8 violation + 8 compliant images, bf16+sdpa,
 # reason-first:
 #
