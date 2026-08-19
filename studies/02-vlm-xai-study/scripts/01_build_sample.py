@@ -37,6 +37,11 @@ MANIFEST_FIELDS = [
 ]
 
 # The Stage 0 median, used only to project wall clock before any GPU time is spent.
+#
+# OPTIMISTIC BY ABOUT 3x. Stage 0 timed 39 hand-picked gate images; the measured
+# median over the full corpus is 8.84 s, because most corpus images reach the
+# MAX_PIXELS cap those smaller gate images did not. The printed projection is a
+# floor, not an estimate -- see README, "Running Stage 2".
 STAGE0_MEDIAN_S = 2.9
 
 # BOTH SPLITS. The sample is the full 10,013-record corpus (architecture doc 5.2,

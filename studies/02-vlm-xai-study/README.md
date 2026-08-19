@@ -95,8 +95,18 @@ cd studies/02-vlm-xai-study
 ../../pilot/.venv/Scripts/python scripts/02_baseline_inference.py --model qwen7b-4bit --resume
 ```
 
-Projected wall clock for the full pass: **~3.1 h** at the Stage 0 median of
-2.9 s/call.
+Wall clock for the full pass: **~9.4 h**, measured.
+
+Stage 1 prints a projection of ~3.1 h based on the Stage 0 median of 2.9 s/call.
+**That projection is optimistic and should not be planned around.** Stage 0 timed
+39 hand-picked gate images; over the full corpus the measured median is **8.84 s**
+(p25 3.42, p75 9.48, p90 11.05, max 86.1). Most corpus images reach the
+`MAX_PIXELS` cap that the smaller gate images did not, so they carry the full
+609-token vision budget rather than less.
+
+Note p90 sits close to the 12.0 s latency abort. A trip several hours in is
+plausible; it costs only the time to rerun the command, since every completed row
+is already on disk.
 
 **`--resume` is safe on a first run.** With no existing CSV the done-set is empty
 and it behaves as a fresh start. Pass it every time — there is then no way to lose
