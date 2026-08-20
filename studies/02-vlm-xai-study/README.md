@@ -23,9 +23,116 @@ safety judgement can be trusted — not just whether its answer is right.
 | `scripts/00_feasibility_gate.py` — Stage 0 | ✅ run; **VERDICT: GO** |
 | `scripts/01_build_sample.py` — Stage 1 | ✅ run; manifest frozen |
 | `scripts/02_baseline_inference.py` — Stage 2 | ✅ implemented; smoke-run on GPU |
-| `metrics/` — the seven metrics | ⬜ not started (Plan 3) |
+| `metrics/geometry.py` — box conversion and IoU | ✅ implemented and tested |
+| `metrics/regions.py` — Stage 3 | ✅ run |
+| `metrics/efficiency.py` — Stage 7 | ✅ run |
+| `metrics/text_similarity.py` — pinned embeddings | ✅ implemented and tested |
+| `metrics/correctness.py` — Stage 10 | ✅ run |
+| `metrics/descriptive_accuracy.py` — Stage 4 | ✅ implemented; run in progress |
+| `metrics/` — Stages 5, 6, 8, 9 | ⬜ not started (Plans 3b/3c) |
 
-110 tests pass: 98 without a GPU, 12 requiring `--gpu`.
+168 tests: 156 without a GPU, 12 requiring `--gpu`.
+
+## Results so far
+
+Every figure below is from a committed CSV in `results/`, not a summary written
+by hand.
+
+### Stage 2 — baseline (n = 3,882)
+
+```
+sensitivity        91%   (n=1,327)
+specificity        41%   (n=2,555)
+false-alarm rate   59%   (1,509/2,555)
+YES share          70%
+parse rate        100%   (3,807 strict, 75 lenient)
+```
+
+Balanced accuracy is 66% against 50% for an always-YES model. The model is above
+chance, but its 91% sensitivity is substantially bought with false alarms rather
+than detection — roughly six false alerts per ten genuine ones. **Report the
+false-alarm rate beside any accuracy figure**, per §5.3.
+
+### Stage 3 — explanation regions
+
+```
+no-region rate, all rows   21.9%
+no-region rate, YES only    3.5%
+```
+
+These must be reported separately. The pooled 21.9% is dominated by NO answers,
+which need no region; when this model claims a hazard it almost always points at
+something.
+
+### Stage 7 — efficiency
+
+```
+median 10.1 s   p90 26.5 s   mean 13.7 s   max 477 s   n=3,882
+per-rule medians: 10.0-10.3 s across all four rules
+```
+
+Per-rule medians are near-identical despite different question complexity, which
+suggests a roughly constant per-call overhead rather than content-dependent cost.
+
+**The standalone/in-run gap is unexplained and both figures must be reported.**
+The same images answered alone take 3.1 s. Ruled out: VRAM (peak 6.97 GB of 8,
+stable), system RAM (18 GB free), image dimensions, reply length. Leading
+unverified hypothesis: CPU contention between parquet decoding and Qwen's
+CPU-side preprocessing, which falls inside the timed call.
+
+### Stage 10 — explanation correctness
+
+```
+scored 1,191 of 3,882        undefined 2,691
+explanation CORRECT          2.4%
+right answer, wrong reason  97.6%   (1,162/1,191)
+
+similarity >= 0.60   56.9%
+hazard match         91.2%
+IoU >= 0.30           6.8%    <- the binding constraint
+```
+
+The model **describes** hazards well and **locates** them badly. 91% name the
+right hazard category; two thirds have no spatial overlap with the annotation at
+all.
+
+**The geometry was verified, not assumed.** A 6.8% IoU pass rate is also the
+signature of the coordinate bug §5.2 warns about, so it was hand-checked against
+raw boxes. On high-IoU rows the model's normalised box matches the annotation to
+three decimals — `(0.706, 0.470, 0.824, 0.865)` against `[0.70, 0.47, 0.82, 0.90]`,
+IoU 0.851. No broken transform produces that. The distribution has a real tail:
+max 0.872, p99 0.774, 32% non-zero.
+
+Three caveats belong with the 2.4%:
+
+1. **Model regions are tiny** — median 0.64% of image area. IoU is harsh for small
+   boxes: two hard-hat-sized regions slightly apart score exactly zero. §5.2 calls
+   IoU ≥ 0.30 permissive, but that assumed larger regions.
+2. **1,430 rows are unscoreable** (`no_annotation_box`) — YES answers on rules the
+   image does not violate. **A false alarm has no correct explanation**, so this
+   metric structurally cannot penalise the model's largest failure mode. Stage 2's
+   59% and Stage 10's 2.4% measure different things.
+3. **Zero IoU may mean the model found a real violation nobody boxed.** 47% of the
+   corpus is self-flagged "poor info"; separating that from a genuine miss needs
+   the §5.5 human audit.
+
+### Pre-registered thresholds
+
+Fixed before any value was computed, and not tuned against results:
+
+| threshold | value | source |
+|---|---|---|
+| `SIMILARITY_FLOOR` | 0.60 | standard paraphrase floor for MiniLM-class bi-encoders |
+| `IOU_FLOOR` | 0.30 | deliberately permissive; the model gives one region, the annotation may mark several |
+| `PARSE_RATE_FLOOR` | 0.95 | architecture doc, Stage 2 |
+| `LATENCY_CEILING_S` | 25.0 | recalibrated from measured in-run latency — see `runner.py` |
+
+The embedding model is pinned at `1110a243` and verified against §6.3's own worked
+pair: paraphrase 0.704, unrelated 0.340. Note the doc's illustrative 0.88 is
+higher than this model actually gives; 0.60 still separates them.
+
+All three metric-7 signals are written to the CSV beside the verdict, so
+re-thresholding needs no re-run.
 
 ## Stage 1 result — the frozen sample
 
