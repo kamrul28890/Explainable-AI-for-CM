@@ -145,3 +145,43 @@ Draw is seeded and verified deterministic.
 **Also built:** Stage 9 (`completeness.py` + `scripts/09_completeness.py`, 6 tests)
 and `report/PAPER-OUTLINE.md` — a findings register where every claim carries its
 source file and n, or is marked not-yet-measured.
+
+### 02:10 — Root cause found: autograd graph retained in the ablation path
+
+**The bug.** `_multimodal_embeds()` ran `self.model.visual(...)` — a full
+vision-tower forward — **outside** `torch.inference_mode()`. It therefore built an
+autograd graph and retained every intermediate activation for a backward pass that
+never comes. The generate call beneath it was correctly guarded; the embeds
+computation above it was not.
+
+**Measured, per call, one 1200x900 image:**
+
+```
+                       before fix          after fix
+answer()               3.1s / 6.97 GB      unchanged
+answer_masked black    6.3s / 6.97 GB      unchanged
+answer_masked tokens  54.5s / 22.65 GB     2.8s / 6.96 GB
+```
+
+~16 GB of retained activations on an 8 GB card, served from Windows shared memory
+at a 19.5x speed penalty.
+
+**My first hypothesis was wrong and the probe that disproved it found the answer.**
+I predicted a missing KV cache and expected time to scale quadratically with
+`max_new_tokens`. It did not (56.0 / 56.1 / 56.5 s at 32 / 64 / 128), and
+`use_cache=True` changed nothing. But in that probe `input_ids` — measured at 3.1 s
+in the clean run — showed 56 s, purely because I had materialised `embeds`
+beforehand and the leaked graph was still resident. The contamination was the
+evidence.
+
+**Comparability verified, not assumed.** `inference_mode` disables gradient
+tracking and version counting; the arithmetic is identical. Re-ran the 6 smoke
+rows produced by the OLD path: **verdicts identical 6/6**. Unlike the fast image
+processor (which explicitly warns it changes outputs, and which I left alone),
+this is safe to apply mid-study.
+
+**Consequence: the pre-registered subsample is retired.** It existed to survive an
+81 h run. Full Stage 4 is now ~10 h, so all 3,031 rows will run — strictly better
+than sampling 1,200. The `--sample` path stays in the code, documented, unused.
+
+**Also affects Stages 5, 6 and 8**, which all use token ablation.

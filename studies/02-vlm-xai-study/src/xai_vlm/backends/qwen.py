@@ -213,13 +213,27 @@ class QwenBackend:
         and Descriptive Accuracy would report near-perfect faithfulness while
         measuring nothing at all.
         """
-        embeds = self.model.model.embed_tokens(inputs["input_ids"])
-        image_embeds = self.model.visual(
-            inputs["pixel_values"], grid_thw=inputs["image_grid_thw"]
-        ).to(embeds.device, embeds.dtype)
-        image_token_id = getattr(self.model.config, "image_token_id")
-        mask = (inputs["input_ids"] == image_token_id).unsqueeze(-1).expand_as(embeds)
-        return embeds.masked_scatter(mask, image_embeds)
+        # INFERENCE MODE IS LOAD-BEARING HERE, not a tidy-up.
+        #
+        # self.model.visual() is a full vision-tower forward. Outside inference
+        # mode it builds an autograd graph and retains every intermediate
+        # activation for a backward pass that never comes. Measured on one
+        # 1200x900 image: peak allocation 22.65 GB against 6.97 GB for the same
+        # model answering normally -- roughly 16 GB of retained activations on an
+        # 8 GB card, which Windows silently serves from shared system memory at
+        # about a 17x speed penalty (54.5 s per call against 3.1 s).
+        #
+        # It does not change the numbers. inference_mode disables gradient
+        # tracking and version counting; the arithmetic is identical, so results
+        # computed before and after this line are directly comparable.
+        with torch.inference_mode():
+            embeds = self.model.model.embed_tokens(inputs["input_ids"])
+            image_embeds = self.model.visual(
+                inputs["pixel_values"], grid_thw=inputs["image_grid_thw"]
+            ).to(embeds.device, embeds.dtype)
+            image_token_id = getattr(self.model.config, "image_token_id")
+            mask = (inputs["input_ids"] == image_token_id).unsqueeze(-1).expand_as(embeds)
+            return embeds.masked_scatter(mask, image_embeds)
 
     def attention(self, image: Image.Image, rule_id: RuleId, **kw
                   ) -> Optional[np.ndarray]:
