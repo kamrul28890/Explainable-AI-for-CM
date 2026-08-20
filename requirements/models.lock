@@ -26,3 +26,15 @@ florence2     microsoft/Florence-2-base-ft                f6c1a25888ffc1d945ee8a
 # ENFORCED: scripts/download_data.py reads this file and passes `revision=` to
 # snapshot_download. A tier with no entry here still downloads, but prints a
 # warning naming the omission rather than silently taking `main`.
+
+# --- Metric 7 sentence embeddings -------------------------------------------
+# Explanation correctness compares the model's REASON with the human's. Unpinned,
+# the embedding model silently changes those scores between runs.
+#
+# Verified on this snapshot against the architecture doc's own worked pair:
+#   "The mechanic in front of the truck is not wearing a hard hat."
+#   "The man working beside the truck cab has no helmet on."      -> 0.704
+#   vs "The excavation edge on the right is not guarded."         -> 0.340
+# The pre-registered SIMILARITY_FLOOR of 0.60 separates them. Note the doc's
+# illustrative 0.88 for that pair is higher than this model actually gives.
+minilm-l6-v2  sentence-transformers/all-MiniLM-L6-v2  1110a243fdf4706b3f48f1d95db1a4f5529b4d41  # verified 2026-08-20
