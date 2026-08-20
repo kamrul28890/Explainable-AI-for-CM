@@ -55,3 +55,44 @@ inference.
 ---
 
 ## Entries
+
+### 01:20 — Stage 4 launched; reporting layer built
+
+**Stage 4 (descriptive accuracy)** implemented TDD (7 driver tests + 7 flip-logic
+tests, all green first run) and smoke-running on GPU. Measured latency is worse
+than projected: ~34 s per row (two masking calls), against the 20 s the 17 h
+estimate assumed. Projection on n=2 is **28.7 h**, not 17 h. n=2 is not a basis
+for a decision; waiting for the 20-row smoke before committing.
+
+**Reporting layer** (`metrics/reporting.py`, `scripts/11_report.py`) built so the
+paper has one command and one source of truth. Reuses the pilot's `bootstrap_ci`
+and `MIN_N_FLOOR=30` rather than reimplementing, so both studies report on the
+same standard.
+
+**MAJOR FINDING, surfaced only by per-rule reporting with intervals:**
+
+```
+sensitivity by rule
+  rule_1 (PPE)              93.2% [91.7, 94.7]  n=1001
+  rule_2 (fall protection)  97.6% [94.0, 100.0] n=84
+  rule_3 (edge protection)  98.8% [97.1, 100.0] n=172
+  rule_4 (plant proximity)  30.0% [20.0, 41.4]  n=70
+```
+
+The pooled 91% sensitivity **hides a rule the model is nearly blind to**. rule_4
+is struck-by risk — a worker in the danger zone of operating machinery, one of
+construction's "fatal four". The CI does not approach any other rule's. A model
+that answers YES to 70% of everything still misses 70% of these.
+
+This was invisible in every figure reported until now. It is a headline result and
+a safety-critical one: the hazard class the model handles worst is among the most
+lethal on a real site.
+
+*Inference, not yet tested:* rule_4 is the only rule with `context_fields`
+(`excavator`), so it is the only one whose negative controls are context-gated.
+Whether that interacts with the low sensitivity is worth checking, but the
+sensitivity figure is computed over annotated violations, so the control policy
+should not affect it directly.
+
+**Fixed:** em-dashes in report section labels mangled on the cp1252 console;
+switched to ASCII hyphens in labels.
