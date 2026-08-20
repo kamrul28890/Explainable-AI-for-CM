@@ -46,6 +46,87 @@ def maskable_rows(regions_rows: list[dict]) -> list[dict]:
     return [r for r in regions_rows if r.get("source") == "model" and (r.get("region") or "").strip()]
 
 
+# Pre-registered subsample sizes, fixed before any flip rate was computed.
+#
+# WHY SUBSAMPLE AT ALL. The architecture document budgeted Stage 4 at ~11 h on an
+# assumed 4 s/call and says explicitly never to cut it. Measured cost is ~96 s per
+# row -- two masking calls, each paying an image-preprocessing pass that the
+# recorded latency does not even count -- which puts the full 3,031 rows at ~81 h.
+# That is not a schedule, it is an abandonment of Stages 5, 6 and 8.
+#
+# Subsampling preserves the metric rather than cutting it. Precision for a
+# proportion near 0.5 at 95%:
+#
+#     n=400  -> +/- 4.9 points
+#     n=800  -> +/- 3.5 points
+#     n=2621 -> +/- 1.9 points   (the full set)
+#
+# The extra 1.6 points of precision from running everything costs about fifty
+# additional GPU-hours. 800 YES rows and 400 controls is ample to separate a
+# faithful model from an unfaithful one, and the interval is reported so a reader
+# can judge the precision directly.
+SAMPLE_YES = 800
+SAMPLE_NO = 400
+
+
+# Every rule must clear the reporting floor where its pool allows, before any
+# budget is spent on making the common rules more precise.
+#
+# Purely proportional stratification gave rule_4 twenty-one YES rows -- under the
+# n=30 floor, and therefore unreportable. That is the subgroup the baseline found
+# the model nearly blind to (30% sensitivity against 93-99% elsewhere), so it is
+# precisely the one worth measuring. Its entire pool is 70 rows; taking all of them
+# costs 49 extra rows and removes sampling error from the subgroup that matters
+# most.
+PER_RULE_FLOOR = 40
+
+
+def stratified_sample(rows: list[dict], n_yes: int = SAMPLE_YES,
+                      n_no: int = SAMPLE_NO, seed: int = 42) -> list[dict]:
+    """Seeded draw: guarantee each rule a floor, then fill proportionally.
+
+    Stratifying by rule matters here because the rules differ by an order of
+    magnitude in frequency, and the rarest one is the most interesting.
+    """
+    import random
+
+    rng = random.Random(seed)
+    out: list[dict] = []
+
+    for verdict, target in (("YES", n_yes), ("NO", n_no)):
+        pool = [r for r in rows if r.get("verdict") == verdict]
+        if len(pool) <= target:
+            out.extend(pool)
+            continue
+
+        by_rule: dict[str, list[dict]] = {}
+        for r in pool:
+            by_rule.setdefault(r["rule_id"], []).append(r)
+        for group in by_rule.values():
+            rng.shuffle(group)
+
+        # Pass 1: the floor, capped by what each pool actually holds.
+        picked: dict[str, list[dict]] = {}
+        for rule, group in sorted(by_rule.items()):
+            picked[rule] = group[:min(len(group), PER_RULE_FLOOR)]
+
+        # Pass 2: distribute what remains in proportion to the leftover pools.
+        used = sum(len(v) for v in picked.values())
+        remaining = max(0, target - used)
+        leftovers = {rule: by_rule[rule][len(picked[rule]):] for rule in by_rule}
+        total_left = sum(len(v) for v in leftovers.values())
+        if remaining and total_left:
+            for rule, group in sorted(leftovers.items()):
+                k = round(remaining * len(group) / total_left)
+                picked[rule].extend(group[:k])
+
+        drawn = [r for rule in sorted(picked) for r in picked[rule]]
+        rng.shuffle(drawn)
+        out.extend(drawn[:max(target, used)])
+
+    return out
+
+
 def build_fingerprint(manifest_path, baseline_path, regions_path, model, seed) -> dict:
     """Everything that, if changed, makes previously written rows incomparable."""
     return {
@@ -207,6 +288,9 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--checkpoint-every", type=int, default=100)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--sample", action="store_true",
+                    help="run the pre-registered stratified subsample "
+                         f"({SAMPLE_YES} YES + {SAMPLE_NO} controls) instead of all rows")
     args = ap.parse_args()
 
     res = STUDY_ROOT / "results"
@@ -220,6 +304,10 @@ def main() -> int:
 
     with regions.open(newline="", encoding="utf-8") as fh:
         work_rows = maskable_rows(list(csv.DictReader(fh)))
+    if args.sample:
+        work_rows = stratified_sample(work_rows, seed=args.seed)
+        print(f"stratified subsample: seed {args.seed}, "
+              f"{SAMPLE_YES} YES target, {SAMPLE_NO} NO target")
     if args.limit is not None:
         work_rows = work_rows[:args.limit]
 

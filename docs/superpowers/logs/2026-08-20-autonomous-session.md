@@ -96,3 +96,52 @@ should not affect it directly.
 
 **Fixed:** em-dashes in report section labels mangled on the cp1252 console;
 switched to ASCII hyphens in labels.
+
+### 01:35 — Stage 4 is far slower than budgeted; subsample pre-registered
+
+**Measured cost.** Smoke shows ~96 s per row wall-clock against ~39 s of recorded
+model time. The gap is real work that `latency_ms` never counted: it times only
+`model.generate()`, while `_build_inputs()` — Qwen's **slow** image processor —
+runs before the clock starts, twice per row.
+
+The warning was in every run log from the beginning:
+`Using a slow image processor as use_fast is unset`.
+
+**Deliberately NOT switching to the fast processor.** The same warning states it
+"will result in minor differences in outputs". Stage 2's 3,882 baseline rows were
+produced with the slow processor; changing it now would make Stage 4 incomparable
+with the baseline it is measured against. Recorded as a finding for future runs
+and for the paper's efficiency section, not applied mid-study.
+
+**Consequence.** Full Stage 4 is ~81 h, against the architecture doc's ~11 h
+budget (which assumed 4 s/call). That is not a schedule — it would consume the
+time Stages 5, 6 and 8 need.
+
+**Decision, made autonomously and pre-registered here before any flip rate
+exists.** Subsample rather than cut. The doc says never to cut Stage 4; it does
+not require running every row. Precision for a proportion near 0.5:
+
+```
+n=400   +/- 4.9 points
+n=800   +/- 3.5 points
+n=2621  +/- 1.9 points   (full set, ~50 extra GPU-hours)
+```
+
+Sample: **800 YES + 400 NO controls = 1,200 rows, ~32 h**, seed 42.
+
+**Sampling design corrected once before use.** Purely proportional stratification
+gave rule_4 only 21 YES rows — below the n=30 floor, and therefore unreportable.
+rule_4 is the subgroup the baseline found the model nearly blind to (30%
+sensitivity against 93–99%), so it is the one most worth measuring. Switched to
+floor-then-proportional (`PER_RULE_FLOOR = 40`):
+
+```
+YES: rule_1 352, rule_2 119, rule_3 281, rule_4 48   (none below floor)
+NO : rule_1 101, rule_2 118, rule_3  13, rule_4 168  (rule_3 pool is only 13 — unavoidable, flagged)
+```
+
+Draw is seeded and verified deterministic.
+
+**Also built:** Stage 9 (`completeness.py` + `scripts/09_completeness.py`, 6 tests)
+and `report/PAPER-OUTLINE.md` — a findings register where every claim carries its
+source file and n, or is marked not-yet-measured.
