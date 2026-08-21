@@ -135,6 +135,40 @@ external artefact, not by internal consistency.
 for four distinct reasons. Collapsing them into "incorrect" would have produced a
 much worse-looking and completely wrong result.
 
+**M6 — Correct-but-slow is a failure mode that no correctness test catches.**
+The token-ablation path — the study's primary artefact-free intervention — ran the
+vision tower outside `torch.inference_mode()`, retaining ~16 GB of autograd
+activations for a backward pass that never comes. On an 8 GB card the driver
+served them from shared system memory rather than raising OOM.
+
+```
+answer_masked(tokens)   54.5 s / 22.65 GB   ->   2.8 s / 6.96 GB
+```
+
+Every answer it produced was **correct** — verified verdict-identical on rows
+computed before and after the fix. No test failed, no number was wrong, nothing
+was silently dropped. The only symptom was a 19.5x cost, and the only reason it
+was caught is that peak VRAM is instrumented and a 22.65 GB reading on an 8 GB
+card was implausible enough to chase.
+
+*Two transferable points.* First, **instrument resources, not just outputs**: a
+harness that records only accuracy and latency cannot distinguish "this model is
+expensive" from "our harness is broken". The 3.5x standalone-vs-in-run gap (F5)
+went unexplained for a day precisely because it was visible only as time.
+
+Second, **the diagnostic detour paid for itself**: an hour of measurement replaced
+a 32-hour workaround (a pre-registered subsample, drafted and then retired) with a
+one-line fix, and the saving repeats across Stages 5, 6 and 8, which share the
+intervention.
+
+*Counter-example worth reporting beside it.* The same run log warned
+`Using a slow image processor as use_fast is unset`, which is also a real speed
+cost — and that one was **deliberately left in place**, because the warning states
+it changes outputs and the baseline was already computed with it. Not every
+available speedup is available mid-study. The distinction is whether the change
+can alter a number, and that has to be checked rather than assumed:
+`inference_mode` cannot, the processor can.
+
 ---
 
 ## Structure
