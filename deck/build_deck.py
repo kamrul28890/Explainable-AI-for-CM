@@ -592,15 +592,7 @@ def build() -> None:
            "in roughly two cases out of three."),
           ("The area-ranking bias is implicated. ",
            "Masking a worker's whole body removes the person, not the missing hard hat.")]),
-        ("Metric 2 · Sparsity",
-         "Is attention concentrated or diffuse?",
-         "Cross-attention over a 24×24 grid; mass in the top 5 of 576 cells.",
-         "0.108", "top-5 mass · n=159", "neutral",
-         [("A diffuse map is an unreadable explanation. ",
-           "0.108 means the top five cells hold about a tenth of total attention."),
-          ("Size-dependence is the flaw here. ",
-           "A top-k measure punishes large objects for being large; Study 2 replaces "
-           "it with a size-independent Gini coefficient.")]),
+        ("__SPARSITY__", "", "", "", "", "", []),
         ("Metric 3 · Stability",
          "Ask repeatedly — same answer?",
          "Three sampled re-runs per image; measure answer agreement.",
@@ -641,6 +633,50 @@ def build() -> None:
            "quoted as a result.")]),
     ]
     for title, question, method, value, ci, tone, points in metric_slides:
+        if title == "__SPARSITY__":
+            s, y = newslide("Study 1 · metrics", "Metric 2 · Sparsity",
+                            "Where did the model look while answering — a few places, "
+                            "or everywhere at once?", foot="n = 159 · pilot")
+
+            tf = tb(s, M, y + Inches(0.02), Inches(6.1), Inches(2.6))
+            para(tf, "THE METHOD, PLAINLY", 10, ACCENT, bold=True, first=True,
+                 space_after=7)
+            for i, step in enumerate([
+                "As the model writes its answer, it repeatedly “looks back” at the "
+                "image. That looking is recorded — it is called cross-attention.",
+                "Divide the image into a 24 × 24 grid — 576 cells — and total up how "
+                "much attention landed in each one.",
+                "Rank the cells and ask: what share of all attention fell in the "
+                "strongest five?",
+            ], start=1):
+                p = para(tf, "", 12.5, INK, space_after=7)
+                run(p, f"{i}.  ", 12.5, ACCENT, bold=True, font=MONO)
+                run(p, step, 12.5, SOFT)
+
+            statbox(s, Inches(6.9), y + Inches(0.02), Inches(2.7), Inches(1.35),
+                    "0.87%", "if attention were even", "5 of 576 cells")
+            statbox(s, Inches(9.9), y + Inches(0.02), Inches(2.7), Inches(1.35),
+                    "10.8%", "measured", "≈ 12× more focused", tone="neutral")
+
+            tf2 = tb(s, Inches(6.9), y + Inches(1.55), Inches(5.7), Inches(1.2))
+            para(tf2, "HOW TO READ IT", 10, ACCENT, bold=True, first=True, space_after=6)
+            para(tf2, "The model is clearly not looking everywhere at random — it is "
+                      "about twelve times more concentrated than an even spread. But "
+                      "the top five cells still hold only a tenth of its attention; "
+                      "the other 90% is distributed across the remaining 571.", 12.5, SOFT)
+
+            note(s, M, y + Inches(2.9), Inches(6.1), "Why concentration matters at all",
+                 "A heat map spread over the whole photograph cannot be shown to a site "
+                 "supervisor as a reason. Concentration is what makes an explanation "
+                 "legible to a person.")
+            note(s, Inches(7.2), y + Inches(2.9), Inches(5.4),
+                 "Why this formulation was replaced",
+                 "A top-5 measure punishes big hazards for being big: an unguarded edge "
+                 "spanning the frame should attract spread-out attention. Study 2 uses "
+                 "the Gini coefficient, which describes the shape of the distribution "
+                 "regardless of object size.", tone="signal")
+            continue
+
         s, y = newslide("Study 1 · metrics", title, question, foot="n = 163 · pilot")
         statbox(s, M, y + Inches(0.1), Inches(3.0), Inches(1.45), value,
                 "result", ci, tone=tone)
