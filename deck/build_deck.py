@@ -342,24 +342,26 @@ def build() -> None:
          "judgements — and what does it reveal that accuracy hides?")
 
     # ---------------------------------------------------------------- 4 -----
-    s, y = newslide("Background", "The six-metric framework",
-                    "Prof. Abdallah's framework, developed for deep intrusion-detection "
-                    "models on tabular data.", foot="Framework origin")
+    s, y = newslide("Background", "Six metrics — and a seventh this project adds",
+                    "Metrics 1–6 are Prof. Abdallah's framework, developed for deep "
+                    "intrusion-detection models on tabular data.", foot="Framework origin")
     rows = [
-        ["1  Descriptive accuracy", "Remove the evidence the model used — does the answer change?"],
-        ["2  Sparsity", "Is the explanation concentrated, or smeared over everything?"],
-        ["3  Stability", "Ask repeatedly — is the answer the same?"],
-        ["4  Efficiency", "What does one explained decision cost?"],
-        ["5  Robustness", "Does it survive degraded input?"],
-        ["6  Bounded completeness", "Was a usable explanation given, and did it matter?"],
+        ["1  Descriptive accuracy", "Remove the evidence the model used — does the answer change?", "both"],
+        ["2  Sparsity", "Is the explanation concentrated, or smeared over everything?", "both"],
+        ["3  Stability", "Ask repeatedly — is the answer the same?", "both"],
+        ["4  Efficiency", "What does one explained decision cost?", "both"],
+        ["5  Robustness", "Does it survive degraded input?", "both"],
+        ["6  Bounded completeness", "Was a usable explanation given, and did it matter?", "both"],
+        ["7  Explanation correctness", "Does the stated reason match the human's reason?", "Study 2"],
     ]
-    table(s, M, y + Inches(0.1), W - 2 * M, ["Metric", "What it asks"], rows,
-          col_w=[2.4, 7.6], size=13)
-    note(s, M, y + Inches(2.85), W - 2 * M, "The adaptation problem",
-         "Tabular features are independent columns. Image pixels are not: they are "
-         "spatially correlated, and “removing a feature” means occluding a region "
-         "that a human would still recognise. Every metric needed a visual analogue, "
-         "and two of them needed redesign rather than translation.")
+    table(s, M, y + Inches(0.05), W - 2 * M,
+          ["Metric", "What it asks", "Measured in"], rows,
+          col_w=[2.5, 6.4, 1.4], size=12.5)
+    note(s, M, y + Inches(2.9), W - 2 * M, "Why the seventh only appears in Study 2",
+         "Metric 7 grades the reason a model gives in words against the reason a human "
+         "wrote. Florence-2 has no question-answering head — it returns boxes, never a "
+         "sentence — so there is nothing to grade. Qwen2.5-VL states a reason, which is "
+         "what makes the metric possible at all.")
 
     # ---------------------------------------------------------------- 5 -----
     s, y = newslide("The data", "ConstructionSite 10k",
@@ -375,8 +377,9 @@ def build() -> None:
             "safety rules", "PPE · fall · edge · plant")
     bullets(s, M, y + Inches(1.75), Inches(11.9), [
         ("Each violation carries a human-written reason and a bounding box. ",
-         "That reason is the yardstick for explanation correctness — without it, "
-         "metric 7 could not exist."),
+         "That reason is the yardstick for metric 7, explanation correctness — "
+         "without a human-written reason there is nothing to grade the model's "
+         "reason against."),
         ("Boxes are normalised 0–1; model outputs are absolute pixels. ",
          "Comparing them without converting puts every annotation in the top-left "
          "corner and yields a study-wide null result that looks like a finding."),
