@@ -753,6 +753,74 @@ def build() -> None:
          "It could. The individual values matter less than the two adaptations "
          "required and the three defects the process exposed.")
 
+    # ------------------------------------------------------ 21b (new) -------
+    s, y = newslide("Study 1 · methodology", "How each number is actually computed",
+                    "Every metric reduces to a share of samples meeting a per-sample "
+                    "test, applied over n. No metric is estimated or eyeballed.",
+                    foot="src/xai_pilot/metrics/*.py")
+    formula_rows = [
+        ["Descriptive\naccuracy", "flip(x) = 1 if answer(mask(x, top-1 region)) ≠ answer(x)",
+         "mean(flip)", "163", "36.2%"],
+        ["Sparsity", "top5(x) = mass of the 5 highest cells / total mass, on a\n"
+         "24×24 = 576-cell cross-attention grid",
+         "mean(top5)", "159*", "10.8%"],
+        ["Stability", "agree(x) = share of the 3 pairs among 3 sampled reruns\n"
+         "(temp = 0.7) that gave the same answer",
+         "mean(agree)", "163", "77.5%"],
+        ["Robustness", "survive(x,p) = 1 if answer(perturb(x,p)) = answer(x),\n"
+         "over 4 perturbations p × 163 images",
+         "mean(survive)", "652", "80.7%"],
+        ["Bounded\ncompleteness", "3-way rule on (region offered?, did masking flip\n"
+         "the answer?) — no new model calls, a pure rollup",
+         "share per\ncategory", "163", "43.6% /\n54.0% / 2.5%"],
+    ]
+    table(s, M, y + Inches(0.02), W - 2 * M,
+          ["Metric", "Per-sample test", "Aggregate", "n", "Result"], formula_rows,
+          col_w=[1.7, 5.6, 1.7, 0.8, 1.9], size=10.5)
+    note(s, M, y + Inches(3.55), W - 2 * M, "* sparsity's n is 159, not 163",
+         "Four samples had no model-grounded region at all (grid fallback only) — "
+         "there is no attention map worth scoring in the same way, so they are "
+         "excluded rather than assigned an arbitrary value.")
+
+    # ------------------------------------------------------ 21c (new) -------
+    s, y = newslide("Study 1 · methodology", "Descriptive accuracy, worked through",
+                    "The exact arithmetic behind 36.2%, using the flip you already "
+                    "saw on slide 15.", foot="results/descriptive_accuracy.csv")
+    tf = tb(s, M, y + Inches(0.02), Inches(6.3), Inches(3.5))
+    para(tf, "STEP BY STEP", 10, ACCENT, bold=True, first=True, space_after=7)
+    for i, step in enumerate([
+        "Run the baseline: answer(x) for all 163 images. Image 0000037 → violation.",
+        "Mask the top-ranked region (worker box) and rerun: "
+        "answer(mask(x)). Image 0000037 → compliant.",
+        "Compare: violation ≠ compliant → flip(0000037) = 1.",
+        "Repeat for all 163 images. 59 return flip = 1; 104 return flip = 0.",
+        "Average: 59 / 163 = 0.362 → report as 36.2%.",
+    ], start=1):
+        p = para(tf, "", 11.5, INK, space_after=7)
+        run(p, f"{i}.  ", 11.5, ACCENT, bold=True, font=MONO)
+        run(p, step, 11.5, SOFT)
+    note(s, M, y + Inches(3.62), Inches(6.3), "What a HIGH score would mean",
+         "If most masks flipped the answer, the region would be doing real work. At "
+         "36.2%, most did not — consistent with the area-ranking bias masking the "
+         "worker's body instead of the PPE item in question.")
+
+    tf2 = tb(s, Inches(6.9), y + Inches(0.05), Inches(5.7), Inches(4.6))
+    para(tf2, "WHY “FLIP” AND NOT “GRADED SCORE”", 10, ACCENT, bold=True, first=True,
+         space_after=7)
+    para(tf2, "The frozen pilot's headline (36.2%) uses the boolean flip test above. "
+              "Scale-up Phase 2.1 later added a continuous graded score — the drop "
+              "in a confidence-weighted coverage metric, not just yes/no — because a "
+              "mask can meaningfully reduce the model's confidence without crossing "
+              "the answer boundary.", 12, SOFT, space_after=10)
+    para(tf2, "Both are reported, behind a flag: the boolean flip rate is what the "
+              "163-sample pilot is frozen to and what every number on this deck's "
+              "Study-1 slides cites; the graded score is a Phase-2 validity check "
+              "that the boolean version is not hiding a lot of near-misses.", 12, SOFT)
+    note(s, Inches(6.9), y + Inches(3.6), Inches(5.7), "The formula is the same shape everywhere",
+         "Sparsity, robustness and stability are also a per-sample 0/1 (or fractional) "
+         "test, averaged over n. Once you can read this one, you can read all six.",
+         tone="signal")
+
     # ------------------------------------------------------ 19b (new) -------
     s, y = newslide("Study 1 · findings", "Does Florence only see the largest thing?",
                     "No — it detects the small object too. The bias is in how the "
@@ -1059,6 +1127,34 @@ def build() -> None:
          space_after=10)
     para(tf, "Balanced accuracy is 66%, against 50% for a model that always says yes.",
          12.5, SOFT)
+
+    # ------------------------------------------------------ 31b (new) -------
+    s, y = newslide("Study 2 · methodology", "How the Study 2 numbers are computed",
+                    "Standard detection-theory ratios for the baseline; a "
+                    "conjunctive rule for metric 7; a flip test for metric 1 — the "
+                    "same shape as Study 1's, over the model's own stated region.",
+                    foot="src/xai_vlm/metrics/*.py")
+    s2_rows = [
+        ["Sensitivity", "YES answers among rows where expected = YES",
+         "TP / (TP+FN)", "1,327", "90.9%"],
+        ["Specificity", "NO answers among rows where expected = NO",
+         "TN / (TN+FP)", "2,555", "40.9%"],
+        ["False-alarm rate", "YES answers among the negative-control rows only",
+         "FP / (FP+TN)|ctrl", "2,555", "59.1%"],
+        ["Metric 7\ncorrect", "similarity≥0.60 AND hazard_match AND IoU≥0.30, "
+         "all three\nrequired — conjunctive, not weighted or averaged",
+         "AND of 3 tests", "1,191", "2.4%"],
+        ["Metric 1\n(Stage 4)", "flip(x,m) = 1 if answer(mask(x, region, method=m)) "
+         "≠ answer(x),\nfor m in {black, tokens} — same shape as Study 1's test",
+         "mean(flip)", "in progress", "—"],
+    ]
+    table(s, M, y + Inches(0.02), W - 2 * M,
+          ["Quantity", "Per-row test", "Formula", "n", "Result"], s2_rows,
+          col_w=[1.6, 5.8, 1.9, 1.1, 1.3], size=10)
+    note(s, M, y + Inches(3.65), W - 2 * M, "Why metric 7 is AND, not a weighted average",
+         "A weighted score would let a high text-similarity score outvote a region "
+         "on the wrong side of the photograph — exactly the failure slide 34 shows. "
+         "Requiring all three keeps geometry as a hard veto, not a nudge.")
 
     # --------------------------------------------------------------- 32 -----
     s, y = newslide("Study 2 · results", "The pooled figure hid a near-blind hazard class",
