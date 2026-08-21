@@ -507,11 +507,26 @@ def build() -> None:
     para(tf2, "9× gain", 22, GOOD, bold=True, first=True, space_after=6)
     para(tf2, "from changing what the question asks, not from changing the model.",
          13.5, SOFT)
-    note(s, M, y + Inches(2.05), W - 2 * M, "What the first version actually measured",
-         "It answered “compliant” almost regardless of ground truth. A metric suite "
-         "run on that formulation would have produced six confident numbers about a "
-         "model that was not responding to the input at all — the earliest instance "
-         "in this project of a result that looks valid and means nothing.", tone="signal")
+    tf3 = tb(s, M, y + Inches(2.0), Inches(6.0), Inches(2.2))
+    para(tf3, "WHY IT PRODUCED CONFIDENT NUMBERS ANYWAY", 10, SIGNAL, bold=True,
+         first=True, space_after=6)
+    para(tf3, "v1 asked: does a hard hat appear anywhere in the image? On a site "
+              "photo the answer is usually yes, so it returned “compliant” almost "
+              "regardless of ground truth — 3.0% sensitivity.", 12.5, INK, space_after=8)
+    para(tf3, "None of the six metrics reads the verdict's correctness. They measure "
+              "flip rates, attention concentration and re-run agreement — all of which "
+              "compute perfectly well on a model that is ignoring the image. Six "
+              "plausible numbers, describing nothing.", 12.5, SOFT)
+
+    tf4 = tb(s, Inches(7.2), y + Inches(2.0), Inches(5.4), Inches(2.2))
+    para(tf4, "THE FIX — MAKE THE QUESTION PERSON-RELATIVE", 10, GOOD, bold=True,
+         first=True, space_after=6)
+    para(tf4, "v2 asks: is a hard hat on THIS worker? Detect the worker, detect the "
+              "safety object, then check whether the object covers the worker's head "
+              "region.", 12.5, INK, space_after=8)
+    para(tf4, "The hazard now has to be tied to a person, so a helmet elsewhere in "
+              "frame no longer clears the check. Same model, same weights — only the "
+              "question changed.", 12.5, SOFT)
 
     # --------------------------------------------------------------- 11 -----
     s, y = newslide("Study 1 · pipeline", "Eleven stages, run in order",
