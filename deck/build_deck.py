@@ -409,15 +409,15 @@ def build() -> None:
     ]
     yy = y + Inches(0.02)
     for rid, short, hazard, question in ruleset:
-        rect(s, M, yy, W - 2 * M, Inches(0.98), fill=SHADE, line=RULE)
-        rect(s, M, yy, Inches(0.05), Inches(0.98), fill=ACCENT)
-        tf = tb(s, M + Inches(0.22), yy + Inches(0.13), Inches(2.5), Inches(0.8))
-        para(tf, rid, 13, ACCENT, bold=True, font=MONO, first=True, space_after=2)
-        para(tf, short, 13.5, INK, bold=True, space_after=2)
-        para(tf, hazard, 10, FAINT, font=MONO)
-        tf2 = tb(s, M + Inches(2.95), yy + Inches(0.26), Inches(8.6), Inches(0.7))
-        para(tf2, f"“{question}”", 13, SOFT, first=True)
-        yy += Inches(1.07)
+        rect(s, M, yy, W - 2 * M, Inches(0.82), fill=SHADE, line=RULE)
+        rect(s, M, yy, Inches(0.05), Inches(0.82), fill=ACCENT)
+        tf = tb(s, M + Inches(0.22), yy + Inches(0.09), Inches(2.5), Inches(0.7))
+        para(tf, rid, 12.5, ACCENT, bold=True, font=MONO, first=True, space_after=1)
+        para(tf, short, 13, INK, bold=True, space_after=1)
+        para(tf, hazard, 9.5, FAINT, font=MONO)
+        tf2 = tb(s, M + Inches(2.95), yy + Inches(0.21), Inches(8.6), Inches(0.6))
+        para(tf2, f"“{question}”", 12.5, SOFT, first=True)
+        yy += Inches(0.89)
     note(s, M, yy + Inches(0.02), W - 2 * M, "rule_4 is asked only when machinery is present",
          "It is the one rule with a context gate. Asking about excavator proximity in "
          "a photograph containing no machinery is a question that cannot be failed — "
@@ -528,6 +528,16 @@ def build() -> None:
               "frame no longer clears the check. Same model, same weights — only the "
               "question changed.", 12.5, SOFT)
 
+    # -------------------------------------------------------- 11b (new) -----
+    s, y = newslide("Study 1 · adaptation", "The mechanism, on a real image",
+                    "Both boxes below are genuine Florence-2 detections from the "
+                    "pilot run — not a mockup.", foot="Image 0000233, rule_1")
+    picture(s, "s1_proxy_mechanism.png", M, y, W - 2 * M, Inches(3.55))
+    note(s, M, y + Inches(3.65), W - 2 * M, "Why v2 is not just 'try harder'",
+         "The model detects the hard hat correctly either way — grounding is not the "
+         "problem. v1 fails because it asks a question with no notion of WHO is "
+         "wearing WHAT; v2 fixes that by requiring the two boxes to overlap.")
+
     # --------------------------------------------------------------- 11 -----
     s, y = newslide("Study 1 · pipeline", "Eleven stages, run in order",
                     foot="scripts/01–11")
@@ -582,27 +592,9 @@ def build() -> None:
 
     # ------------------------------------------------------- metrics 13–18 --
     metric_slides = [
-        ("Metric 1 · Descriptive accuracy",
-         "Does removing the evidence change the answer?",
-         "Mask the top-ranked explanation region; re-run; record whether the verdict flips.",
-         "36.2%", "[28.8, 43.6] · n=163", "bad",
-         [("Higher is better. ", "A flip means the region was load-bearing."),
-          ("36% means most explanations were not. ",
-           "Masking the region the model supposedly relied on left its answer unchanged "
-           "in roughly two cases out of three."),
-          ("The area-ranking bias is implicated. ",
-           "Masking a worker's whole body removes the person, not the missing hard hat.")]),
+        ("__DESCACC__", "", "", "", "", "", []),
         ("__SPARSITY__", "", "", "", "", "", []),
-        ("Metric 3 · Stability",
-         "Ask repeatedly — same answer?",
-         "Three sampled re-runs per image; measure answer agreement.",
-         "77.5%", "3-run agreement · n=163", "neutral",
-         [("Sampling is mandatory. ",
-           "Under greedy decoding the model is deterministic and would score 100% "
-           "stable by construction, proving nothing."),
-          ("A stable answer can hide a drifted explanation. ",
-           "28.3% of reruns kept the same verdict while the evidence box moved to "
-           "something unrelated — invisible to answer-level agreement alone.")]),
+        ("__STABILITY__", "", "", "", "", "", []),
         ("Metric 4 · Efficiency",
          "What does one explained decision cost?",
          "Per-stage GPU timing, extrapolated to n=1,000.",
@@ -612,27 +604,95 @@ def build() -> None:
            "at a thousand samples."),
           ("This is the one metric that transferred unchanged. ",
            "Wall-clock timing means the same thing for tabular and visual models.")]),
-        ("Metric 5 · Robustness",
-         "Does it survive degraded input?",
-         "Blur, low light, occlusion, contrast reduction; re-ask and compare.",
-         "80.7%", "level-1 survival · n=652", "neutral",
-         [("Report per perturbation, never pooled. ",
-           "A single figure hides a model that is perfect under blur and useless in "
-           "low light — and low light is when site accidents happen."),
-          ("Targeted occlusion drifts the explanation significantly more than random. ",
-           "Wilcoxon p = 1.1 × 10⁻³, confirming the effect is not sampling noise.")]),
-        ("Metric 6 · Bounded completeness",
-         "Was a usable explanation given, and did it matter?",
-         "Combine region availability with whether masking it was load-bearing.",
-         "43.6%", "n=163", "bad",
-         [("“Bounded” is an honest qualifier. ",
-           "The pilot tests whether the top region is necessary, not whether the full "
-           "set of regions is sufficient."),
-          ("Multi-hazard images score far worse. ",
-           "27.3% [9.1, 45.5] on n=22 — flagged below the reporting floor rather than "
-           "quoted as a result.")]),
+        ("__ROBUSTNESS__", "", "", "", "", "", []),
+        ("__COMPLETENESS__", "", "", "", "", "", []),
     ]
     for title, question, method, value, ci, tone, points in metric_slides:
+        if title == "__DESCACC__":
+            s, y = newslide("Study 1 · metrics", "Metric 1 · Descriptive accuracy",
+                            "If we delete the region the model pointed to, does its "
+                            "answer change?", foot="n = 163 · pilot")
+            picture(s, "s1_descacc_flip.png", M, y, W - 2 * M, Inches(3.55))
+            statbox(s, M, y + Inches(3.65), Inches(2.7), Inches(1.15), "36.2%",
+                    "descriptive accuracy", "[28.8, 43.6] · n=163", tone="bad")
+            tf = tb(s, Inches(3.1), y + Inches(3.6), Inches(9.1), Inches(1.2))
+            para(tf, "Masking the region the model supposedly relied on left its "
+                     "answer unchanged in roughly two cases out of three. The image "
+                     "above is one of the 63 cases (38.7%) where it did flip.", 12.5,
+                 SOFT, first=True, space_after=6)
+            para(tf, "The area-ranking bias is implicated: masking a worker's whole "
+                     "body removes the person, not the missing hard hat — see slide 21.",
+                 12.5, SOFT)
+            continue
+
+        if title == "__STABILITY__":
+            s, y = newslide("Study 1 · metrics", "Metric 3 · Stability",
+                            "Ask the same question five times — does the model give "
+                            "the same answer?", foot="n = 163 · pilot")
+            picture(s, "s1_stability_example.png", M, y, W - 2 * M, Inches(3.5))
+            statbox(s, M, y + Inches(3.6), Inches(3.1), Inches(1.2), "77.5%",
+                    "3-run agreement", "overall · n=163", tone="neutral")
+            tf = tb(s, Inches(3.4), y + Inches(3.55), Inches(8.8), Inches(1.25))
+            para(tf, "Sampling is mandatory: ", 12.5, INK, bold=True, first=True)
+            run(tf.paragraphs[0], "under greedy decoding the model is deterministic "
+                                  "and would score 100% stable by construction, proving "
+                                  "nothing.", 12.5, SOFT)
+            p2 = para(tf, "", 12.5, INK, space_after=0)
+            run(p2, "A stable answer can hide a drifted explanation: ", 12.5, INK, bold=True)
+            run(p2, "28.3% of reruns kept the same verdict while the evidence box "
+                    "moved to something unrelated — invisible to answer-level "
+                    "agreement alone.", 12.5, SOFT)
+            continue
+
+        if title == "__ROBUSTNESS__":
+            s, y = newslide("Study 1 · metrics", "Metric 5 · Robustness",
+                            "Does the answer survive a degraded photograph?",
+                            foot="n = 652 (163 images × 4 perturbations) · pilot")
+            picture(s, "s1_robustness_grid.png", M, y, W - 2 * M, Inches(2.55))
+            statbox(s, M, y + Inches(2.65), Inches(2.9), Inches(1.15), "80.7%",
+                    "level-1 survival", "answer unchanged", tone="neutral")
+            bullets(s, Inches(3.3), y + Inches(2.55), Inches(8.9), [
+                ("Four perturbations, level 1. ",
+                 "Gaussian blur (radius 8), gamma-darkening (γ=2.5), a centred black "
+                 "occlusion square (20% of image area), and contrast × 0.3. No "
+                 "downsampling or resolution change is applied at this level."),
+                ("Report per perturbation, never pooled. ",
+                 "A single figure hides a model that is perfect under blur and "
+                 "useless in low light — and low light is when site accidents happen."),
+            ], size=12, gap=8)
+            note(s, M, y + Inches(3.85), W - 2 * M,
+                 "Targeted occlusion drifts the explanation more than random placement",
+                 "Covering the actual hazard moves the evidence box significantly more "
+                 "than covering a random 20% of the frame — Wilcoxon p = 1.1×10⁻³, "
+                 "confirming the effect is not sampling noise.", tone="signal")
+            continue
+
+        if title == "__COMPLETENESS__":
+            s, y = newslide("Study 1 · metrics", "Metric 6 · Bounded completeness",
+                            "Was a usable explanation given, and did it actually matter?",
+                            foot="n = 163 · pilot")
+            picture(s, "s1_completeness_real.png", M, y - Inches(0.05), Inches(5.3), Inches(4.3))
+            tf = tb(s, Inches(5.9), y + Inches(0.0), Inches(6.4), Inches(1.6))
+            para(tf, "THE RULE — A PURE ROLLUP, NO NEW MODEL CALLS", 10, ACCENT,
+                 bold=True, first=True, space_after=6)
+            para(tf, "no_usable_explanation — no region was offered at all.\n"
+                     "explanation_weak — a region was offered, but masking it did not "
+                     "change the answer.\n"
+                     "explanation_supported — a region was offered, and masking it did.",
+                 12, SOFT, space_after=0)
+            statbox(s, Inches(5.9), y + Inches(1.85), Inches(2.0), Inches(1.1),
+                    "43.6%", "supported", tone="neutral")
+            statbox(s, Inches(8.1), y + Inches(1.85), Inches(2.0), Inches(1.1),
+                    "54.0%", "weak", tone="bad")
+            statbox(s, Inches(10.3), y + Inches(1.85), Inches(2.0), Inches(1.1),
+                    "2.5%", "no explanation", tone="bad")
+            note(s, Inches(5.9), y + Inches(3.15), Inches(6.4), "“Bounded” is an honest qualifier",
+                 "This tests whether the single top-ranked region is necessary, not "
+                 "whether the full set of regions is sufficient. Multi-hazard images "
+                 "score far worse — 27.3% [9.1, 45.5] on n=22, flagged below the "
+                 "reporting floor rather than quoted as a result.")
+            continue
+
         if title == "__SPARSITY__":
             s, y = newslide("Study 1 · metrics", "Metric 2 · Sparsity",
                             "Where did the model look while answering — a few places, "
@@ -653,24 +713,22 @@ def build() -> None:
                 run(p, f"{i}.  ", 12.5, ACCENT, bold=True, font=MONO)
                 run(p, step, 12.5, SOFT)
 
-            statbox(s, Inches(6.9), y + Inches(0.02), Inches(2.7), Inches(1.35),
+            picture(s, "s1_sparsity_heatmap.png", Inches(6.9), y - Inches(0.02),
+                   Inches(2.75), Inches(2.75))
+            fig_cap = tb(s, Inches(9.75), y + Inches(0.75), Inches(2.85), Inches(1.4))
+            para(fig_cap, "Red = high cross-attention.\nImage 0000007, rule_1.",
+                 10.5, FAINT, first=True)
+
+            statbox(s, M, y + Inches(2.65), Inches(2.9), Inches(1.1),
                     "0.87%", "if attention were even", "5 of 576 cells")
-            statbox(s, Inches(9.9), y + Inches(0.02), Inches(2.7), Inches(1.35),
+            statbox(s, Inches(3.1), y + Inches(2.65), Inches(2.9), Inches(1.1),
                     "10.8%", "measured", "≈ 12× more focused", tone="neutral")
 
-            tf2 = tb(s, Inches(6.9), y + Inches(1.55), Inches(5.7), Inches(1.2))
-            para(tf2, "HOW TO READ IT", 10, ACCENT, bold=True, first=True, space_after=6)
-            para(tf2, "The model is clearly not looking everywhere at random — it is "
-                      "about twelve times more concentrated than an even spread. But "
-                      "the top five cells still hold only a tenth of its attention; "
-                      "the other 90% is distributed across the remaining 571.", 12.5, SOFT)
+            note(s, Inches(6.2), y + Inches(2.65), Inches(5.7), "How to read it",
+                 "About twelve times more concentrated than an even spread — but the "
+                 "top five cells still hold only a tenth of total attention.")
 
-            note(s, M, y + Inches(2.9), Inches(6.1), "Why concentration matters at all",
-                 "A heat map spread over the whole photograph cannot be shown to a site "
-                 "supervisor as a reason. Concentration is what makes an explanation "
-                 "legible to a person.")
-            note(s, Inches(7.2), y + Inches(2.9), Inches(5.4),
-                 "Why this formulation was replaced",
+            note(s, M, y + Inches(3.65), W - 2 * M, "Why this formulation was replaced",
                  "A top-5 measure punishes big hazards for being big: an unguarded edge "
                  "spanning the frame should attract spread-out attention. Study 2 uses "
                  "the Gini coefficient, which describes the shape of the distribution "
@@ -694,6 +752,32 @@ def build() -> None:
          "intrusion detection be executed end to end against a vision-language model? "
          "It could. The individual values matter less than the two adaptations "
          "required and the three defects the process exposed.")
+
+    # ------------------------------------------------------ 19b (new) -------
+    s, y = newslide("Study 1 · findings", "Does Florence only see the largest thing?",
+                    "No — it detects the small object too. The bias is in how the "
+                    "results are ranked afterwards, not in what the model can see.",
+                    foot="Answers the area-ranking question directly")
+    picture(s, "s1_ranking_dualbox.png", M, y - Inches(0.05), Inches(6.6), Inches(4.5))
+    tf = tb(s, Inches(7.1), y + Inches(0.0), Inches(5.2), Inches(4.3))
+    para(tf, "WHAT ACTUALLY HAPPENS", 10, ACCENT, bold=True, first=True, space_after=7)
+    for i, step in enumerate([
+        "Florence-2 is asked to ground “worker” and, separately, the safety object "
+        "(“hard hat”). It returns a box for each — both are real detections.",
+        "standardize_regions() then picks ONE box to mask, using the policy "
+        "region_ranking=\"area\": whichever box is largest by pixel area wins.",
+        "A person's body is reliably bigger than a hard hat, a harness clip, or a "
+        "guardrail post — so the worker box wins in about 96% of PPE samples.",
+        "The metric then masks the worker, not the hard hat — measuring whether "
+        "removing the PERSON changes the answer, which is a different question.",
+    ], start=1):
+        p = para(tf, "", 12, INK, space_after=9)
+        run(p, f"{i}.  ", 12, ACCENT, bold=True, font=MONO)
+        run(p, step, 12, SOFT)
+    note(s, Inches(7.1), y + Inches(3.35), Inches(5.2), "So the fix is a ranking fix, not a detection fix",
+         "Phase 1.1 (slide 22) adds a “rule_aware” policy: promote the box matching "
+         "the rule's queried object above all others, area-descending only within "
+         "that tier. Wrong-entity top-1 drops from 80 samples to 1.", tone="signal")
 
     # --------------------------------------------------------------- 20 -----
     s, y = newslide("Study 1 · findings",
@@ -748,6 +832,35 @@ def build() -> None:
          "The pilot's numbers were already circulated. Silently improving them would "
          "have made every earlier statement unverifiable. Flags keep both the original "
          "and the corrected result addressable at the same time.")
+
+    # --------------------------------------------------------- 22b (new) ----
+    s, y = newslide("Study 1 · scale-up", "Phase 1, item by item",
+                    "Seven correctness fixes. Each is a defect that made a metric "
+                    "measure the wrong thing, not a defect in the model.",
+                    foot="commit 68c90da · 110 tests · frozen pilot unchanged")
+    p1_rows = [
+        ["1.1  Region ranking", "Masked the rule's object, not the worker body",
+         "wrong-entity top-1: 80 → 1"],
+        ["1.2  Multi-label sampling", "Recovers hazards hidden behind a higher-"
+         "priority one on the same image", "struck_by_risk: 13 → 24"],
+        ["1.3  Context matching", "Compliant images assigned rule_4 only when "
+         "excavator metadata confirms it applies", "413 vacuous tests removed"],
+        ["1.4  Worker-loss instrumentation", "Separates a genuine flip from the "
+         "worker simply vanishing from the crop", "completeness: 159 reruns → 0"],
+        ["1.5  Prompt concept/synonym split", "True synonyms now ground the same "
+         "box; unrelated concepts no longer do", "cross-grounding: → 0.000"],
+        ["1.6  Unified greedy decoding", "One decoding switch for every stage, "
+         "removing a silent beam/greedy mismatch", "greedy = beam, 93.3% agree"],
+        ["1.7  Literal audit + CI guard", "Patch grid computed from the actual "
+         "input resolution, with a test that blocks new hardcoding", "—"],
+    ]
+    table(s, M, y + Inches(0.05), W - 2 * M,
+          ["Fix", "What it corrected", "Measured effect"], p1_rows,
+          col_w=[2.6, 5.6, 2.2], size=11.5)
+    note(s, M, y + Inches(3.4), W - 2 * M, "The one to remember",
+         "1.1 is why slide 21's region-ranking bias could later be diagnosed and "
+         "fixed: rule_aware ranking existed because Phase 1 built it, not because "
+         "the original pilot got the mechanism right.")
 
     # --------------------------------------------------------------- 23 -----
     s, y = newslide("Study 1 · scale-up", "Phase 3.1 — statistics hardening",
@@ -1016,6 +1129,27 @@ def build() -> None:
          "47% of the corpus is self-flagged “poor info”; separating that from a "
          "genuine miss needs a human audit."),
     ], size=12.5, gap=8)
+
+    # ------------------------------------------------------ 35b (new) -------
+    s, y = newslide("Study 2 · metric 6", "Bounded completeness, on the same example",
+                    "The same rule that scored Study 1's metric 6, applied to the "
+                    "disagreement case from slide 34 — now with real Stage 4 data.",
+                    foot="A row already covered by the in-progress Stage 4 run")
+    picture(s, "s2_completeness_real.png", M, y - Inches(0.1), Inches(4.9), Inches(4.6))
+    tf = tb(s, Inches(5.5), y + Inches(0.0), Inches(6.8), Inches(2.4))
+    para(tf, "THE SAME RULE AS STUDY 1", 10, ACCENT, bold=True, first=True, space_after=7)
+    para(tf, "no_usable_explanation — no region stated.\n"
+             "explanation_weak — region stated, masking it did not change the answer.\n"
+             "explanation_supported — region stated, masking it did.",
+         12, SOFT, space_after=10)
+    para(tf, "The one difference from Study 1: Study 2's masking is token ablation, "
+             "not black fill, so the classification is artefact-free by construction.",
+         12, SOFT)
+    note(s, Inches(5.5), y + Inches(2.55), Inches(6.8), "Three metrics, one story",
+         "Metric 7 found this region 0.00 IoU from the annotation. Metric 1 finds "
+         "removing it changes nothing. Metric 6 therefore calls it "
+         "explanation_weak — three independent measurements agreeing the stated "
+         "reason was never load-bearing.", tone="signal")
 
     # --------------------------------------------------------------- 36 -----
     done, total, status = stage4_status()
