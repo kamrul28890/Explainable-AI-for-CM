@@ -185,3 +185,45 @@ this is safe to apply mid-study.
 than sampling 1,200. The `--sample` path stays in the code, documented, unused.
 
 **Also affects Stages 5, 6 and 8**, which all use token ablation.
+
+### 22:15 — The in-run slowdown was GPU contention I caused myself
+
+**Sequence.** After the inference_mode fix I ran the GPU suite, then launched
+Stage 4. At launch I recorded `VRAM 6143 MiB` and read it as "model loaded,
+healthy". It was not Stage 4's model — Stage 4 had not finished loading. It was
+the **just-finished GPU test suite still holding its ~6 GB while exiting**.
+Stage 4 then loaded its own ~6 GB on top: ~12 GB on an 8 GB card, everything
+served from shared memory.
+
+**Evidence:**
+
+```
+standalone, GPU free                    3.1 s/call
+streaming probe, GPU free               6.6 s/row  (= 3.3 s/call, consistent)
+the launched run, ~6 GB already resident 31-124 s/call
+```
+
+The streaming probe reproduced the run's exact conditions — one pass over the
+dataset, five distinct image geometries, back-to-back masked calls — and was fast.
+Allocated 5.98 GB / reserved 7.16 GB / peak 6.97 GB, **identical on every row, no
+creep**. That also disproves the fragmentation hypothesis I had formed.
+
+**Two mistakes, both mine, both the same shape:**
+1. I projected "~10 h for the full set" from a *standalone* measurement, exactly
+   the error that produced the original 3.1 h estimate from Stage 0's gate images.
+   Extrapolating across contexts is what keeps burning this project.
+2. I read a contention signal as a health signal because it was the number I
+   wanted to see.
+
+**Operational rule, now followed:** verify the GPU is idle immediately before
+launching, not merely that a previous job reported completion. A finished job's
+process can still hold its allocation.
+
+**This is also a candidate explanation for F5** — the long-standing 3.5x
+standalone-vs-in-run gap. Not yet established: Stage 2's run may or may not have
+overlapped with my own probing processes. Marked as a hypothesis to test, not a
+conclusion, because the same eagerness to close it is what produced the last two
+wrong calls.
+
+**Relaunched** with the GPU verified at 1496 MiB (desktop only) and without the
+`grep` pipe that was silently swallowing the log.
