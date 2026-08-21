@@ -182,7 +182,7 @@ def fig_rule4() -> None:
     if not rows:
         return
     names = {"rule_1": "rule_1  PPE", "rule_2": "rule_2  fall protection",
-             "rule_3": "rule_3  edge protection", "rule_4": "rule_4  plant proximity"}
+             "rule_3": "rule_3  edge protection", "rule_4": "rule_4  machinery proximity"}
     pos = [r for r in rows if r["expected"] == "YES"]
     data = []
     for rid in sorted(names):

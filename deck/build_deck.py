@@ -389,6 +389,41 @@ def build() -> None:
     ], size=13.5)
 
     # ---------------------------------------------------------------- 6 -----
+    # ---------------------------------------------------------------- 6 -----
+    s, y = newslide("The data", "The four safety rules",
+                    "Each rule is put to the model as a question. These are the exact "
+                    "wordings used.", foot="src/xai_vlm/rules.py")
+    ruleset = [
+        ("rule_1", "PPE", "ppe_violation",
+         "Is any worker missing required personal protective equipment — a hard hat, "
+         "high-visibility clothing, or adequate body covering?"),
+        ("rule_2", "Fall protection", "fall_hazard",
+         "Is any worker working at height without fall protection such as a safety "
+         "harness or lanyard?"),
+        ("rule_3", "Edge protection", "fall_hazard",
+         "Is there an unprotected edge, excavation, trench or floor opening that a "
+         "worker could fall into — one lacking guardrails or barriers?"),
+        ("rule_4", "Machinery proximity", "struck_by_risk",
+         "Is any worker inside the danger zone or blind spot of operating heavy "
+         "machinery, such as an excavator?"),
+    ]
+    yy = y + Inches(0.02)
+    for rid, short, hazard, question in ruleset:
+        rect(s, M, yy, W - 2 * M, Inches(0.98), fill=SHADE, line=RULE)
+        rect(s, M, yy, Inches(0.05), Inches(0.98), fill=ACCENT)
+        tf = tb(s, M + Inches(0.22), yy + Inches(0.13), Inches(2.5), Inches(0.8))
+        para(tf, rid, 13, ACCENT, bold=True, font=MONO, first=True, space_after=2)
+        para(tf, short, 13.5, INK, bold=True, space_after=2)
+        para(tf, hazard, 10, FAINT, font=MONO)
+        tf2 = tb(s, M + Inches(2.95), yy + Inches(0.26), Inches(8.6), Inches(0.7))
+        para(tf2, f"“{question}”", 13, SOFT, first=True)
+        yy += Inches(1.07)
+    note(s, M, yy + Inches(0.02), W - 2 * M, "rule_4 is asked only when machinery is present",
+         "It is the one rule with a context gate. Asking about excavator proximity in "
+         "a photograph containing no machinery is a question that cannot be failed — "
+         "it inflates accuracy while measuring nothing.")
+
+    # ---------------------------------------------------------------- 7 -----
     s, y = newslide("The data", "Class imbalance is the design constraint",
                     "Violations per rule across the whole corpus.", foot="Section 5.3")
     table(s, M, y + Inches(0.1), Inches(7.4),
@@ -396,7 +431,7 @@ def build() -> None:
           [["rule_1", "PPE", "324", "677", "1,001"],
            ["rule_3", "Edge protection", "63", "109", "172"],
            ["rule_2", "Fall protection", "25", "59", "84"],
-           ["rule_4", "Plant proximity", "24", "46", "70"]],
+           ["rule_4", "Machinery proximity", "24", "46", "70"]],
           col_w=[1.6, 3.4, 1.6, 1.6, 1.8])
     note(s, Inches(8.5), y + Inches(0.1), Inches(4.1), "Why both splits",
          "The models are evaluated zero-shot and never trained on this data, so "
