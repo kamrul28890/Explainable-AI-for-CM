@@ -96,17 +96,40 @@ def collect(res: Path, model: str, n_boot: int) -> list[dict]:
 
     da = _read(res / f"descriptive_accuracy_{model}.csv")
     if da:
+        yes = [r for r in da if r["baseline_verdict"] == "YES"]
+        no = [r for r in da if r["baseline_verdict"] == "NO"]
+
+        # One section per table, both methods inside it. Interleaving the
+        # sections would make render_latex open a fresh tabular per method and
+        # emit four half-tables where the paper needs two.
         for method in ("black", "tokens"):
-            yes = [r for r in da if r["baseline_verdict"] == "YES"]
-            no = [r for r in da if r["baseline_verdict"] == "NO"]
             if yes:
                 rows.append({"section": "Stage 4 - descriptive accuracy", **rate_row(
                     f"flip rate ({method})",
                     [_truthy(r[f"flip_{method}"]) for r in yes], n_boot)})
+
+        # Per rule, and YES rows only. The controls are rule-labelled too, so
+        # pooling them in would fold the artefact floor into the signal that is
+        # supposed to be measured against it.
+        for method in ("black", "tokens"):
+            for rule in sorted({r["rule_id"] for r in yes}):
+                sub = [r for r in yes if r["rule_id"] == rule]
+                rows.append({"section": f"Stage 4 - flip rate by rule ({method})",
+                             **rate_row(
+                                 rule, [_truthy(r[f"flip_{method}"]) for r in sub],
+                                 n_boot)})
+
+        for method in ("black", "tokens"):
             if no:
                 rows.append({"section": "Stage 4 - artefact floor", **rate_row(
                     f"NO->YES ({method})",
                     [_truthy(r[f"flip_{method}"]) for r in no], n_boot)})
+        # The two maskings answer the same question about the same region.
+        # Where they disagree, at least one of them is reporting the mask rather
+        # than the model, so this belongs beside the floor.
+        rows.append({"section": "Stage 4 - artefact floor", **rate_row(
+            "methods disagree",
+            [_truthy(r["methods_disagree"]) for r in da], n_boot)})
 
     return rows
 

@@ -89,11 +89,70 @@ before being reported — high-IoU rows match the annotation to three decimals
 3. Zero IoU may mean the model found a real violation nobody annotated; 47% of the
    corpus is self-flagged "poor info".
 
-### F4 — Faithfulness (Stage 4) — IN PROGRESS
-Does removing the named region change the answer? Includes an **artefact floor**:
-the NO→YES rate, which cannot rationally be non-zero if masking only removes
-information, and therefore measures how much the intervention perturbs the model
-by itself.
+### F4 — The faithfulness probe is drowned by its own artefact
+`results/descriptive_accuracy_qwen7b-4bit.csv`, full working set n=3,031
+(2,621 YES + 410 negative controls; 0 errors, coverage verified against the
+manifest)
+
+Does removing the named region change the answer? The design carries an
+**artefact floor**: the NO→YES rate. Masking only ever removes information, so a
+control that said NO cannot rationally become YES. Whatever that rate is, it
+measures how much the intervention perturbs the model by itself.
+
+```
+                        signal (YES)          floor (NO→YES)
+black mask        6.4% [5.5, 7.4]        27.8% [23.4, 32.2]
+token ablation    5.9% [5.0, 6.8]        51.7% [46.8, 56.3]
+                       n=2,621                 n=410
+
+methods disagree 12.5% [11.4, 13.7]  n=3,031
+```
+
+**The floor is four to nine times the signal, and the intervals are disjoint.**
+Masking the region the model itself named moves its answer *less* than masking
+moves rows where there was nothing to find. Stage 4 therefore returns no evidence
+that the stated region is load-bearing — and, more importantly, it cannot: an
+intervention whose null exceeds its effect has no headroom to detect one.
+
+Per-rule, YES rows only (black / tokens):
+
+```
+rule_1  PPE               4.8% [3.6, 6.0]    4.6% [3.5, 5.8]    n=1,239
+rule_2  fall protection  14.9% [11.4, 18.7] 15.5% [11.7, 19.2]  n=343
+rule_3  housekeeping      4.4% [3.2, 5.8]    2.6% [1.7, 3.6]    n=969
+rule_4  excavator        22.9% [12.9, 32.9] 28.6% [18.6, 40.0]  n=70
+```
+
+The ordering is suggestive — the two rules the model handles worst (F2) are the
+two whose answers move most under masking — but every one of these sits below the
+27.8% floor, so none of it can be read as faithfulness.
+
+*Why it matters for the paper:* this is a null result that only exists because
+the negative control was run. Without it, "6.4% of answers flip when we mask the
+explained region" is a publishable-looking faithfulness number, and it is the
+same shape as numbers reported in the literature. The control turns a modest
+positive finding into a demonstration that the method does not work on this
+model. Reporting the floor beside the effect should be a requirement, not a
+courtesy.
+
+*The token path is the worse of the two, which inverts the design assumption.*
+Token ablation was adopted as the study's *artefact-free* intervention precisely
+because it leaves the image untouched (see M6). It has the highest floor of the
+two: deleting the hazard word flips a NO to a YES in **51.7%** of controls. It
+does not remove evidence, it replaces a specific question with a vaguer one, and
+the model answers the vaguer question YES. Leaving the pixels alone did not make
+the intervention neutral.
+
+*Caveats:*
+1. The floor is measured on rows where the *model* said NO, not where the
+   annotation says NO. Given a 59% false-alarm rate (F1), these 410 rows are a
+   selected population and may be atypically fragile.
+2. A flip is a binary on a single greedy decode. The pilot's graded-score work
+   (Phase 2.1) exists precisely because a boolean discards magnitude; Study 2 has
+   no graded equivalent yet.
+3. Stage 5's mass-inside-region is the one faithfulness probe in the battery that
+   requires no intervention at all, and therefore inherits none of this. After
+   F4 it carries more weight than originally planned.
 
 ### F5 — Cost
 ```
@@ -169,6 +228,18 @@ available speedup is available mid-study. The distinction is whether the change
 can alter a number, and that has to be checked rather than assumed:
 `inference_mode` cannot, the processor can.
 
+**M7 — An intervention's null must be measured, not argued for.** Stage 4's two
+maskings were chosen on reasoning about what each one disturbs: blacking pixels
+is visibly out of distribution, so token ablation was adopted as the
+*artefact-free* alternative because it leaves the image untouched. Measured
+against negative controls, the artefact-free option was the worse of the two by a
+factor of two (51.7% vs 27.8% NO→YES), and both floors exceeded the effect they
+were meant to isolate. The argument for token ablation was sound and the
+conclusion was wrong, because "leaves the image untouched" is not the same as
+"leaves the model's task untouched" — deleting the hazard word changes the
+question being asked. No amount of reasoning about the intervention substitutes
+for running it on rows where the answer is known in advance.
+
 ---
 
 ## Structure
@@ -179,14 +250,20 @@ can alter a number, and that has to be checked rather than assumed:
 | 2 | Related work — VLM safety eval, XAI metrics | **not started** |
 | 3 | Dataset, two-stratum sampling, prevalence reweighting | data ready |
 | 4 | Protocol — seven metrics, pre-registration, the harness | mostly written in specs |
-| 5 | Results — F1–F5 | F1–F3, F5 ready; F4 running |
+| 5 | Results — F1–F5 | F1–F5 ready |
 | 6 | Discussion — what accuracy hides | outline |
 | 7 | Threats to validity — annotation quality, IoU severity, single model | partly written |
-| 8 | Methodological lessons — M1–M5 | outline |
+| 8 | Methodological lessons — M1–M7 | outline |
 
 ## Not yet measured
 
-- Stages 5 (sparsity), 6 (stability), 8 (robustness) — Plan 3c, undesigned.
+- Stage 5 (sparsity), Stage 6 (stability) — designed in the Plan 3c spec,
+  implemented and unit-tested, **not yet run on GPU**.
+- Stage 8 (robustness) — designed in the Plan 3c spec, **not implemented**. Its
+  design should be revisited in light of F4: if a verdict barely moves when the
+  region is removed entirely, "survives blur" may be measuring the same
+  insensitivity rather than robustness.
+- The Plan 3c spec's pre-registered DECISIONs are **not yet reviewed**.
 - Comparison models (`qwen3b-8bit`, `qwen3b-4bit`) — the size-comparison arm.
 - The §5.5 human audit of 100 cases, without which F3's caveat 3 cannot be closed.
 - A prompt ablation for F2.

@@ -28,10 +28,13 @@ safety judgement can be trusted — not just whether its answer is right.
 | `metrics/efficiency.py` — Stage 7 | ✅ run |
 | `metrics/text_similarity.py` — pinned embeddings | ✅ implemented and tested |
 | `metrics/correctness.py` — Stage 10 | ✅ run |
-| `metrics/descriptive_accuracy.py` — Stage 4 | ✅ implemented; run in progress |
-| `metrics/` — Stages 5, 6, 8, 9 | ⬜ not started (Plans 3b/3c) |
+| `metrics/descriptive_accuracy.py` — Stage 4 | ✅ run, full set n=3,031 |
+| `metrics/sparsity.py` — Stage 5 | ✅ implemented and tested; ⬜ not run |
+| `metrics/stability.py` — Stage 6 | ✅ implemented and tested; ⬜ not run |
+| `metrics/completeness.py` — Stage 9 | ✅ implemented and tested; ⬜ not run |
+| `metrics/` — Stage 8 (robustness) | ⬜ not started (Plan 3c) |
 
-168 tests: 156 without a GPU, 12 requiring `--gpu`.
+222 tests: 210 without a GPU, 12 requiring `--gpu`.
 
 ## Results so far
 
