@@ -187,3 +187,54 @@ def summarize_strata(rows: Iterable[SampleRow]) -> str:
         lines.append("")
         lines.append(f"BELOW REPORTING FLOOR (n<30 positives): {', '.join(sorted(thin))}")
     return "\n".join(lines)
+
+
+def floor_then_proportional_sample(
+    rows: list[dict], group_key: str, stratify_key: str,
+    targets: dict, floor: int, seed: int = 42,
+) -> list[dict]:
+    """Seeded subsample: guarantee each stratum its floor, then fill proportionally.
+
+    Shared by Stages 4, 6 and 8, all of which need a smaller-than-full working set
+    while keeping the rarest stratum (rule_4, an order of magnitude scarcer than
+    rule_1) reportable rather than crowded out by pure proportional allocation.
+
+    `rows` are grouped by `group_key` (e.g. baseline verdict), and each group is
+    drawn independently toward `targets[group_value]`. Within a group, `floor`
+    rows are taken from every `stratify_key` value first (capped by what that
+    stratum's pool actually holds), and the remainder is distributed in
+    proportion to what is left. A pool smaller than the target is taken whole.
+    """
+    rng = __import__("random").Random(seed)
+    out: list[dict] = []
+
+    for group_value, target in targets.items():
+        pool = [r for r in rows if r.get(group_key) == group_value]
+        if len(pool) <= target:
+            out.extend(pool)
+            continue
+
+        by_stratum: dict = {}
+        for r in pool:
+            by_stratum.setdefault(r[stratify_key], []).append(r)
+        for group in by_stratum.values():
+            rng.shuffle(group)
+
+        picked: dict = {}
+        for stratum, group in sorted(by_stratum.items()):
+            picked[stratum] = group[:min(len(group), floor)]
+
+        used = sum(len(v) for v in picked.values())
+        remaining = max(0, target - used)
+        leftovers = {s: by_stratum[s][len(picked[s]):] for s in by_stratum}
+        total_left = sum(len(v) for v in leftovers.values())
+        if remaining and total_left:
+            for stratum, group in sorted(leftovers.items()):
+                k = round(remaining * len(group) / total_left)
+                picked[stratum].extend(group[:k])
+
+        drawn = [r for stratum in sorted(picked) for r in picked[stratum]]
+        rng.shuffle(drawn)
+        out.extend(drawn[:max(target, used)])
+
+    return out
