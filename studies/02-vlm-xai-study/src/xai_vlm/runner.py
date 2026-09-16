@@ -168,6 +168,11 @@ class GuardTripped(RuntimeError):
     """A pre-registered quality guard failed; the run stops."""
 
 
+def _row_ok(out_row: dict) -> bool:
+    """Stage 2's definition of a healthy row, and the default for run_stage."""
+    return bool(out_row.get("verdict")) and not out_row.get("parse_error")
+
+
 class Guards:
     """Running quality checks over the rows this process has produced."""
 
@@ -231,6 +236,8 @@ def run_stage(
     checkpoint_every: int = 100,
     progress_fn: Optional[Callable[[dict], None]] = None,
     guards: Optional[Guards] = None,
+    ok_fn: Optional[Callable[[dict], bool]] = None,
+    latency_fn: Optional[Callable[[dict], float]] = None,
 ) -> dict:
     """Run `work_fn` over `rows`, checkpointing every row and skipping done work.
 
@@ -238,6 +245,23 @@ def run_stage(
     continues, because one unreadable image should not end an overnight run. A
     tripped guard *is* fatal, because it means every subsequent row would be
     unusable too.
+
+    `ok_fn` and `latency_fn` say how THIS stage's health is read from a result
+    row. The defaults are Stage 2's columns, which is where the guards came from,
+    and every other stage writes something different:
+
+      - latency defaults to `latency_ms`. Stage 4 spends its time in
+        `latency_ms_black` + `latency_ms_tokens`; Stage 5 and 6 wrote no such
+        column at all. A missing column reads as 0.0 s, so the ceiling can never
+        be crossed and the stage reports a healthy `median 0.0s` forever.
+      - success defaults to a non-empty `verdict`. Because `out_row` is
+        `{**row, **result}`, a stage whose input rows come from an earlier
+        stage's CSV *inherits that CSV's verdict column* and grades the previous
+        stage's output instead of its own.
+
+    Both failures are silent and both look like health. Guards run in-process
+    over this run's rows only and never touch what is written, so supplying these
+    cannot change a recorded number -- only whether a bad run is caught.
     """
     state = RunState(state_json)
     state.verify_or_create(fingerprint, force=force_resume)
@@ -272,8 +296,9 @@ def run_stage(
             summary["done"] += 1
 
             guards.record(
-                parsed_ok=bool(out_row.get("verdict")) and not out_row.get("parse_error"),
-                latency_s=float(out_row.get("latency_ms") or 0.0) / 1000.0,
+                parsed_ok=_row_ok(out_row) if ok_fn is None else bool(ok_fn(out_row)),
+                latency_s=(float(out_row.get("latency_ms") or 0.0) / 1000.0
+                           if latency_fn is None else float(latency_fn(out_row))),
             )
 
             if summary["done"] % checkpoint_every == 0:

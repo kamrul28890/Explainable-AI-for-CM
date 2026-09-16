@@ -269,6 +269,36 @@ def _summarise(out_csv: Path) -> None:
     print("=" * 70)
 
 
+def _ms(value) -> float:
+    """Blank means that masking never ran -- a row that errored partway. float('')
+    raises, and raising inside the guard would kill the run it is protecting."""
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def row_latency_s(out_row: dict) -> float:
+    """Both maskings, because a row costs two generations.
+
+    The default guard reads `latency_ms`, which this stage never writes -- it
+    writes one column per masking method. So the guard measured 0.0 s on every
+    row of the 70 h run and could not have tripped.
+    """
+    return (_ms(out_row.get("latency_ms_black"))
+            + _ms(out_row.get("latency_ms_tokens"))) / 1000.0
+
+
+def row_ok(out_row: dict) -> bool:
+    """Both maskings produced a verdict.
+
+    Not `verdict`: that column is inherited from the regions CSV this stage reads
+    its input from, so the default guard grades Stage 3's output and passes even
+    if every masking call here came back empty.
+    """
+    return bool(out_row.get("verdict_black")) and bool(out_row.get("verdict_tokens"))
+
+
 def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
         resume, force_resume, checkpoint_every, rows=None) -> dict:
     return run_stage(
@@ -277,6 +307,7 @@ def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
         Path(out_csv), Path(state_json), RESULT_FIELDS, fingerprint,
         resume=resume, force_resume=force_resume,
         checkpoint_every=checkpoint_every, progress_fn=_progress, guards=Guards(),
+        ok_fn=row_ok, latency_fn=row_latency_s,
     )
 
 

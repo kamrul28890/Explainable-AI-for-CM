@@ -240,6 +240,39 @@ conclusion was wrong, because "leaves the image untouched" is not the same as
 question being asked. No amount of reasoning about the intervention substitutes
 for running it on rows where the answer is known in advance.
 
+**M8 — A guard wired to the wrong column reports health, not failure.** The
+runner's two guards were written against Stage 2 and read its column names:
+latency from `latency_ms`, success from a non-empty `verdict`. Every later stage
+writes different columns, and because a result row is `{**input_row, **result}`,
+a stage reading its input from an earlier stage's CSV *inherits that CSV's
+`verdict` column*. The consequence, measured across the battery:
+
+| stage | latency guard | parse guard |
+|---|---|---|
+| 2 — baseline | works | works |
+| 4 — descriptive accuracy | **dead** (writes `latency_ms_black`/`_tokens`) | **vacuous** (reads Stage 3's verdict) |
+| 5 — sparsity | **dead** (no latency column) | **vacuous** (reads Stage 3's verdict) |
+| 6 — stability | **dead** (no latency column) | **vacuous** (reads Stage 2's verdict) |
+
+Three of the four stages that use the runner were unguarded, including the 70 h
+Stage 4 run. Neither failure is visible as an error: a missing latency column
+reads as 0.0 s, so the progress line prints a healthy `median 0.0s` and the
+ceiling can never be crossed, and an inherited verdict column is always
+non-empty, so the parse rate is 100% by construction.
+
+This is M1 in a second form. M1 was a guard that could not see rows that were
+never attempted; M8 is a guard that could not see the stage it was watching.
+Both reported success. The fix makes each stage declare how its own health is
+read (`ok_fn`, `latency_fn`) rather than inheriting Stage 2's assumptions, and
+the defaults are unchanged so Stage 2 is untouched. Guards run in-process and
+never touch what is written, so no recorded number changes — only whether a bad
+run gets caught.
+
+*Caveat that must travel with the Stage 4 result:* F4's run was unguarded. Its
+numbers survive on the strength of coverage verification (3,031/3,031 rows,
+0 errors) rather than on the latency and parse guards, which were inert
+throughout.
+
 ---
 
 ## Structure
@@ -253,7 +286,7 @@ for running it on rows where the answer is known in advance.
 | 5 | Results — F1–F5 | F1–F5 ready |
 | 6 | Discussion — what accuracy hides | outline |
 | 7 | Threats to validity — annotation quality, IoU severity, single model | partly written |
-| 8 | Methodological lessons — M1–M7 | outline |
+| 8 | Methodological lessons — M1–M8 | outline |
 
 ## Not yet measured
 

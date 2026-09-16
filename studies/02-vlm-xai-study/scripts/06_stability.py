@@ -14,6 +14,7 @@ Requires CUDA. Resumable: rerun the same command after any interruption.
 import argparse
 import csv
 import sys
+import time
 from collections import defaultdict
 from pathlib import Path
 
@@ -34,7 +35,7 @@ from xai_vlm.sampling import floor_then_proportional_sample  # noqa: E402
 RESULT_FIELDS = [
     "image_id", "rule_id", "baseline_verdict", "verdicts", "regions",
     "agreement_rate", "region_presence_rate", "flickering",
-    "mean_centroid_drift", "error",
+    "mean_centroid_drift", "latency_ms", "error",
 ]
 
 N_RERUNS = 5
@@ -68,13 +69,19 @@ def make_work_fn(backend, image_source, n_reruns: int = N_RERUNS,
             "baseline_verdict": row.get("verdict", ""),
             "verdicts": "", "regions": "", "agreement_rate": "",
             "region_presence_rate": "", "flickering": "",
-            "mean_centroid_drift": "", "error": "",
+            "mean_centroid_drift": "", "latency_ms": "", "error": "",
         }
 
         image = image_source(row["image_id"])
         if image is None:
             out["error"] = "image not found"
             return out
+
+        # All five reruns, because that is what one row of this stage costs. The
+        # runner's latency guard reads this field; without it the guard sees
+        # 0.0 s forever and cannot detect the shared-memory spill, which is the
+        # failure mode a 5x-generation stage is most exposed to.
+        started = time.perf_counter()
 
         verdicts, regions = [], []
         for _ in range(n_reruns):
@@ -83,6 +90,7 @@ def make_work_fn(backend, image_source, n_reruns: int = N_RERUNS,
             verdicts.append(ans.verdict or "")
             regions.append("" if ans.region is None else str(tuple(ans.region)))
 
+        out["latency_ms"] = round((time.perf_counter() - started) * 1000.0, 1)
         out["verdicts"] = "|".join(verdicts)
         out["regions"] = "|".join(regions)
         out["agreement_rate"] = f"{pairwise_agreement(verdicts):.4f}"
@@ -158,6 +166,22 @@ def _summarise(out_csv: Path) -> None:
     print("=" * 66)
 
 
+def row_ok(out_row: dict) -> bool:
+    """Every rerun answered.
+
+    Not `verdict`: that column is inherited from the baseline CSV this stage
+    draws its subset from, so the default guard grades Stage 2's output.
+
+    An empty slot between the `|` separators means a sampled decode produced
+    nothing parseable. Agreement computed across blanks is not a stability
+    measurement, and sampling decoding is exactly the setting where parse rates
+    degrade -- which is the pre-registered risk this guard exists to catch.
+    """
+    verdicts = out_row.get("verdicts") or ""
+    parts = verdicts.split("|")
+    return bool(verdicts) and all(p.strip() for p in parts)
+
+
 def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
         resume, force_resume, checkpoint_every, rows=None) -> dict:
     return run_stage(
@@ -166,6 +190,7 @@ def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
         Path(out_csv), Path(state_json), RESULT_FIELDS, fingerprint,
         resume=resume, force_resume=force_resume,
         checkpoint_every=checkpoint_every, progress_fn=_progress, guards=Guards(),
+        ok_fn=row_ok,
     )
 
 

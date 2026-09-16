@@ -13,6 +13,7 @@ import argparse
 import ast
 import csv
 import sys
+import time
 from collections import defaultdict
 from pathlib import Path
 
@@ -25,7 +26,7 @@ from xai_vlm.runner import Guards, manifest_sha256, run_stage  # noqa: E402
 
 RESULT_FIELDS = [
     "image_id", "rule_id", "verdict", "attention_available", "gini",
-    "mass_inside_region", "region_area_fraction", "error",
+    "mass_inside_region", "region_area_fraction", "latency_ms", "error",
 ]
 
 
@@ -45,7 +46,7 @@ def make_work_fn(backend, image_source):
             "image_id": row["image_id"], "rule_id": row["rule_id"],
             "verdict": row.get("verdict", ""), "attention_available": "",
             "gini": "", "mass_inside_region": "", "region_area_fraction": "",
-            "error": "",
+            "latency_ms": "", "error": "",
         }
 
         image = image_source(row["image_id"])
@@ -53,9 +54,22 @@ def make_work_fn(backend, image_source):
             out["error"] = "image not found"
             return out
 
+        # The runner derives its latency guard from this field, and that guard is
+        # the only detector for the silent shared-memory spill: peak VRAM here is
+        # 7.29 GB against a 7.0 GB budget, and Windows serves the overflow from
+        # system RAM at ~30x cost rather than raising OOM. Omitting it does not
+        # disable the guard visibly -- it reports a healthy 0.0 s forever.
+        started = time.perf_counter()
+
         # Legitimate: not every backend exposes attention. Recorded as
         # unavailable, never defaulted to zero -- a false "unfocused" reading.
         grid = backend.attention(image, row["rule_id"])
+
+        # Timed before the early return: a backend that returns no attention has
+        # still paid for the forward pass, and recording 0 ms there would drag
+        # the median down and hide a real slowdown.
+        out["latency_ms"] = round((time.perf_counter() - started) * 1000.0, 1)
+
         if grid is None:
             out["attention_available"] = "False"
             return out
@@ -135,6 +149,33 @@ def _summarise(out_csv: Path) -> None:
     print("=" * 66)
 
 
+# MEASURED ON THIS STAGE, not inherited. Reading attention forces
+# `output_attentions=True`, which makes transformers fall back from sdpa to the
+# manual attention implementation, so a row here costs far more than a Stage 2
+# answer. Smoke-measured median over 30 rows: 15.4 / 13.8 / 16.0 s.
+MEASURED_MEDIAN_LATENCY_S = 16.0
+
+# The runner's 25.0 s ceiling is 2.3x Stage 2's 9-11 s median. Against 16 s it is
+# only 1.56x, which would abort a 17 h run on ordinary variation -- M2 again, a
+# threshold calibrated on an unrepresentative workload. This keeps Stage 2's
+# multiple against the median this stage actually measured.
+LATENCY_CEILING_S = 37.0
+
+
+def make_guards() -> Guards:
+    return Guards(latency_ceiling_s=LATENCY_CEILING_S)
+
+
+def row_ok(out_row: dict) -> bool:
+    """This stage's analog of "the reply parsed": attention actually came back.
+
+    The default guard reads `verdict`, which this stage copies in from the
+    regions CSV -- so it would grade Stage 3's output and pass on every row even
+    if attention extraction failed for all of them.
+    """
+    return out_row.get("attention_available") == "True"
+
+
 def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
         resume, force_resume, checkpoint_every, rows=None) -> dict:
     return run_stage(
@@ -142,7 +183,8 @@ def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
         make_work_fn(backend, image_source),
         Path(out_csv), Path(state_json), RESULT_FIELDS, fingerprint,
         resume=resume, force_resume=force_resume,
-        checkpoint_every=checkpoint_every, progress_fn=_progress, guards=Guards(),
+        checkpoint_every=checkpoint_every, progress_fn=_progress,
+        guards=make_guards(), ok_fn=row_ok,
     )
 
 
