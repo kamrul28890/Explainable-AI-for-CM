@@ -222,6 +222,44 @@ highest-value unblocking work in the study.
    `output_attentions=True`. Generation still runs on sdpa; attention comes from
    a separate teacher-forced pass, so the decoded text is unaffected.
 
+### F7 — Bounded completeness is NOT REPORTABLE as designed
+`results/completeness_qwen7b-4bit.csv`, n=3,882 (computed; **do not quote**)
+
+```
+no_usable_explanation   21.9%
+explanation_supported    9.5% [ 8.6, 10.4]
+explanation_weak        68.6% [67.1, 70.0]
+```
+
+**These numbers must not go in the paper.** `classify_completeness` derives the
+entire metric from Stage 4's `flip_tokens`: a flip means *supported*, no flip
+means *weak*. F4 established that token ablation carries a 51.7% artefact floor
+against a 5.9% signal, so:
+
+- `explanation_weak` (68.6%) says only that the flip test did not move — which
+  F4 shows it would not have moved regardless of whether the region mattered.
+- `explanation_supported` (9.5%) is *more* likely to be artefact than signal,
+  since the NO→YES artefact rate exceeds the YES flip rate nine-fold.
+
+The metric is not wrong in implementation; it is correctly computing a quantity
+whose input has no discriminative power.
+
+*This is the same inversion as M7, one layer further out.* The module docstring
+states token ablation was chosen "so the headline is not inflated by the
+black-rectangle artefact" — sound reasoning, written before anything measured
+which artefact was larger. An unvalidated intervention was selected on argument,
+then a second metric was built on top of it. **A metric defined over another
+metric inherits that metric's validity, and nothing re-checks it.**
+
+*Open design question, for decision rather than assumption:* completeness asks
+"was an explanation offered, and did it hold up?" Only the second half is broken.
+F6's mass-inside-region is intervention-free and survived, so completeness could
+be redefined against *attention landing inside the named region* instead of
+*answer flips when the region is removed*. That would change what the metric
+means — from causal ("removing it changes the answer") to attentional ("the model
+looked there") — and that change must be argued in the paper, not slipped in.
+Not done pending a decision.
+
 ### F5 — Cost
 ```
 median 10.1 s   p90 26.5 s   max 477 s   n=3,882
@@ -351,7 +389,7 @@ throughout.
 | 2 | Related work — VLM safety eval, XAI metrics | **not started** |
 | 3 | Dataset, two-stratum sampling, prevalence reweighting | data ready |
 | 4 | Protocol — seven metrics, pre-registration, the harness | mostly written in specs |
-| 5 | Results — F1–F6 | F1–F6 ready |
+| 5 | Results — F1–F7 | F1–F6 ready; F7 blocked, see entry |
 | 6 | Discussion — what accuracy hides | outline |
 | 7 | Threats to validity — annotation quality, IoU severity, single model | partly written |
 | 8 | Methodological lessons — M1–M8 | outline |
