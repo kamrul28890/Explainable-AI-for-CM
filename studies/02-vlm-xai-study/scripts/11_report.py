@@ -131,6 +131,35 @@ def collect(res: Path, model: str, n_boot: int) -> list[dict]:
             "methods disagree",
             [_truthy(r["methods_disagree"]) for r in da], n_boot)})
 
+    sp = _read(res / f"sparsity_{model}.csv")
+    if sp:
+        # Raw attention mass is not interpretable on its own: a region covering
+        # half the image should attract half the attention by chance alone. The
+        # reportable quantity is mass against THAT ROW'S OWN area fraction, which
+        # is what uniform attention would put there.
+        #
+        # Rows where attention was unavailable are excluded rather than counted
+        # as misses -- "not measured" is not "measured and failed", which is the
+        # distinction Stage 5 was written to preserve (and M5).
+        scored = [r for r in sp
+                  if r.get("attention_available") == "True"
+                  and r.get("mass_inside_region")
+                  and r.get("region_area_fraction")]
+        if scored:
+            beats = [float(r["mass_inside_region"]) > float(r["region_area_fraction"])
+                     for r in scored]
+            rows.append({"section": "Stage 5 - sparsity", **rate_row(
+                "attention exceeds area null", beats, n_boot)})
+
+            for rule in sorted({r["rule_id"] for r in scored}):
+                sub = [r for r in scored if r["rule_id"] == rule]
+                rows.append({"section": "Stage 5 - attention vs area null by rule",
+                             **rate_row(
+                                 rule,
+                                 [float(r["mass_inside_region"])
+                                  > float(r["region_area_fraction"]) for r in sub],
+                                 n_boot)})
+
     return rows
 
 

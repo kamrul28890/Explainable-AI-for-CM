@@ -149,17 +149,28 @@ def _summarise(out_csv: Path) -> None:
     print("=" * 66)
 
 
-# MEASURED ON THIS STAGE, not inherited. Reading attention forces
+# MEASURED IN A FULL RUN, not in a smoke run. Reading attention forces
 # `output_attentions=True`, which makes transformers fall back from sdpa to the
 # manual attention implementation, so a row here costs far more than a Stage 2
-# answer. Smoke-measured median over 30 rows: 15.4 / 13.8 / 16.0 s.
-MEASURED_MEDIAN_LATENCY_S = 16.0
+# answer.
+#
+# A 30-row smoke measured 15.4 / 13.8 / 16.0 s. The real median over the first
+# 993 rows of the full run is 30.5 s (p25 23.4, p75 35.7, p90 38.8) -- nearly
+# double. THE SMOKE RUN CANNOT CALIBRATE THIS STAGE, and not by accident: Qwen's
+# CPU-side image preprocessing sits inside the timed call, and a 30-row smoke
+# stops streaming the dataset almost immediately while a full run decodes
+# parquet continuously alongside every inference. The short run measures a
+# quieter machine than the long one. This is the same CPU-contention hypothesis
+# left unresolved in runner.py's LATENCY_CEILING_S note.
+MEASURED_MEDIAN_LATENCY_S = 30.5
 
-# The runner's 25.0 s ceiling is 2.3x Stage 2's 9-11 s median. Against 16 s it is
-# only 1.56x, which would abort a 17 h run on ordinary variation -- M2 again, a
-# threshold calibrated on an unrepresentative workload. This keeps Stage 2's
-# multiple against the median this stage actually measured.
-LATENCY_CEILING_S = 37.0
+# The runner's 25.0 s ceiling is 2.3x Stage 2's 9-11 s median. Against 30.5 s it
+# is BELOW the healthy median and would abort immediately. The first value tried
+# here, 37.0, was derived from the smoke's wrong 16 s and left only 1.2x headroom
+# against a p90 of 38.8 s -- it would have aborted a healthy 35 h run on ordinary
+# variation. M2 twice over: calibrate on the workload, and make sure the sample
+# you calibrate on is the workload.
+LATENCY_CEILING_S = 70.0
 
 
 def make_guards() -> Guards:

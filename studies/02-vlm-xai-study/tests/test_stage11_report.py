@@ -115,3 +115,56 @@ def test_method_disagreement_is_reported(tmp_path):
 
 def test_missing_result_files_collect_nothing(tmp_path):
     assert stage11.collect(tmp_path, "absent", n_boot=200) == []
+
+
+def _sparsity_csv(tmp_path):
+    """40 rows per rule. rule_1 beats its own area null on 30 of 40; rule_4 on 10."""
+    rows = []
+    for rule, wins in (("rule_1", 30), ("rule_4", 10)):
+        for i in range(40):
+            beat = i < wins
+            rows.append({
+                "image_id": f"{rule}-{i:03d}", "rule_id": rule, "verdict": "YES",
+                "attention_available": "True", "gini": "0.55",
+                "mass_inside_region": "0.04" if beat else "0.01",
+                "region_area_fraction": "0.02",
+                "latency_ms": "20000", "error": "",
+            })
+    # A row where attention never came back must not count as a miss.
+    rows.append({
+        "image_id": "none-001", "rule_id": "rule_1", "verdict": "YES",
+        "attention_available": "False", "gini": "", "mass_inside_region": "",
+        "region_area_fraction": "", "latency_ms": "20000", "error": "",
+    })
+    _write(tmp_path / "sparsity_m.csv", rows)
+    return tmp_path
+
+
+def test_sparsity_reports_attention_beating_the_area_null(tmp_path):
+    """The headline is not the raw mass -- it is mass against the area the region
+    occupies, which is what uniform attention would deliver by chance."""
+    res = _sparsity_csv(tmp_path)
+    rows = stage11.collect(res, "m", n_boot=200)
+    row = next(r for r in rows if r["section"] == "Stage 5 - sparsity"
+               and r["label"] == "attention exceeds area null")
+    assert row["n"] == 80
+    assert row["point"] == 40 / 80
+
+
+def test_sparsity_excludes_rows_where_attention_was_unavailable(tmp_path):
+    """Recording those as failures would understate the metric with rows that
+    were never measured -- the distinction the stage exists to preserve."""
+    res = _sparsity_csv(tmp_path)
+    rows = stage11.collect(res, "m", n_boot=200)
+    row = next(r for r in rows if r["section"] == "Stage 5 - sparsity"
+               and r["label"] == "attention exceeds area null")
+    assert row["n"] == 80  # not 81
+
+
+def test_sparsity_is_reported_per_rule(tmp_path):
+    res = _sparsity_csv(tmp_path)
+    rows = stage11.collect(res, "m", n_boot=200)
+    by_rule = {r["label"]: r for r in rows
+               if r["section"] == "Stage 5 - attention vs area null by rule"}
+    assert by_rule["rule_1"]["point"] == 30 / 40
+    assert by_rule["rule_4"]["point"] == 10 / 40

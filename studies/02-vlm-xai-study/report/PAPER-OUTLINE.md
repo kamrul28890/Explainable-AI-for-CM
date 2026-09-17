@@ -154,6 +154,74 @@ the intervention neutral.
    requires no intervention at all, and therefore inherits none of this. After
    F4 it carries more weight than originally planned.
 
+### F6 — The model does look where it says it looks
+`results/sparsity_qwen7b-4bit.csv`, n=3,882 (coverage verified against the
+manifest: 0 missing, 0 duplicate, 0 errors; attention extracted on 3,882/3,882)
+
+**The study's first positive faithfulness result, and the only one F4's artefact
+collapse cannot touch** — this stage performs no intervention at all. Nothing is
+masked and nothing is deleted; attention is read from a teacher-forced pass over
+the reply the model already gave.
+
+```
+Gini                        median 0.551   p25 0.503   p75 0.602   n=3,882
+mass inside stated region   median 0.0237
+area fraction of region     median 0.0105   <- the chance baseline
+                                     ratio  2.3x
+
+attention exceeds area null  85.7% [84.5, 87.0]   n=3,031
+```
+
+Raw attention mass means nothing alone: a region covering half the frame should
+attract half the attention by chance. The reportable quantity is each row's mass
+against **its own** area fraction. On 86% of rows attention concentrates inside
+the named region beyond what uniform attention would put there.
+
+Per rule:
+
+```
+rule_1  PPE               82.3% [80.2, 84.3]  n=1,342   2.2x
+rule_2  fall protection   88.6% [85.6, 91.4]  n=464     2.3x
+rule_3  edge protection   88.1% [86.0, 90.1]  n=982     1.5x
+rule_4  struck-by         90.1% [86.0, 93.8]  n=243     2.4x
+```
+
+**rule_4 is the sharpest finding in this table.** It is the class the model is
+nearly blind to — 30% sensitivity (F2) — and it has the *highest* rate of
+attention landing on target. The model looks in the right place and then answers
+NO. That dissociates *looking* from *deciding*: rule_4's failure is not a
+perception failure, and a fix aimed at the vision encoder would address the wrong
+half of the model.
+
+rule_3's ratio is lowest (1.5x) because its regions are by far the largest
+(median area 8.75% of the frame against rule_1's 0.46%). A larger region is
+easier to hit by chance, which compresses the ratio while leaving the beat-null
+rate high. This is exactly why Gini is the size-independent primary and why the
+null is computed per row rather than pooled.
+
+Attention is also slightly more concentrated when the model answers YES
+(Gini 0.570, n=2,715) than NO (0.516, n=1,167) — consistent with a located
+hazard focusing attention, though the two distributions overlap heavily.
+
+*Why it matters for the paper:* F6 stands in direct tension with F3. The model's
+attention is on target 86% of the time, while the boxes it *names* match human
+annotations only 6.8% of the time. Both can be true, and together they say the
+model is internally consistent but disagrees with the annotators about where the
+hazard is. That reframes F3's third caveat from a hedge into a live hypothesis:
+with 47% of the corpus self-flagged "poor info", the §5.5 human audit is now the
+highest-value unblocking work in the study.
+
+*Caveats:*
+1. Attention is not explanation. High mass inside the region shows the model
+   attended there while producing the reply; it does not prove that attention
+   caused the verdict. The causal claim is what Stage 4 was for, and Stage 4
+   failed.
+2. 851 of 3,882 rows have no model region (Stage 3's no-region rate) and are
+   excluded from mass-inside-region. Gini is reported over all 3,882.
+3. Read from the manual attention implementation, since sdpa does not support
+   `output_attentions=True`. Generation still runs on sdpa; attention comes from
+   a separate teacher-forced pass, so the decoded text is unaffected.
+
 ### F5 — Cost
 ```
 median 10.1 s   p90 26.5 s   max 477 s   n=3,882
@@ -283,15 +351,15 @@ throughout.
 | 2 | Related work — VLM safety eval, XAI metrics | **not started** |
 | 3 | Dataset, two-stratum sampling, prevalence reweighting | data ready |
 | 4 | Protocol — seven metrics, pre-registration, the harness | mostly written in specs |
-| 5 | Results — F1–F5 | F1–F5 ready |
+| 5 | Results — F1–F6 | F1–F6 ready |
 | 6 | Discussion — what accuracy hides | outline |
 | 7 | Threats to validity — annotation quality, IoU severity, single model | partly written |
 | 8 | Methodological lessons — M1–M8 | outline |
 
 ## Not yet measured
 
-- Stage 5 (sparsity), Stage 6 (stability) — designed in the Plan 3c spec,
-  implemented and unit-tested, **not yet run on GPU**.
+- Stage 6 (stability) — designed in the Plan 3c spec, implemented and
+  unit-tested, **not yet run on GPU**. (Stage 5 is complete: see F6.)
 - Stage 8 (robustness) — designed in the Plan 3c spec, **not implemented**. Its
   design should be revisited in light of F4: if a verdict barely moves when the
   region is removed entirely, "survives blur" may be measuring the same
