@@ -29,7 +29,7 @@ from xai_vlm.metrics.stability import (  # noqa: E402
     parse_box,
     region_presence_rate,
 )
-from xai_vlm.runner import Guards, manifest_sha256, run_stage  # noqa: E402
+from xai_vlm.runner import Guards, backend_device, manifest_sha256, run_stage  # noqa: E402
 from xai_vlm.sampling import floor_then_proportional_sample  # noqa: E402
 
 RESULT_FIELDS = [
@@ -194,6 +194,28 @@ def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
     )
 
 
+def build_fingerprint(manifest_path, baseline_path, model, seed, *, device: str) -> dict:
+    """Everything that, if changed, makes previously written rows incomparable.
+
+    Includes the sampling override: under the study-wide greedy config five
+    reruns are byte-identical, so a resume must not mix decoding settings.
+    """
+    return {
+        "manifest_sha256": manifest_sha256(Path(manifest_path)),
+        "baseline_sha256": manifest_sha256(Path(baseline_path)),
+        "model": model,
+        "device": device,
+        "compute_dtype": config.COMPUTE_DTYPE,
+        "attention_impl": config.ATTENTION_IMPL,
+        "max_pixels": config.MAX_PIXELS,
+        "n_reruns": N_RERUNS,
+        "stability_temperature": STABILITY_TEMPERATURE,
+        "subset_size": SUBSET_SIZE,
+        "per_rule_floor": PER_RULE_FLOOR,
+        "seed": seed,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", required=True, choices=sorted(config.MODEL_TIERS))
@@ -204,7 +226,7 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
-    res = STUDY_ROOT / "results"
+    res = config.RESULTS_DIR
     manifest = res / "sample_manifest.csv"
     baseline = res / f"baseline_{args.model}.csv"
     if not baseline.exists():
@@ -224,25 +246,13 @@ def main() -> int:
 
     out_csv = res / f"stability_{args.model}.csv"
     state_json = res / f"stability_{args.model}.state.json"
-    fingerprint = {
-        "manifest_sha256": manifest_sha256(manifest),
-        "baseline_sha256": manifest_sha256(baseline),
-        "model": args.model,
-        "compute_dtype": config.COMPUTE_DTYPE,
-        "attention_impl": config.ATTENTION_IMPL,
-        "max_pixels": config.MAX_PIXELS,
-        "n_reruns": N_RERUNS,
-        "stability_temperature": STABILITY_TEMPERATURE,
-        "subset_size": SUBSET_SIZE,
-        "per_rule_floor": PER_RULE_FLOOR,
-        "seed": args.seed,
-    }
-
     from xai_pilot.data import load_construction_site
     from xai_vlm.backends.qwen import QwenBackend
 
     print(f"loading {args.model} ...")
     backend = QwenBackend(tier=args.model)
+    fingerprint = build_fingerprint(manifest, baseline, args.model, args.seed,
+                                    device=backend_device(backend))
 
     cache: dict = {}
 

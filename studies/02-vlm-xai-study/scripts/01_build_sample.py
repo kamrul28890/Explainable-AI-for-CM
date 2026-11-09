@@ -145,7 +145,7 @@ def write_manifest(rows: list[dict], path: Path, force: bool) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--out", default=str(STUDY_ROOT / "results" / "sample_manifest.csv"))
+    ap.add_argument("--out", default=str(config.RESULTS_DIR / "sample_manifest.csv"))
     ap.add_argument("--force", action="store_true",
                     help="overwrite an existing manifest (invalidates prior results)")
     ap.add_argument("--allow-imbalance", action="store_true",

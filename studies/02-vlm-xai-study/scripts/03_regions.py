@@ -36,7 +36,7 @@ def main() -> int:
     ap.add_argument("--model", default="qwen7b-4bit")
     args = ap.parse_args()
 
-    baseline_path = STUDY_ROOT / "results" / f"baseline_{args.model}.csv"
+    baseline_path = config.RESULTS_DIR / f"baseline_{args.model}.csv"
     if not baseline_path.exists():
         print(f"no baseline at {baseline_path}. Run Stage 2 first.", file=sys.stderr)
         return 1
@@ -53,7 +53,7 @@ def main() -> int:
     print(f"  got {len(sizes)}")
 
     rows = build_region_rows(baseline, sizes)
-    out = STUDY_ROOT / "results" / f"regions_{args.model}.csv"
+    out = config.RESULTS_DIR / f"regions_{args.model}.csv"
     with out.open("w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=REGION_FIELDS)
         w.writeheader()

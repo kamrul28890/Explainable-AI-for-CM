@@ -26,7 +26,7 @@ from xai_vlm.metrics.descriptive_accuracy import (  # noqa: E402
     flip_rate,
     is_flip,
 )
-from xai_vlm.runner import Guards, manifest_sha256, run_stage  # noqa: E402
+from xai_vlm.runner import Guards, backend_device, manifest_sha256, run_stage  # noqa: E402
 
 RESULT_FIELDS = [
     "image_id", "rule_id", "baseline_verdict", "region", "region_snapped",
@@ -127,13 +127,15 @@ def stratified_sample(rows: list[dict], n_yes: int = SAMPLE_YES,
     return out
 
 
-def build_fingerprint(manifest_path, baseline_path, regions_path, model, seed) -> dict:
+def build_fingerprint(manifest_path, baseline_path, regions_path, model, seed, *,
+                      device: str) -> dict:
     """Everything that, if changed, makes previously written rows incomparable."""
     return {
         "manifest_sha256": manifest_sha256(Path(manifest_path)),
         "baseline_sha256": manifest_sha256(Path(baseline_path)),
         "regions_sha256": manifest_sha256(Path(regions_path)),
         "model": model,
+        "device": device,
         "compute_dtype": config.COMPUTE_DTYPE,
         "attention_impl": config.ATTENTION_IMPL,
         "max_pixels": config.MAX_PIXELS,
@@ -324,7 +326,7 @@ def main() -> int:
                          f"({SAMPLE_YES} YES + {SAMPLE_NO} controls) instead of all rows")
     args = ap.parse_args()
 
-    res = STUDY_ROOT / "results"
+    res = config.RESULTS_DIR
     manifest = res / "sample_manifest.csv"
     baseline = res / f"baseline_{args.model}.csv"
     regions = res / f"regions_{args.model}.csv"
@@ -370,7 +372,8 @@ def main() -> int:
     summary = run(
         work_rows=work_rows, backend=backend, image_source=image_source,
         out_csv=out_csv, state_json=state_json,
-        fingerprint=build_fingerprint(manifest, baseline, regions, args.model, args.seed),
+        fingerprint=build_fingerprint(manifest, baseline, regions, args.model, args.seed,
+                                      device=backend_device(backend)),
         resume=args.resume, force_resume=args.force_resume,
         checkpoint_every=args.checkpoint_every, rows=rows_with_images(),
     )

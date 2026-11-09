@@ -168,3 +168,24 @@ def test_verify_coverage_is_zero_on_a_complete_run(tmp_path):
             w.writerow({"image_id": f"{i:04d}", "rule_id": "rule_1"})
 
     assert baseline.verify_coverage(manifest, out_csv) == 0
+
+
+def test_output_paths_default_is_the_frozen_filename(tmp_path):
+    # No tag must reproduce the historical names exactly, or the frozen
+    # baseline and every downstream stage that reads it would be orphaned.
+    csv_path, state = baseline.output_paths(tmp_path, "qwen7b-4bit", None)
+    assert csv_path == tmp_path / "baseline_qwen7b-4bit.csv"
+    assert state == tmp_path / "baseline_qwen7b-4bit.state.json"
+
+
+def test_output_paths_tag_never_touches_the_frozen_file(tmp_path):
+    csv_path, state = baseline.output_paths(tmp_path, "qwen7b-4bit", "scholar-a40")
+    assert csv_path == tmp_path / "baseline_qwen7b-4bit_scholar-a40.csv"
+    assert state == tmp_path / "baseline_qwen7b-4bit_scholar-a40.state.json"
+
+
+def test_output_paths_rejects_a_tag_that_escapes_the_results_dir(tmp_path):
+    import pytest
+    for bad in ("../x", "a/b", r"a\b", ""):
+        with pytest.raises(ValueError):
+            baseline.output_paths(tmp_path, "qwen7b-4bit", bad)

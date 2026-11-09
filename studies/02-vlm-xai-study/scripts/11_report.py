@@ -20,6 +20,8 @@ from pathlib import Path
 STUDY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(STUDY_ROOT / "src"))
 
+from xai_vlm import config  # noqa: E402
+
 from xai_vlm.metrics.reporting import MIN_N_FLOOR, rate_row  # noqa: E402
 
 
@@ -207,7 +209,7 @@ def main() -> int:
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
-    res = STUDY_ROOT / "results"
+    res = config.RESULTS_DIR
     rows = collect(res, args.model, args.n_boot)
     if not rows:
         print("no result files found; run the stages first.", file=sys.stderr)

@@ -17,7 +17,7 @@ sys.path.insert(0, str(STUDY_ROOT / "src"))
 
 from xai_vlm import config  # noqa: E402
 from xai_vlm.parsing import ParseStats, parse_response  # noqa: E402
-from xai_vlm.runner import Guards, manifest_sha256, run_stage  # noqa: E402
+from xai_vlm.runner import Guards, backend_device, manifest_sha256, run_stage  # noqa: E402
 
 RESULT_FIELDS = [
     "image_id", "rule_id", "stratum", "is_negative_control", "expected",
@@ -39,11 +39,28 @@ def _revision_for(model: str) -> str:
     return "unpinned"
 
 
-def build_fingerprint(manifest_path: Path, model: str, seed: int) -> dict:
+def output_paths(results_dir: Path, model: str, tag: str | None) -> tuple[Path, Path]:
+    """Where a run writes. No tag gives the frozen names, unchanged.
+
+    A tag exists so a run on another machine (or a parity check against the
+    frozen baseline) writes beside it instead of resuming into it. Resuming into
+    the frozen CSV would skip every row as already done, and with --force-resume
+    would append rows from a different machine to a file every later stage reads.
+    """
+    stem = f"baseline_{model}"
+    if tag is not None:
+        if not tag or any(c in tag for c in "/\\") or ".." in tag:
+            raise ValueError(f"--out-tag must be a plain name, got {tag!r}")
+        stem = f"{stem}_{tag}"
+    return results_dir / f"{stem}.csv", results_dir / f"{stem}.state.json"
+
+
+def build_fingerprint(manifest_path: Path, model: str, seed: int, *, device: str) -> dict:
     """Everything that, if changed, makes previously written rows incomparable."""
     return {
         "manifest_sha256": manifest_sha256(manifest_path),
         "model": model,
+        "device": device,
         "revision": _revision_for(model),
         "compute_dtype": config.COMPUTE_DTYPE,
         "attention_impl": config.ATTENTION_IMPL,
@@ -157,7 +174,8 @@ def run(*, manifest_path, backend, image_source, out_csv, state_json, model, see
         rows,
         make_work_fn(backend, image_source),
         Path(out_csv), Path(state_json), RESULT_FIELDS,
-        build_fingerprint(Path(manifest_path), model, seed),
+        build_fingerprint(Path(manifest_path), model, seed,
+                          device=backend_device(backend)),
         resume=resume, force_resume=force_resume,
         checkpoint_every=checkpoint_every,
         progress_fn=_progress, guards=Guards(),
@@ -211,13 +229,15 @@ def _summarise(out_csv: Path) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", required=True, choices=sorted(config.MODEL_TIERS))
-    ap.add_argument("--manifest", default=str(STUDY_ROOT / "results" / "sample_manifest.csv"))
+    ap.add_argument("--manifest", default=str(config.RESULTS_DIR / "sample_manifest.csv"))
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--force-resume", action="store_true",
                     help="resume despite a configuration change (recorded in the state file)")
     ap.add_argument("--limit", type=int, default=None, help="cap rows, for smoke tests")
     ap.add_argument("--checkpoint-every", type=int, default=100)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--out-tag", default=None,
+                    help="write baseline_<model>_<tag>.csv instead of the frozen file")
     args = ap.parse_args()
 
     manifest = Path(args.manifest)
@@ -226,8 +246,7 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
-    out_csv = STUDY_ROOT / "results" / f"baseline_{args.model}.csv"
-    state_json = STUDY_ROOT / "results" / f"baseline_{args.model}.state.json"
+    out_csv, state_json = output_paths(config.RESULTS_DIR, args.model, args.out_tag)
 
     from xai_pilot.data import load_construction_site
     from xai_vlm.backends.qwen import QwenBackend

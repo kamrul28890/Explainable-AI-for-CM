@@ -31,6 +31,12 @@ def test_model_loads_and_reports_its_patch_grid(backend):
     assert rows > 0 and cols > 0
 
 
+def test_device_name_is_the_gpu_actually_computing(backend):
+    import torch
+    assert backend.device_name == torch.cuda.get_device_name(backend.model.device)
+    assert backend.device_name not in {"", "unknown", "cuda"}
+
+
 def test_stays_within_the_vram_budget(backend, photo):
     backend.answer(photo, "rule_1")
     assert backend.peak_memory_gb() < 7.0, "exceeds the 8 GB card's usable budget"

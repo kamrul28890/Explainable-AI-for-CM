@@ -81,6 +81,6 @@ def test_fingerprint_includes_both_input_hashes(tmp_path):
     m = tmp_path / "m.csv"; m.write_text("a", encoding="utf-8")
     b = tmp_path / "b.csv"; b.write_text("b", encoding="utf-8")
     r = tmp_path / "r.csv"; r.write_text("c", encoding="utf-8")
-    fp = stage4.build_fingerprint(m, b, r, "fake", 42)
+    fp = stage4.build_fingerprint(m, b, r, "fake", 42, device="fake")
     assert "baseline_sha256" in fp and "regions_sha256" in fp
     assert fp["masking_methods"] == "black,tokens"

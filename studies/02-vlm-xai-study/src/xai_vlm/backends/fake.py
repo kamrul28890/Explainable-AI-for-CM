@@ -27,6 +27,7 @@ class FakeBackend:
     """
 
     name = "fake"
+    device_name = "fake"
 
     def __init__(self, script: Optional[dict[str, list[str]]] = None,
                  patch_grid_size: tuple[int, int] = (32, 32)):

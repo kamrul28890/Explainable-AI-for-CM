@@ -361,6 +361,15 @@ class QwenBackend:
         return Answer.from_parsed(parsed, raw_text=raw, latency_ms=latency_ms,
                                   intervention="tokens")
 
+    @property
+    def device_name(self) -> str:
+        """The GPU actually computing, e.g. 'NVIDIA A40'. Recorded in every
+        stage fingerprint: replies are not reproducible across devices."""
+        dev = self.model.device
+        if dev.type == "cuda":
+            return torch.cuda.get_device_name(dev)
+        return dev.type
+
     def peak_memory_gb(self) -> float:
         if not torch.cuda.is_available():
             return float("nan")

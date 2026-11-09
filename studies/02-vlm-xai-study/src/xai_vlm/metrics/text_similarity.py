@@ -20,6 +20,10 @@ import numpy as np
 # Pinned in requirements/models.lock, like every other weight in this study. An
 # unpinned embedding model silently changes metric 7 between runs.
 EMBED_MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
+# The revision is enforced HERE, not only recorded in models.lock: Stage 10
+# constructs MiniLMEmbedder() with no arguments, and before this default a fresh
+# machine silently took whatever `main` pointed at. tests/ checks the two agree.
+EMBED_REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
 
 
 class Embedder(Protocol):
@@ -76,7 +80,7 @@ class FakeEmbedder:
 class MiniLMEmbedder:
     """The real embedder. Loaded lazily so importing this module costs nothing."""
 
-    def __init__(self, model_id: str = EMBED_MODEL_ID, revision: str | None = None):
+    def __init__(self, model_id: str = EMBED_MODEL_ID, revision: str | None = EMBED_REVISION):
         self._model_id = model_id
         self._revision = revision
         self._model = None

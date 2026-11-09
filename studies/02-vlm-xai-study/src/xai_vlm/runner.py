@@ -85,6 +85,20 @@ def manifest_sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def backend_device(backend) -> str:
+    """The device a backend computes on, for the run fingerprint.
+
+    Greedy decoding reproduces on one machine and not across machines: the
+    2026-11-09 parity run (identical weights, code, data and pinned libraries,
+    RTX 3070 vs A40) agreed on 96.9% of verdicts and 42.7% of replies byte for
+    byte. Rows from two devices must therefore never share a results file, and
+    recording the device lets resume refuse to mix them.
+
+    Read by attribute so this module stays torch-free.
+    """
+    return str(getattr(backend, "device_name", "unknown"))
+
+
 class FingerprintMismatch(RuntimeError):
     """The run on disk was produced under a different configuration.
 

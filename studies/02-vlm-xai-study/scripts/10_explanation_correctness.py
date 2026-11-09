@@ -140,7 +140,7 @@ def main() -> int:
     ap.add_argument("--model", default="qwen7b-4bit")
     args = ap.parse_args()
 
-    res = STUDY_ROOT / "results"
+    res = config.RESULTS_DIR
     with (res / f"baseline_{args.model}.csv").open(newline="", encoding="utf-8") as fh:
         baseline = list(csv.DictReader(fh))
     regions_path = res / f"regions_{args.model}.csv"

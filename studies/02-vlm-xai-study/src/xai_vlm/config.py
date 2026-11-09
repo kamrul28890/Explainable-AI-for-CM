@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 STUDY_ROOT = Path(__file__).resolve().parents[2]
-RESULTS_DIR = STUDY_ROOT / "results"
+# Every stage reads and writes here. XAI_RESULTS_DIR redirects a whole run to a
+# separate tree -- e.g. a run on the RCAC Scholar cluster -- so it can never
+# resume into, or overwrite, the frozen local results. Unset, it is unchanged.
+# Replies are not reproducible across GPUs (see runner.backend_device), so a
+# second machine needs its own tree, not its own rows in this one.
+_RESULTS_OVERRIDE = os.environ.get("XAI_RESULTS_DIR")
+RESULTS_DIR = Path(_RESULTS_OVERRIDE) if _RESULTS_OVERRIDE else STUDY_ROOT / "results"
 REPO_ROOT = STUDY_ROOT.parents[1]
 MODEL_DIR = REPO_ROOT / "models"
 

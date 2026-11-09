@@ -17,6 +17,8 @@ from pathlib import Path
 STUDY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(STUDY_ROOT / "src"))
 
+from xai_vlm import config  # noqa: E402
+
 # PRE-REGISTERED. Not to be adjusted after seeing results.
 DETECTION_PROCEED = 0.80
 DETECTION_LIMITATION = 0.50
@@ -27,7 +29,7 @@ VRAM_BUDGET_GB = 7.0
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--tier", default="qwen7b-4bit")
-    ap.add_argument("--out", default=str(STUDY_ROOT / "results" / "stage0_feasibility.csv"))
+    ap.add_argument("--out", default=str(config.RESULTS_DIR / "stage0_feasibility.csv"))
     args = ap.parse_args()
 
     from xai_pilot.data import load_construction_site

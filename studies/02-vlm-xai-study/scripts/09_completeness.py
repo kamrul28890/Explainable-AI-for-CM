@@ -12,6 +12,8 @@ from pathlib import Path
 STUDY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(STUDY_ROOT / "src"))
 
+from xai_vlm import config  # noqa: E402
+
 from xai_vlm.metrics.completeness import (  # noqa: E402
     CATEGORIES,
     classify_completeness,
@@ -49,7 +51,7 @@ def main() -> int:
     ap.add_argument("--n-boot", type=int, default=10_000)
     args = ap.parse_args()
 
-    res = STUDY_ROOT / "results"
+    res = config.RESULTS_DIR
     reg_path = res / f"regions_{args.model}.csv"
     da_path = res / f"descriptive_accuracy_{args.model}.csv"
     if not reg_path.exists():

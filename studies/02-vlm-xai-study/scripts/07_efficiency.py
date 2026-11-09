@@ -10,6 +10,8 @@ from pathlib import Path
 STUDY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(STUDY_ROOT / "src"))
 
+from xai_vlm import config  # noqa: E402
+
 from xai_vlm.metrics.efficiency import latency_stats, per_rule_stats  # noqa: E402
 
 # Measured standalone on the same images, for the caveat below. See the Plan 3a
@@ -22,7 +24,7 @@ def main() -> int:
     ap.add_argument("--model", default="qwen7b-4bit")
     args = ap.parse_args()
 
-    path = STUDY_ROOT / "results" / f"baseline_{args.model}.csv"
+    path = config.RESULTS_DIR / f"baseline_{args.model}.csv"
     with path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
 
@@ -30,7 +32,7 @@ def main() -> int:
     overall = latency_stats(lat)
     by_rule = per_rule_stats(rows)
 
-    out = STUDY_ROOT / "results" / f"efficiency_{args.model}.csv"
+    out = config.RESULTS_DIR / f"efficiency_{args.model}.csv"
     with out.open("w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=["scope", "n", "median_s", "p90_s",
                                            "mean_s", "min_s", "max_s"])

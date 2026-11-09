@@ -22,7 +22,7 @@ sys.path.insert(0, str(STUDY_ROOT / "src"))
 
 from xai_vlm import config  # noqa: E402
 from xai_vlm.metrics.sparsity import gini, mass_inside_region, region_area_fraction  # noqa: E402
-from xai_vlm.runner import Guards, manifest_sha256, run_stage  # noqa: E402
+from xai_vlm.runner import Guards, backend_device, manifest_sha256, run_stage  # noqa: E402
 
 RESULT_FIELDS = [
     "image_id", "rule_id", "verdict", "attention_available", "gini",
@@ -199,6 +199,22 @@ def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
     )
 
 
+def build_fingerprint(manifest_path, baseline_path, regions_path, model, seed, *,
+                      device: str) -> dict:
+    """Everything that, if changed, makes previously written rows incomparable."""
+    return {
+        "manifest_sha256": manifest_sha256(Path(manifest_path)),
+        "baseline_sha256": manifest_sha256(Path(baseline_path)),
+        "regions_sha256": manifest_sha256(Path(regions_path)),
+        "model": model,
+        "device": device,
+        "compute_dtype": config.COMPUTE_DTYPE,
+        "attention_impl_for_reading": config.ATTENTION_IMPL_FOR_READING,
+        "max_pixels": config.MAX_PIXELS,
+        "seed": seed,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", required=True, choices=sorted(config.MODEL_TIERS))
@@ -209,7 +225,7 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
-    res = STUDY_ROOT / "results"
+    res = config.RESULTS_DIR
     manifest = res / "sample_manifest.csv"
     baseline = res / f"baseline_{args.model}.csv"
     regions = res / f"regions_{args.model}.csv"
@@ -226,22 +242,13 @@ def main() -> int:
 
     out_csv = res / f"sparsity_{args.model}.csv"
     state_json = res / f"sparsity_{args.model}.state.json"
-    fingerprint = {
-        "manifest_sha256": manifest_sha256(manifest),
-        "baseline_sha256": manifest_sha256(baseline),
-        "regions_sha256": manifest_sha256(regions),
-        "model": args.model,
-        "compute_dtype": config.COMPUTE_DTYPE,
-        "attention_impl_for_reading": config.ATTENTION_IMPL_FOR_READING,
-        "max_pixels": config.MAX_PIXELS,
-        "seed": args.seed,
-    }
-
     from xai_pilot.data import load_construction_site
     from xai_vlm.backends.qwen import QwenBackend
 
     print(f"loading {args.model} ...")
     backend = QwenBackend(tier=args.model)
+    fingerprint = build_fingerprint(manifest, baseline, regions, args.model, args.seed,
+                                    device=backend_device(backend))
 
     cache: dict = {}
 
