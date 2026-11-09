@@ -1,0 +1,21 @@
+# Data files are stored BYTE-FOR-BYTE. No line-ending conversion, ever.
+#
+# Every result CSV is fingerprinted by sha256 (runner.manifest_sha256 reads in
+# binary on purpose), and later stages refuse to resume when an input's hash
+# changes. With core.autocrlf=true and no attributes, git rewrote these files on
+# the way in (CRLF -> LF) and on the way out (LF -> CRLF, including the newlines
+# INSIDE quoted model replies). The result was three different byte sequences for
+# one frozen file:
+#
+#   working copy that Stages 4/5 fingerprinted   043d7954...
+#   blob git actually stored                      43e72386...
+#   what a Windows checkout/archive hands out     71cacb41...
+#
+# so a fresh clone could not resume against its own recorded fingerprints, and
+# the stored replies were not the replies the model produced. -text stops git
+# touching them.
+*.csv     -text
+*.tsv     -text
+*.jsonl   -text
+**/results/*.json  -text
+**/data/*.json     -text
