@@ -5,6 +5,7 @@ safety judgement can be trusted — not just whether its answer is right.
 
 **Design:** [../../docs/architecture/vlm-xai-study-architecture.md](../../docs/architecture/vlm-xai-study-architecture.md)
 **Running it:** [../../docs/setup/REPRODUCE.md](../../docs/setup/REPRODUCE.md)
+**On the RCAC Scholar cluster (from 2026-11-09):** [cluster/README.md](cluster/README.md)
 
 ---
 
@@ -34,7 +35,7 @@ safety judgement can be trusted — not just whether its answer is right.
 | `metrics/completeness.py` — Stage 9 | ✅ run; ⚠️ not reportable (see F7) |
 | `metrics/` — Stage 8 (robustness) | ⬜ not started (Plan 3c) |
 
-246 tests: 234 without a GPU, 12 requiring `--gpu`.
+262 tests: 249 without a GPU, 13 requiring `--gpu`.
 
 ## Results so far
 
@@ -193,6 +194,25 @@ confident wrong numbers rather than a crash. Do not revert without re-measuring:
 | `ATTENTION_IMPL = sdpa` | the eager kernel injects spurious tokens mid-sentence |
 | `MAX_PIXELS = 640` blocks | 1280 spills past the 8 GB card, ~30× slower, no gain in sensitivity |
 | `ANSWER` last in the format | with ANSWER first the verdict precedes the reasoning and contradicts it |
+
+### Results are per machine
+
+Greedy decoding reproduces exactly on one GPU and not across GPUs. A parity run
+on Scholar's A40 -- identical weights, code, data and pinned libraries -- agreed
+with the frozen RTX 3070 baseline on 96.9% of verdicts and 42.7% of replies
+byte-for-byte ([cluster/README.md](cluster/README.md#parity-with-the-local-machine-2026-11-09)).
+So:
+
+- every model stage records `device` in its fingerprint and refuses to resume a
+  file written on a different GPU. State files written before 2026-11-09 have
+  no `device` key and therefore refuse any resume -- they are all complete;
+- `XAI_RESULTS_DIR` sends a whole run to its own tree (Scholar uses
+  `results/scholar-a40/`), never into the frozen `results/`;
+- comparisons between stages (Stage 6 against Stage 2, say) must stay within
+  one tree, or machine noise is measured as instability.
+
+Result CSVs are stored byte-for-byte (`.gitattributes`). Before fbaa473 git
+rewrote their line endings, so a fresh checkout failed its own fingerprints.
 
 ---
 

@@ -1,0 +1,97 @@
+image_id,rule_id,stratum,is_violation,is_negative_control,quality_of_info,illumination,camera_distance,view
+0000068,rule_2,H,False,True,rich info,normal lighting,mid distance,elevation view
+0000120,rule_4,H,True,False,rich info,underexposed,long distance,elevation view
+0000149,rule_2,H,True,False,poor info,underexposed,mid distance,elevation view
+0000421,rule_4,H,True,False,poor info,normal lighting,short distance,elevation view
+0000468,rule_1,H,False,True,rich info,normal lighting,mid distance,elevation view
+0000925,rule_1,H,False,True,rich info,normal lighting,long distance,elevation view
+0001325,rule_4,H,True,False,poor info,normal lighting,short distance,elevation view
+0001530,rule_2,H,True,False,rich info,normal lighting,short distance,elevation view
+0001554,rule_2,H,False,True,poor info,underexposed,short distance,elevation view
+0001900,rule_2,H,True,False,rich info,normal lighting,long distance,elevation view
+0002062,rule_4,H,False,True,poor info,normal lighting,long distance,elevation view
+0002198,rule_3,H,False,True,poor info,normal lighting,short distance,elevation view
+0002265,rule_3,H,False,True,poor info,normal lighting,short distance,elevation view
+0002815,rule_2,H,True,False,poor info,normal lighting,mid distance,elevation view
+0003088,rule_4,H,True,False,poor info,normal lighting,short distance,elevation view
+0003241,rule_4,H,False,True,rich info,overexposed,mid distance,elevation view
+0003743,rule_2,H,False,True,rich info,normal lighting,short distance,elevation view
+0004032,rule_3,H,True,False,rich info,normal lighting,mid distance,elevation view
+0004196,rule_4,H,True,False,poor info,normal lighting,short distance,elevation view
+0004235,rule_2,H,True,False,poor info,normal lighting,mid distance,elevation view
+0004638,rule_3,H,False,True,poor info,normal lighting,short distance,plan view
+0004987,rule_4,H,False,True,poor info,normal lighting,short distance,elevation view
+0005283,rule_1,H,False,True,rich info,normal lighting,mid distance,elevation view
+0005538,rule_3,H,True,False,rich info,normal lighting,mid distance,elevation view
+0005594,rule_3,H,False,True,poor info,normal lighting,short distance,elevation view
+0005675,rule_2,H,False,True,rich info,normal lighting,short distance,elevation view
+0005753,rule_1,H,False,True,poor info,normal lighting,short distance,elevation view
+0005837,rule_1,H,False,True,poor info,underexposed,short distance,elevation view
+0005944,rule_3,H,True,False,poor info,normal lighting,mid distance,elevation view
+0006144,rule_4,H,False,True,rich info,normal lighting,mid distance,elevation view
+0006164,rule_4,H,False,True,rich info,overexposed,long distance,elevation view
+0006290,rule_1,H,True,False,rich info,night,short distance,elevation view
+0006399,rule_1,H,False,True,rich info,normal lighting,mid distance,elevation view
+0007611,rule_1,H,True,False,rich info,normal lighting,mid distance,elevation view
+0007613,rule_4,H,True,False,rich info,normal lighting,short distance,elevation view
+0007648,rule_4,H,False,True,rich info,underexposed,mid distance,elevation view
+0007734,rule_1,H,True,False,rich info,normal lighting,short distance,plan view
+0008370,rule_3,H,False,True,rich info,normal lighting,mid distance,elevation view
+0008965,rule_2,H,True,False,rich info,normal lighting,mid distance,elevation view
+0009062,rule_3,H,False,True,rich info,night,mid distance,elevation view
+0009435,rule_1,H,False,True,rich info,normal lighting,mid distance,elevation view
+0009775,rule_3,H,True,False,rich info,underexposed,mid distance,elevation view
+0009992,rule_1,H,True,False,rich info,normal lighting,mid distance,elevation view
+0010086,rule_3,H,True,False,rich info,normal lighting,mid distance,elevation view
+0010111,rule_1,H,True,False,poor info,normal lighting,short distance,elevation view
+0010604,rule_4,H,True,False,poor info,normal lighting,mid distance,elevation view
+0010748,rule_2,H,True,False,rich info,normal lighting,mid distance,plan view
+0010846,rule_2,H,False,True,rich info,normal lighting,mid distance,elevation view
+0010897,rule_1,H,True,False,rich info,underexposed,mid distance,elevation view
+0010897,rule_4,H,False,True,rich info,underexposed,mid distance,elevation view
+0011167,rule_4,H,True,False,poor info,normal lighting,mid distance,elevation view
+0011276,rule_3,H,True,False,poor info,normal lighting,mid distance,elevation view
+0011356,rule_2,H,False,True,rich info,normal lighting,mid distance,elevation view
+0011548,rule_4,H,False,True,poor info,normal lighting,mid distance,elevation view
+0011683,rule_2,H,True,False,rich info,normal lighting,mid distance,elevation view
+0011838,rule_3,H,True,False,rich info,normal lighting,mid distance,elevation view
+0013033,rule_3,H,True,False,rich info,normal lighting,mid distance,elevation view
+0013033,rule_1,H,False,True,rich info,normal lighting,mid distance,elevation view
+0013344,rule_3,H,False,True,rich info,normal lighting,short distance,elevation view
+0013363,rule_1,H,True,False,poor info,normal lighting,mid distance,elevation view
+0013384,rule_2,H,False,True,poor info,night,mid distance,elevation view
+0013709,rule_3,H,False,True,poor info,night,mid distance,elevation view
+0013849,rule_1,H,True,False,rich info,normal lighting,mid distance,elevation view
+0014069,rule_2,H,False,True,poor info,normal lighting,mid distance,elevation view
+0011656,rule_3,C,False,True,poor info,normal lighting,mid distance,elevation view
+0009832,rule_3,C,False,True,rich info,normal lighting,mid distance,elevation view
+0008587,rule_2,C,False,True,rich info,normal lighting,mid distance,elevation view
+0012906,rule_3,C,False,True,poor info,normal lighting,mid distance,elevation view
+0011930,rule_3,C,False,True,rich info,normal lighting,mid distance,elevation view
+0013059,rule_2,C,False,True,rich info,normal lighting,mid distance,elevation view
+0009395,rule_4,C,False,True,poor info,normal lighting,mid distance,elevation view
+0010827,rule_2,C,False,True,rich info,normal lighting,mid distance,elevation view
+0010218,rule_1,C,False,True,rich info,normal lighting,mid distance,elevation view
+0009494,rule_2,C,False,True,rich info,normal lighting,mid distance,elevation view
+0012576,rule_1,C,False,True,poor info,normal lighting,mid distance,elevation view
+0011064,rule_4,C,False,True,poor info,normal lighting,mid distance,elevation view
+0000325,rule_1,C,False,True,rich info,normal lighting,mid distance,elevation view
+0001059,rule_4,C,False,True,rich info,normal lighting,mid distance,elevation view
+0011365,rule_2,C,False,True,poor info,normal lighting,mid distance,elevation view
+0003191,rule_1,C,False,True,rich info,normal lighting,mid distance,elevation view
+0007075,rule_4,C,False,True,rich info,normal lighting,mid distance,elevation view
+0006348,rule_4,C,False,True,rich info,normal lighting,mid distance,elevation view
+0010166,rule_2,C,False,True,rich info,underexposed,mid distance,elevation view
+0006724,rule_4,C,False,True,poor info,underexposed,mid distance,elevation view
+0001523,rule_3,C,False,True,poor info,normal lighting,short distance,elevation view
+0004121,rule_2,C,False,True,poor info,normal lighting,short distance,elevation view
+0001777,rule_1,C,False,True,poor info,normal lighting,short distance,elevation view
+0008887,rule_4,C,False,True,rich info,normal lighting,short distance,elevation view
+0006984,rule_1,C,False,True,poor info,normal lighting,short distance,elevation view
+0003597,rule_3,C,False,True,poor info,normal lighting,short distance,elevation view
+0008895,rule_1,C,False,True,rich info,normal lighting,short distance,elevation view
+0001168,rule_3,C,False,True,poor info,normal lighting,short distance,elevation view
+0003357,rule_2,C,False,True,rich info,normal lighting,short distance,elevation view
+0000569,rule_1,C,False,True,rich info,underexposed,short distance,elevation view
+0006845,rule_3,C,False,True,rich info,underexposed,short distance,elevation view
+0005007,rule_4,C,False,True,poor info,overexposed,long distance,elevation view

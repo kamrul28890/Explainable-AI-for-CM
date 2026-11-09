@@ -19,3 +19,8 @@
 *.jsonl   -text
 **/results/*.json  -text
 **/data/*.json     -text
+
+# Shell and SLURM scripts run on Linux (RCAC Scholar). With autocrlf a Windows
+# checkout or `git archive` would hand bash CRLF lines, and `\r` breaks it.
+*.sh      text eol=lf
+*.sbatch  text eol=lf
