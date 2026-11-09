@@ -22,7 +22,12 @@
 
 set -uo pipefail
 CHAIN="${1:?usage: chain.sbatch <base|s4|s5|s6|final>}"
-HERE="${XAI_CLUSTER_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+# Not $(dirname "$0"): SLURM runs a COPY of this script from its spool
+# directory, so $0 points there and env.sh is not beside it.
+HERE="${XAI_CLUSTER_DIR:-/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/cluster}"
+for f in env.sh steps.sh; do
+    [[ -f "$HERE/$f" ]] || { echo "missing $HERE/$f -- set XAI_CLUSTER_DIR"; exit 2; }
+done
 source "$HERE/env.sh"
 source "$HERE/steps.sh"
 
