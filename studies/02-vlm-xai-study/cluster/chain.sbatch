@@ -41,10 +41,10 @@ if (( n > MAX_LINKS )); then
     echo "chain $CHAIN exceeded $MAX_LINKS links" | tee "$STATE/FAILED"; exit 1
 fi
 
-NEXT=$(sbatch --parsable --job-name="$CHAIN" --dependency=afterany:"$SLURM_JOB_ID" \
+NEXT=$(sbatch --parsable --job-name="$CHAIN${SUFFIX}" --dependency=afterany:"$SLURM_JOB_ID" \
        --export=ALL,XAI_CLUSTER_DIR="$HERE" "$HERE/chain.sbatch" "$CHAIN")
 echo "== chain $CHAIN link $n  job $SLURM_JOB_ID  successor $NEXT  host $(hostname)"
-echo "== commit $(cat "$REPO/COMMIT")  results $XAI_RESULTS_DIR"
+echo "== commit $(cat "$REPO/COMMIT")  model $MODEL  results $XAI_RESULTS_DIR"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
 DEADLINE=$(( $(date +%s) + BUDGET_S ))

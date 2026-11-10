@@ -36,27 +36,32 @@ verify_manifest() {
 
 chain_base() {
     step cpu_and_gpu_tests env XAI_RESULTS_DIR= $PY -m pytest tests --gpu -p no:cacheprovider -q -W ignore::UserWarning || return $?
-    step stage0 $PY scripts/00_feasibility_gate.py                          || return $?
-    step stage1 $PY scripts/01_build_sample.py --seed 42                    || return $?
+    step stage0 $PY scripts/00_feasibility_gate.py --tier "$MODEL" \
+        --out "$XAI_RESULTS_DIR/stage0_feasibility$SUFFIX.csv"             || return $?
+    # The sample is model-independent. Only the primary tier builds it; every
+    # other tier must find the same frozen manifest already in the tree.
+    if [[ -z $SUFFIX ]]; then
+        step stage1 $PY scripts/01_build_sample.py --seed 42                || return $?
+    fi
     step stage1_verify verify_manifest                                      || return $?
-    step stage2 $PY scripts/02_baseline_inference.py --model qwen7b-4bit --resume || return $?
-    step stage3 $PY scripts/03_regions.py --model qwen7b-4bit               || return $?
-    step stage7 $PY scripts/07_efficiency.py --model qwen7b-4bit            || return $?
+    step stage2 $PY scripts/02_baseline_inference.py --model "$MODEL" --resume || return $?
+    step stage3 $PY scripts/03_regions.py --model "$MODEL"                  || return $?
+    step stage7 $PY scripts/07_efficiency.py --model "$MODEL"               || return $?
 }
-chain_s4() { step stage4 $PY scripts/04_descriptive_accuracy.py --model qwen7b-4bit --resume; }
-chain_s5() { step stage5 $PY scripts/05_sparsity.py --model qwen7b-4bit --resume; }
-chain_s6() { step stage6 $PY scripts/06_stability.py --model qwen7b-4bit --resume; }
+chain_s4() { step stage4 $PY scripts/04_descriptive_accuracy.py --model "$MODEL" --resume; }
+chain_s5() { step stage5 $PY scripts/05_sparsity.py --model "$MODEL" --resume; }
+chain_s6() { step stage6 $PY scripts/06_stability.py --model "$MODEL" --resume; }
 chain_final() {
-    step stage9  $PY scripts/09_completeness.py --model qwen7b-4bit          || return $?
-    step stage10 $PY scripts/10_explanation_correctness.py --model qwen7b-4bit || return $?
-    step stage11_text  $PY scripts/11_report.py --model qwen7b-4bit --format text \
-        --out "$XAI_RESULTS_DIR/report_qwen7b-4bit.txt"                       || return $?
-    step stage11_latex $PY scripts/11_report.py --model qwen7b-4bit --format latex \
-        --out "$XAI_RESULTS_DIR/report_qwen7b-4bit.tex"                       || return $?
+    step stage9  $PY scripts/09_completeness.py --model "$MODEL"            || return $?
+    step stage10 $PY scripts/10_explanation_correctness.py --model "$MODEL" || return $?
+    step stage11_text  $PY scripts/11_report.py --model "$MODEL" --format text \
+        --out "$XAI_RESULTS_DIR/report_$MODEL.txt"                         || return $?
+    step stage11_latex $PY scripts/11_report.py --model "$MODEL" --format latex \
+        --out "$XAI_RESULTS_DIR/report_$MODEL.tex"                         || return $?
 }
 
 submit() {
-    sbatch --parsable --job-name="$1" --export=ALL,XAI_CLUSTER_DIR="$HERE" \
+    sbatch --parsable --job-name="$1$SUFFIX" --export=ALL,XAI_CLUSTER_DIR="$HERE" \
         "$HERE/chain.sbatch" "$1"
 }
 

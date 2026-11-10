@@ -8,7 +8,15 @@ STUDY=$REPO/studies/02-vlm-xai-study
 # frozen local results in results/.
 RUN_NAME=${RUN_NAME:-scholar-a40}
 export XAI_RESULTS_DIR=$STUDY/results/$RUN_NAME
-STATE=$XAI_RESULTS_DIR/.chain-state
+
+# Which model tier the battery runs. One machine's tree holds every tier (files
+# are model-suffixed), so tiers compare without machine noise. The primary tier
+# keeps the original state dir and Stage 0 file names; any other tier gets its
+# own, or its markers would read as "already done".
+#   sbatch --export=ALL,MODEL=qwen7b-bf16 --job-name=base cluster/chain.sbatch base
+export MODEL=${MODEL:-qwen7b-4bit}
+if [[ $MODEL == qwen7b-4bit ]]; then SUFFIX=""; else SUFFIX="_$MODEL"; fi
+STATE=$XAI_RESULTS_DIR/.chain-state$SUFFIX
 
 # Stop each link ~25 min before the 4 h wall so the stage exits via SIGINT
 # between rows, never by SIGKILL mid-write. 12 links cap any runaway chain.

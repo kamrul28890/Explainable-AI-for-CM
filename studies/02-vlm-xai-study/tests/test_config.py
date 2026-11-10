@@ -31,3 +31,27 @@ def test_unknown_tier_names_the_valid_options():
 def test_generation_is_deterministic_by_default():
     from xai_vlm.config import GENERATION
     assert GENERATION["do_sample"] is False
+
+
+def test_unquantised_7b_tier_exists_for_the_a40():
+    spec = resolve_tier("qwen7b-bf16")
+    assert spec.quantization == "none"
+    assert spec.repo_id == resolve_tier("qwen7b-4bit").repo_id
+
+
+def test_bf16_tier_loads_the_same_weights_as_the_4bit_tier():
+    """Quantisation happens at load time; the on-disk snapshot is the full-precision
+    checkpoint either way. Two copies would be two things to keep in sync -- and a
+    second download could land on a different revision."""
+    assert resolve_tier("qwen7b-bf16").weights_dir == resolve_tier("qwen7b-4bit").weights_dir
+    assert resolve_tier("qwen3b-8bit").weights_dir == "qwen3b-8bit"   # default: own name
+
+
+def test_every_tier_sharing_weights_shares_a_pinned_revision():
+    import importlib.util
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("s2", root / "scripts" / "02_baseline_inference.py")
+    s2 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(s2)
+    assert s2._revision_for("qwen7b-bf16") == s2._revision_for("qwen7b-4bit") != "unpinned"

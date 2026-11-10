@@ -101,6 +101,13 @@ class ModelSpec:
     quantization: str          # "4bit" | "8bit" | "none"
     supports_attention: bool   # can we read per-layer attention?
     notes: str = ""
+    # Folder under MODEL_DIR holding the weights; empty means the tier's own name.
+    # Quantisation is applied at load time, so tiers of one checkpoint share it.
+    weights: str = ""
+
+    @property
+    def weights_dir(self) -> str:
+        return self.weights or self.name
 
 
 MODEL_TIERS: dict[str, ModelSpec] = {
@@ -110,6 +117,14 @@ MODEL_TIERS: dict[str, ModelSpec] = {
         quantization="4bit",
         supports_attention=True,
         notes="primary; largest that fits 8 GB",
+    ),
+    "qwen7b-bf16": ModelSpec(
+        name="qwen7b-bf16",
+        repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
+        quantization="none",
+        supports_attention=True,
+        notes="unquantised comparison arm, A40 only (~16 GB); what nf4 costs",
+        weights="qwen7b-4bit",
     ),
     "qwen3b-8bit": ModelSpec(
         name="qwen3b-8bit",

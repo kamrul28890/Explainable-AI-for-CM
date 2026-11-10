@@ -43,7 +43,7 @@ class QwenBackend:
         from transformers import (AutoProcessor, BitsAndBytesConfig,
                                   Qwen2_5_VLForConditionalGeneration)
 
-        local = MODEL_DIR / self.spec.name
+        local = MODEL_DIR / self.spec.weights_dir
         source = str(local) if local.exists() else self.spec.repo_id
 
         # bfloat16, not float16: see config.COMPUTE_DTYPE. fp16 overflows on this

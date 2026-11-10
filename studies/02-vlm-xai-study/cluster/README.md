@@ -29,6 +29,19 @@ That single command runs everything that exists, unattended:
 
 Stage 8 (robustness) is not implemented and is not run.
 
+### Another model tier
+
+```bash
+sbatch --export=ALL,MODEL=qwen7b-bf16 --job-name=base_qwen7b-bf16 cluster/chain.sbatch base
+```
+
+Same chains, same tree (`results/scholar-a40/`), so tiers compare without
+machine noise; every output is model-suffixed. A non-primary tier gets its own
+state dir (`.chain-state_<tier>`) and Stage 0 file, and does not rebuild Stage 1:
+it verifies the manifest already in the tree is the frozen one. `qwen7b-bf16` is
+the same checkpoint as `qwen7b-4bit` (`models/qwen7b-4bit` holds full-precision
+weights; nf4 is applied at load time), loaded unquantised -- ~16 GB, A40 only.
+
 Output goes to `results/scholar-a40/` via `XAI_RESULTS_DIR` -- **never** into
 `results/`, which holds the frozen local run. Progress markers live in
 `results/scholar-a40/.chain-state/`; `COMPLETE` appears there at the end, and
