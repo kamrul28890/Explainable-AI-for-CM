@@ -306,3 +306,46 @@ def test_the_ablation_completeness_is_never_reported(tmp_path):
            [{"image_id": "a", "completeness": "explanation_supported"}])
     rows = stage11.collect(tmp_path, "m", n_boot=200)
     assert not [r for r in rows if r["section"].startswith("Stage 9")]
+
+
+def _robustness_csv(tmp_path):
+    """60 rows. blur: 45 survive. occlusion: 30 hazard-hidden rows (6 survive),
+    30 visible (27 survive). desaturate: all survive, 12 of them drifted."""
+    from xai_vlm import perturbations as P
+    rows = []
+    for i in range(60):
+        r = {"image_id": f"i{i}", "rule_id": "rule_1", "quality_of_info": "rich info",
+             "baseline_verdict": "YES", "baseline_region": "", "error": "",
+             "occluder_coverage": "0.5000" if i < 30 else "0.0000", "latency_ms": "1"}
+        for p in P.PERTURBATIONS:
+            r.update({f"verdict_{p}": "YES", f"region_{p}": "", f"survived_{p}": "True",
+                      f"drift_{p}": "", f"drifted_{p}": ""})
+        r["survived_blur"] = str(i < 45)
+        r["survived_occlusion"] = str(i < 6 or i >= 33)
+        r["drift_desaturate"] = "0.2" if i < 12 else "0.01"
+        r["drifted_desaturate"] = str(i < 12)
+        rows.append(r)
+    _write(tmp_path / "robustness_m.csv", rows)
+    return tmp_path
+
+
+def test_robustness_survival_is_reported_per_perturbation_never_pooled(tmp_path):
+    rows = stage11.collect(_robustness_csv(tmp_path), "m", n_boot=200)
+    got = _by_label(rows, "Stage 8 - verdict survives the perturbation")
+    assert set(got) == {"blur", "low_light", "occlusion", "contrast", "desaturate"}
+    assert abs(got["blur"]["point"] - 45 / 60) < 1e-9
+    assert not any("pooled" in r["label"] or r["label"] == "all" for r in rows)
+
+
+def test_occlusion_survival_is_split_on_whether_the_hazard_was_hidden(tmp_path):
+    got = _by_label(stage11.collect(_robustness_csv(tmp_path), "m", n_boot=200),
+                    "Stage 8 - occlusion survival by hazard hidden")
+    assert abs(got["hazard >= 10% hidden"]["point"] - 6 / 30) < 1e-9
+    assert abs(got["hazard < 10% hidden"]["point"] - 27 / 30) < 1e-9
+
+
+def test_survived_but_drifted_is_reported(tmp_path):
+    got = _by_label(stage11.collect(_robustness_csv(tmp_path), "m", n_boot=200),
+                    "Stage 8 - survived, but region moved > 10% of diagonal")
+    assert abs(got["desaturate"]["point"] - 12 / 60) < 1e-9
+    assert "blur" not in got          # no drift measured under blur in this fixture

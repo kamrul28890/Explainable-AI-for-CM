@@ -200,6 +200,30 @@ def collect(res: Path, model: str, n_boot: int) -> list[dict]:
                 "lift >= 2x (regions only)",
                 [float(r["attention_lift"]) >= 2.0 for r in named], n_boot)})
 
+    rb = [r for r in _read(res / f"robustness_{model}.csv") if not r.get("error")]
+    if rb:
+        from xai_vlm.perturbations import PERTURBATIONS
+        # Per perturbation, never pooled (Plan 3c).
+        for p in PERTURBATIONS:
+            s = [r for r in rb if r.get(f"survived_{p}")]
+            if s:
+                rows.append({"section": "Stage 8 - verdict survives the perturbation",
+                             **rate_row(p, [r[f"survived_{p}"] == "True" for r in s],
+                                        n_boot)})
+        # A flip when the block hides the hazard is the correct response.
+        for label, hidden in (("hazard >= 10% hidden", True), ("hazard < 10% hidden", False)):
+            s = [r for r in rb if r.get("occluder_coverage") and r.get("survived_occlusion")
+                 and (float(r["occluder_coverage"]) >= 0.10) == hidden]
+            if s:
+                rows.append({"section": "Stage 8 - occlusion survival by hazard hidden",
+                             **rate_row(label, [r["survived_occlusion"] == "True" for r in s],
+                                        n_boot)})
+        for p in PERTURBATIONS:
+            s = [r for r in rb if r.get(f"drifted_{p}")]
+            if s:
+                rows.append({"section": "Stage 8 - survived, but region moved > 10% of diagonal",
+                             **rate_row(p, [r[f"drifted_{p}"] == "True" for r in s], n_boot)})
+
     st = _read(res / f"stability_{model}.csv")
     if st:
         # Rows that errored have no agreement rate and count nowhere: "not

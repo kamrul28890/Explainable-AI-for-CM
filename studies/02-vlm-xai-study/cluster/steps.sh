@@ -2,12 +2,11 @@
 #
 #   base  : GPU tests, Stage 0, Stage 1 (verified against the frozen sha),
 #           Stage 2, then the CPU stages 3 and 7 that only need Stage 2
-#   s4 s5 s6 : Stages 4, 5, 6 -- independent of each other, so one A40 each
-#   final : Stages 9, 10 and 11, once s4, s5 and s6 are all done
+#   s4 s5 s6 s8 : Stages 4, 5, 6, 8 -- independent of each other, one A40 each
+#   final : Stages 9, 10 and 11, once s4, s5, s6 and s8 are all done
 #   comp  : on its own -- the 7,457 compliant images the sample left out
 #           (Stage 1 --complement, sha-verified), Stage 2 on them, report
 #
-# Stage 8 (robustness) is not implemented and is not run.
 
 # step NAME CMD... -- run once. Marker on success; 124 when out of time.
 step() {
@@ -55,6 +54,14 @@ chain_base() {
 chain_s4() { step stage4 $PY scripts/04_descriptive_accuracy.py --model "$MODEL" --resume; }
 chain_s5() { step stage5 $PY scripts/05_sparsity.py --model "$MODEL" --resume; }
 chain_s6() { step stage6 $PY scripts/06_stability.py --model "$MODEL" --resume; }
+chain_s8() { step stage8 $PY scripts/08_robustness.py --model "$MODEL" --resume; }
+
+# Rebuild the report from whatever is in the tree. Not a step: it must rerun
+# every time a late chain (s8, comp) adds results to an already-final tree.
+report_now() {
+    $PY scripts/11_report.py --model "$MODEL" --format text  --out "$XAI_RESULTS_DIR/report_$MODEL.txt" &&
+    $PY scripts/11_report.py --model "$MODEL" --format latex --out "$XAI_RESULTS_DIR/report_$MODEL.tex"
+}
 chain_final() {
     step stage9  $PY scripts/09_completeness.py --model "$MODEL"            || return $?
     step stage9_attention $PY scripts/09_completeness.py --model "$MODEL" --basis attention || return $?
@@ -81,17 +88,20 @@ submit() {
         "$HERE/chain.sbatch" "$1"
 }
 
-# What a finished chain unlocks. mkdir is atomic, so when s4/s5/s6 finish at the
-# same moment exactly one of them submits `final`.
+# What a finished chain unlocks. mkdir is atomic, so when s4/s5/s6/s8 finish at
+# the same moment exactly one of them submits `final`.
 after_chain() {
     case $1 in
-        base) for c in s4 s5 s6; do echo "submitted $c: $(submit $c)"; done ;;
-        s4|s5|s6)
-            if [[ -e $STATE/s4.done && -e $STATE/s5.done && -e $STATE/s6.done ]] \
-               && mkdir "$STATE/final.lock" 2>/dev/null; then
+        base) for c in s4 s5 s6 s8; do echo "submitted $c: $(submit $c)"; done ;;
+        s4|s5|s6|s8)
+            if [[ -e $STATE/final.done ]]; then
+                report_now && echo "== report rebuilt with $1"
+            elif [[ -e $STATE/s4.done && -e $STATE/s5.done && -e $STATE/s6.done \
+                    && -e $STATE/s8.done ]] && mkdir "$STATE/final.lock" 2>/dev/null; then
                 echo "submitted final: $(submit final)"
             fi ;;
-        comp) echo "== COMPLEMENT COMPLETE  $(date -Is)" ;;
+        comp) echo "== COMPLEMENT COMPLETE  $(date -Is)"
+              [[ -e $STATE/final.done ]] && report_now && echo "== report rebuilt with comp" ;;
         final) echo "== BATTERY COMPLETE  $(date -Is)" | tee "$STATE/COMPLETE" ;;
     esac
 }

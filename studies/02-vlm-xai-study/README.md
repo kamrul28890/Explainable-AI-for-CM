@@ -33,9 +33,9 @@ safety judgement can be trusted — not just whether its answer is right.
 | `metrics/sparsity.py` — Stage 5 | ✅ run, full set n=3,882 |
 | `metrics/stability.py` — Stage 6 | ✅ implemented and tested; ✅ run on Scholar A40 only (`results/scholar-a40/`) |
 | `metrics/completeness.py` — Stage 9 | ablation basis: ✅ run, ⚠️ not reportable (F7) · attention basis (`--basis attention`): ✅ run, reported |
-| `metrics/` — Stage 8 (robustness) | ⬜ not started (Plan 3c) |
+| `perturbations.py` + `08_robustness.py` — Stage 8 | ✅ implemented and tested; strengths approved 2026-11-10 before any run; running on Scholar |
 
-288 tests: 275 without a GPU, 13 requiring `--gpu`.
+312 tests: 299 without a GPU, 13 requiring `--gpu`.
 
 ## Results so far
 

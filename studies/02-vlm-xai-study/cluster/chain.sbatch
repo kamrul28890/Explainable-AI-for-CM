@@ -1,7 +1,7 @@
 #!/bin/bash -l
 # One link of a self-continuing job chain on RCAC Scholar.
 #
-#   sbatch cluster/chain.sbatch <chain>      chain = base | s4 | s5 | s6 | final | comp
+#   sbatch cluster/chain.sbatch <chain>      chain = base | s4 | s5 | s6 | s8 | final | comp
 #
 # Scholar caps a job at 4 h and the battery needs far longer, so each link:
 #   1. queues its own successor FIRST (afterany), so a walltime kill still continues;
@@ -21,7 +21,7 @@
 #SBATCH --output=/scratch/scholar/mkamrul/xai/logs/chain-%x-%j.out
 
 set -uo pipefail
-CHAIN="${1:?usage: chain.sbatch <base|s4|s5|s6|final|comp>}"
+CHAIN="${1:?usage: chain.sbatch <base|s4|s5|s6|s8|final|comp>}"
 # Not $(dirname "$0"): SLURM runs a COPY of this script from its spool
 # directory, so $0 points there and env.sh is not beside it.
 HERE="${XAI_CLUSTER_DIR:-/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/cluster}"

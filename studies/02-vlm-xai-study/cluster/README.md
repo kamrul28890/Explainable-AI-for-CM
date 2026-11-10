@@ -24,10 +24,11 @@ That single command runs everything that exists, unattended:
 | chain | steps | runs after |
 |---|---|---|
 | `base` | all tests incl. GPU · Stage 0 · Stage 1 (must reproduce sha `af91ed28…`) · Stage 2 · Stages 3, 7 | — |
-| `s4` `s5` `s6` | Stage 4 · Stage 5 · Stage 6, one A40 each, in parallel | `base` |
-| `final` | Stages 9, 10 · Stage 11 report (text and LaTeX) | all of `s4` `s5` `s6` |
+| `s4` `s5` `s6` `s8` | Stage 4 · Stage 5 · Stage 6 · Stage 8, one A40 each, in parallel | `base` |
+| `final` | Stages 9 (both bases), 10 · Stage 11 report (text and LaTeX) | all of `s4` `s5` `s6` `s8` |
+| `comp` | Stage 1 `--complement` (sha-verified) · Stage 2 on the 7,457 unsampled compliant images | — |
 
-Stage 8 (robustness) is not implemented and is not run.
+A chain that finishes after `final` (a late `s8` or `comp`) rebuilds the report.
 
 ### Another model tier
 
