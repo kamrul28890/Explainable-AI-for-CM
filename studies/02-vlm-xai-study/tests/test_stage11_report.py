@@ -232,3 +232,45 @@ def test_stability_reports_majority_disagreeing_with_greedy_baseline(tmp_path):
     # YES rows keep a YES majority; NO rows 10..19 get a YES majority.
     assert abs(got["majority overturns baseline"]["point"] - 10 / 80) < 1e-9
     assert got["majority overturns baseline"]["n"] == 80
+
+
+def _baseline_row(image_id, stratum, expected, verdict, rule="rule_1"):
+    return {"image_id": image_id, "rule_id": rule, "stratum": stratum,
+            "is_negative_control": str(expected == "NO"), "expected": expected,
+            "verdict": verdict, "region": "", "rationale": "", "confidence": "",
+            "raw_text": "", "latency_ms": "1000", "parse_strict": "True",
+            "parse_error": "", "error": ""}
+
+
+def _whole_corpus(tmp_path):
+    """Sample: 40 H (all YES) + 40 C (10 say NO). Complement: 120 R (90 say NO)."""
+    sample = [_baseline_row(f"h{i}", "H", "YES", "YES") for i in range(40)]
+    sample += [_baseline_row(f"c{i}", "C", "NO", "NO" if i < 10 else "YES") for i in range(40)]
+    rest = [_baseline_row(f"r{i}", "R", "NO", "NO" if i < 90 else "YES",
+                          rule="rule_2" if i % 2 else "rule_1") for i in range(120)]
+    _write(tmp_path / "baseline_m.csv", sample)
+    _write(tmp_path / "baseline_m_complement.csv", rest)
+    return tmp_path
+
+
+def test_whole_corpus_specificity_pools_matched_and_unsampled_compliant(tmp_path):
+    got = _by_label(stage11.collect(_whole_corpus(tmp_path), "m", n_boot=200),
+                    "Stage 2 - every compliant image")
+    assert abs(got["specificity, matched (C)"]["point"] - 10 / 40) < 1e-9
+    assert abs(got["specificity, unsampled (R)"]["point"] - 90 / 120) < 1e-9
+    assert got["specificity, all compliant"]["n"] == 160
+    assert abs(got["specificity, all compliant"]["point"] - 100 / 160) < 1e-9
+
+
+def test_whole_corpus_section_is_absent_without_the_complement_run(tmp_path):
+    _whole_corpus(tmp_path)
+    (tmp_path / "baseline_m_complement.csv").unlink()
+    rows = stage11.collect(tmp_path, "m", n_boot=200)
+    assert not [r for r in rows if r["section"].startswith("Stage 2 - every compliant")]
+
+
+def test_whole_corpus_false_alarms_are_split_by_rule(tmp_path):
+    got = _by_label(stage11.collect(_whole_corpus(tmp_path), "m", n_boot=200),
+                    "Stage 2 - false-alarm rate by rule, all compliant")
+    assert set(got) == {"rule_1", "rule_2"}
+    assert got["rule_1"]["n"] + got["rule_2"]["n"] == 160

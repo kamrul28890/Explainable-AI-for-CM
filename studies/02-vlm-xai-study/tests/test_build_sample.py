@@ -127,3 +127,46 @@ def test_scan_records_drops_the_image_column():
     records = build_sample.scan_records(loader, splits=("test",))
     assert "image" not in records[0]
     assert records[0]["illumination"] == "daylight"
+
+
+# --- the complement: every compliant image the frozen sample left out ---------
+
+def test_complement_is_every_compliant_image_the_sample_left_out():
+    recs = _records(n_violation=6, n_compliant=20)
+    sample = build_sample.build_rows(recs, seed=42)
+    rest = build_sample.build_complement_rows(recs, sample, seed=42)
+
+    in_sample = {r["image_id"] for r in sample}
+    rest_ids = {r["image_id"] for r in rest}
+    compliant = {r["image_id"] for r in recs if r["image_id"].startswith("c")}
+    assert not rest_ids & in_sample
+    assert rest_ids | (in_sample & compliant) == compliant
+    assert len(rest_ids) == 14
+
+
+def test_complement_asks_one_negative_control_per_image_under_the_same_policy():
+    """Pooling with stratum C is only valid if the question policy is identical."""
+    recs = _records(n_violation=6, n_compliant=20)
+    sample = build_sample.build_rows(recs, seed=42)
+    rest = build_sample.build_complement_rows(recs, sample, seed=42)
+    assert len(rest) == len({r["image_id"] for r in rest})
+    assert all(r["stratum"] == "R" for r in rest)
+    assert all(r["is_negative_control"] and not r["is_violation"] for r in rest)
+    by_id = {r["image_id"]: r for r in recs}
+    for r in rest:
+        [(rule, _)] = build_sample.rules_to_ask(by_id[r["image_id"]], seed=42)
+        assert r["rule_id"] == rule
+
+
+def test_complement_refuses_a_sample_that_does_not_match_the_records():
+    """A manifest from a different dataset revision would make the complement
+    silently overlap or miss images."""
+    recs = _records(n_violation=6, n_compliant=20)
+    sample = build_sample.build_rows(recs, seed=42)
+    sample.append({**sample[-1], "image_id": "not-in-dataset"})
+    with pytest.raises(ValueError, match="not-in-dataset"):
+        build_sample.build_complement_rows(recs, sample, seed=42)
+
+
+def test_complement_never_writes_the_frozen_manifest_path():
+    assert build_sample.COMPLEMENT_NAME != "sample_manifest.csv"

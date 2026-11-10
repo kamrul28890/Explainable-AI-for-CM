@@ -25,6 +25,9 @@ MAX_LINKS=12
 
 # The frozen Stage 1 manifest. A Stage 1 rerun on Scholar must reproduce it.
 FROZEN_MANIFEST_SHA=af91ed280cd22bfc6cdb27cc6645f448d137bb29b4ec77fc504cddfa3ac166c9
+# Every compliant image the sample left out (Stage 1 --complement, seed 42),
+# built locally first on 2026-11-10: 7,457 rows, one per image.
+COMPLEMENT_SHA=cccec48c0643fe9dd07cba20c0c3be10f71fa0b68fc0a64352d3b8a758ffebc2
 
 module load conda/2025.09
 source "$(conda info --base)/etc/profile.d/conda.sh"

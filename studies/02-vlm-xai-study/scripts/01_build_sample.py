@@ -121,6 +121,35 @@ def build_rows(records: list[dict], seed: int) -> list[dict]:
     return rows
 
 
+COMPLEMENT_NAME = "complement_manifest.csv"
+
+
+def build_complement_rows(records: list[dict], sample_rows: list[dict], seed: int) -> list[dict]:
+    """Every compliant image the frozen sample left out, as stratum R ("rest").
+
+    The frozen manifest is the authority on what was sampled -- the complement is
+    computed against IT, not against a fresh re-draw, so it cannot drift from the
+    sample every result was computed on. Each image is asked exactly what stratum
+    C images were asked (rules_to_ask, same seed), so R and C pool cleanly into a
+    whole-corpus specificity with no prevalence reweighting.
+    """
+    by_id = {r["image_id"]: r for r in records}
+    unknown = sorted({r["image_id"] for r in sample_rows} - by_id.keys())
+    if unknown:
+        raise ValueError(
+            f"{len(unknown)} sampled image(s) are not in these records, e.g. "
+            f"{unknown[:3]} -- the manifest and the dataset do not match")
+
+    sampled = {r["image_id"] for r in sample_rows}
+    rows: list[dict] = []
+    for rec in records:
+        if violated_rules(rec) or rec["image_id"] in sampled:
+            continue
+        for rule_id, is_control in rules_to_ask(rec, seed=seed):
+            rows.append(_row_for(rec, rule_id, is_control, "R"))
+    return rows
+
+
 def write_manifest(rows: list[dict], path: Path, force: bool) -> None:
     """Write the manifest, refusing to clobber an existing one without --force."""
     path = Path(path)
@@ -150,6 +179,9 @@ def main() -> int:
                     help="overwrite an existing manifest (invalidates prior results)")
     ap.add_argument("--allow-imbalance", action="store_true",
                     help="continue despite a stratification WARNING")
+    ap.add_argument("--complement", action="store_true",
+                    help=f"write {COMPLEMENT_NAME}: every compliant image the frozen "
+                         "sample left out. Never touches sample_manifest.csv")
     args = ap.parse_args()
 
     from xai_pilot.data import load_construction_site
@@ -157,6 +189,9 @@ def main() -> int:
     print(f"scanning {' + '.join(SPLITS)} (metadata only) ...")
     records = scan_records(load_construction_site)
     print(f"  {len(records)} records")
+
+    if args.complement:
+        return _write_complement(records, args)
 
     hazard = [r for r in records if violated_rules(r)]
     compliant = [r for r in records if not violated_rules(r)]
@@ -189,6 +224,24 @@ def main() -> int:
     print(f"\nStage 2 projection at the Stage 0 median of {STAGE0_MEDIAN_S}s/call: "
           f"{len(rows) * STAGE0_MEDIAN_S / 3600:.1f} h")
     print("\nFREEZE THIS FILE. Commit it before running Stage 2.")
+    return 0
+
+
+def _write_complement(records: list[dict], args) -> int:
+    from xai_vlm.runner import manifest_sha256
+
+    sample_path = config.RESULTS_DIR / "sample_manifest.csv"
+    if not sample_path.exists():
+        print(f"no frozen sample at {sample_path}; build it first.", file=sys.stderr)
+        return 1
+    with sample_path.open(newline="", encoding="utf-8") as fh:
+        sample = list(csv.DictReader(fh))
+    rows = build_complement_rows(records, sample, seed=args.seed)
+    out = config.RESULTS_DIR / COMPLEMENT_NAME
+    write_manifest(rows, out, force=args.force)
+    print(f"\nfrozen sample  : {sample_path.name}  sha256 {manifest_sha256(sample_path)}")
+    print(f"wrote {len(rows)} rows ({len({r['image_id'] for r in rows})} images) to {out}")
+    print(f"  sha256      : {manifest_sha256(out)}")
     return 0
 
 

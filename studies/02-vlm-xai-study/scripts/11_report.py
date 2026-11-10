@@ -64,6 +64,26 @@ def collect(res: Path, model: str, n_boot: int) -> list[dict]:
                 rows.append({"section": "Stage 2 - sensitivity by rule", **rate_row(
                     rule, [r["verdict"] == "YES" for r in sub], n_boot)})
 
+    # The complement run: every compliant image the sample left out, asked under
+    # the same policy as stratum C. Pooled with C it is a whole-corpus specificity
+    # that needs no prevalence reweighting. C and R are also shown apart, because
+    # C was matched to the hazard stratum's scene conditions (it holds 83 of the
+    # 87 night images) and R was not.
+    rest = _read(res / f"baseline_{model}_complement.csv")
+    if baseline and rest:
+        matched = [r for r in baseline if r.get("stratum") == "C"]
+        everything = matched + rest
+        sec = "Stage 2 - every compliant image"
+        for label, rows_ in (("specificity, matched (C)", matched),
+                             ("specificity, unsampled (R)", rest),
+                             ("specificity, all compliant", everything)):
+            rows.append({"section": sec, **rate_row(
+                label, [r["verdict"] == "NO" for r in rows_], n_boot)})
+        for rule in sorted({r["rule_id"] for r in everything}):
+            sub = [r for r in everything if r["rule_id"] == rule]
+            rows.append({"section": "Stage 2 - false-alarm rate by rule, all compliant",
+                         **rate_row(rule, [r["verdict"] == "YES" for r in sub], n_boot)})
+
     regions = _read(res / f"regions_{model}.csv")
     if regions:
         rows.append({"section": "Stage 3 - regions", **rate_row(

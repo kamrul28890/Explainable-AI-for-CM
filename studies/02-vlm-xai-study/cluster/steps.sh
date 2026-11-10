@@ -4,6 +4,8 @@
 #           Stage 2, then the CPU stages 3 and 7 that only need Stage 2
 #   s4 s5 s6 : Stages 4, 5, 6 -- independent of each other, so one A40 each
 #   final : Stages 9, 10 and 11, once s4, s5 and s6 are all done
+#   comp  : on its own -- the 7,457 compliant images the sample left out
+#           (Stage 1 --complement, sha-verified), Stage 2 on them, report
 #
 # Stage 8 (robustness) is not implemented and is not run.
 
@@ -26,13 +28,15 @@ step() {
     return $rc               # 124 = out of time; anything else is a failure
 }
 
-verify_manifest() {
+# check_sha FILE SHA LABEL -- a rebuilt manifest must be the one results cite.
+check_sha() {
     local got
-    got=$(sha256sum "$XAI_RESULTS_DIR/sample_manifest.csv" | cut -d' ' -f1)
-    echo "manifest sha256 $got"
-    [[ "$got" == "$FROZEN_MANIFEST_SHA" ]] || {
-        echo "Stage 1 did NOT reproduce the frozen manifest ($FROZEN_MANIFEST_SHA)"; return 1; }
+    got=$(sha256sum "$1" | cut -d' ' -f1)
+    echo "$3 sha256 $got"
+    [[ "$got" == "$2" ]] || { echo "$3 did NOT reproduce the frozen sha ($2)"; return 1; }
 }
+verify_manifest()   { check_sha "$XAI_RESULTS_DIR/sample_manifest.csv" "$FROZEN_MANIFEST_SHA" manifest; }
+verify_complement() { check_sha "$XAI_RESULTS_DIR/complement_manifest.csv" "$COMPLEMENT_SHA" complement; }
 
 chain_base() {
     step cpu_and_gpu_tests env XAI_RESULTS_DIR= $PY -m pytest tests --gpu -p no:cacheprovider -q -W ignore::UserWarning || return $?
@@ -60,6 +64,17 @@ chain_final() {
         --out "$XAI_RESULTS_DIR/report_$MODEL.tex"                         || return $?
 }
 
+chain_comp() {
+    step comp_build  $PY scripts/01_build_sample.py --complement --seed 42 || return $?
+    step comp_verify verify_complement                                      || return $?
+    step comp_stage2 $PY scripts/02_baseline_inference.py --model "$MODEL" --resume \
+        --manifest "$XAI_RESULTS_DIR/complement_manifest.csv" --out-tag complement || return $?
+    step comp_report_text  $PY scripts/11_report.py --model "$MODEL" --format text \
+        --out "$XAI_RESULTS_DIR/report_$MODEL.txt"                         || return $?
+    step comp_report_latex $PY scripts/11_report.py --model "$MODEL" --format latex \
+        --out "$XAI_RESULTS_DIR/report_$MODEL.tex"                         || return $?
+}
+
 submit() {
     sbatch --parsable --job-name="$1$SUFFIX" --export=ALL,XAI_CLUSTER_DIR="$HERE" \
         "$HERE/chain.sbatch" "$1"
@@ -75,6 +90,7 @@ after_chain() {
                && mkdir "$STATE/final.lock" 2>/dev/null; then
                 echo "submitted final: $(submit final)"
             fi ;;
+        comp) echo "== COMPLEMENT COMPLETE  $(date -Is)" ;;
         final) echo "== BATTERY COMPLETE  $(date -Is)" | tee "$STATE/COMPLETE" ;;
     esac
 }
