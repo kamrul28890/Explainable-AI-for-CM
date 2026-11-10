@@ -38,6 +38,33 @@ def classify_completeness(source: str, flip_tokens: str) -> str:
     return "not_measured"
 
 
+def classify_completeness_attention(source: str, sparsity_row: dict) -> str:
+    """Three-way verdict from Stage 5 attention -- the F7 redesign.
+
+    `explanation_supported` here means the model's attention put MORE mass inside
+    the region it named than uniform attention would (mass > area fraction, the
+    null F6 validated). That is an ATTENTIONAL claim -- "the model looked where it
+    said" -- not the causal one the ablation basis makes ("removing the region
+    changes the answer"). It replaces that basis because token ablation's
+    artefact floor (51.7%) is nine times its signal (5.9%), so its flips cannot
+    tell a region that mattered from one that did not (F4, F7). The change of
+    meaning is deliberate and must be stated wherever the number is quoted.
+
+    Missing or unavailable attention is `not_measured`, never a verdict.
+    """
+    if source != "model":
+        return "no_usable_explanation"
+    sp = sparsity_row or {}
+    if str(sp.get("attention_available", "")).strip() != "True":
+        return "not_measured"
+    try:
+        mass = float(sp["mass_inside_region"])
+        area = float(sp["region_area_fraction"])
+    except (KeyError, TypeError, ValueError):
+        return "not_measured"
+    return "explanation_supported" if mass > area else "explanation_weak"
+
+
 def completeness_rates(rows: list[dict]) -> dict:
     """Share of rows in each category."""
     n = len(rows)

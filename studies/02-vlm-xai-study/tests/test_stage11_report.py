@@ -274,3 +274,35 @@ def test_whole_corpus_false_alarms_are_split_by_rule(tmp_path):
                     "Stage 2 - false-alarm rate by rule, all compliant")
     assert set(got) == {"rule_1", "rule_2"}
     assert got["rule_1"]["n"] + got["rule_2"]["n"] == 160
+
+
+def _completeness_attention_csv(tmp_path):
+    """40 no region, 30 weak (lift 0.5), 50 supported (20 at lift 3, 30 at 1.5)."""
+    rows = [{"image_id": f"n{i}", "completeness": "no_usable_explanation",
+             "attention_lift": ""} for i in range(40)]
+    rows += [{"image_id": f"w{i}", "completeness": "explanation_weak",
+              "attention_lift": "0.5"} for i in range(30)]
+    rows += [{"image_id": f"s{i}", "completeness": "explanation_supported",
+              "attention_lift": "3.0" if i < 20 else "1.5"} for i in range(50)]
+    _write(tmp_path / "completeness_attention_m.csv", rows)
+    return tmp_path
+
+
+def test_attentional_completeness_is_reported_over_every_row(tmp_path):
+    got = _by_label(stage11.collect(_completeness_attention_csv(tmp_path), "m", n_boot=200),
+                    "Stage 9 - completeness (attentional, not causal)")
+    assert got["explanation supported"]["n"] == 120
+    assert abs(got["explanation supported"]["point"] - 50 / 120) < 1e-9
+    assert abs(got["explanation weak"]["point"] - 30 / 120) < 1e-9
+    assert abs(got["no usable explanation"]["point"] - 40 / 120) < 1e-9
+    # Among rows that named a region: how many sit well clear of chance.
+    assert got["lift >= 2x (regions only)"]["n"] == 80
+    assert abs(got["lift >= 2x (regions only)"]["point"] - 20 / 80) < 1e-9
+
+
+def test_the_ablation_completeness_is_never_reported(tmp_path):
+    """F7: computed, kept, and not quotable."""
+    _write(tmp_path / "completeness_m.csv",
+           [{"image_id": "a", "completeness": "explanation_supported"}])
+    rows = stage11.collect(tmp_path, "m", n_boot=200)
+    assert not [r for r in rows if r["section"].startswith("Stage 9")]

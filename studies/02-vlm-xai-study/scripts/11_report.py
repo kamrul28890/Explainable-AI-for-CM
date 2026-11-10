@@ -182,6 +182,24 @@ def collect(res: Path, model: str, n_boot: int) -> list[dict]:
                                   > float(r["region_area_fraction"]) for r in sub],
                                  n_boot)})
 
+    # Stage 9 on the ATTENTION basis only. The ablation basis (completeness_{model}.csv)
+    # is kept but never collected here: F7, its input has no discriminative power.
+    comp = _read(res / f"completeness_attention_{model}.csv")
+    if comp:
+        sec = "Stage 9 - completeness (attentional, not causal)"
+        for label, cat in (("explanation supported", "explanation_supported"),
+                           ("explanation weak", "explanation_weak"),
+                           ("no usable explanation", "no_usable_explanation")):
+            rows.append({"section": sec, **rate_row(
+                label, [r["completeness"] == cat for r in comp], n_boot)})
+        # Crossing the chance line by a hair counts as `supported`; this shows how
+        # much of that rests on attention well clear of it.
+        named = [r for r in comp if r.get("attention_lift")]
+        if named:
+            rows.append({"section": sec, **rate_row(
+                "lift >= 2x (regions only)",
+                [float(r["attention_lift"]) >= 2.0 for r in named], n_boot)})
+
     st = _read(res / f"stability_{model}.csv")
     if st:
         # Rows that errored have no agreement rate and count nowhere: "not

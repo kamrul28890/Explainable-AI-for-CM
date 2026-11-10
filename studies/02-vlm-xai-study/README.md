@@ -32,10 +32,10 @@ safety judgement can be trusted — not just whether its answer is right.
 | `metrics/descriptive_accuracy.py` — Stage 4 | ✅ run, full set n=3,031 |
 | `metrics/sparsity.py` — Stage 5 | ✅ run, full set n=3,882 |
 | `metrics/stability.py` — Stage 6 | ✅ implemented and tested; ✅ run on Scholar A40 only (`results/scholar-a40/`) |
-| `metrics/completeness.py` — Stage 9 | ✅ run; ⚠️ not reportable (see F7) |
+| `metrics/completeness.py` — Stage 9 | ablation basis: ✅ run, ⚠️ not reportable (F7) · attention basis (`--basis attention`): ✅ run, reported |
 | `metrics/` — Stage 8 (robustness) | ⬜ not started (Plan 3c) |
 
-269 tests: 256 without a GPU, 13 requiring `--gpu`.
+288 tests: 275 without a GPU, 13 requiring `--gpu`.
 
 ## Results so far
 

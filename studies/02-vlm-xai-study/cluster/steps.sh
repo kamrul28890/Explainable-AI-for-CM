@@ -57,6 +57,7 @@ chain_s5() { step stage5 $PY scripts/05_sparsity.py --model "$MODEL" --resume; }
 chain_s6() { step stage6 $PY scripts/06_stability.py --model "$MODEL" --resume; }
 chain_final() {
     step stage9  $PY scripts/09_completeness.py --model "$MODEL"            || return $?
+    step stage9_attention $PY scripts/09_completeness.py --model "$MODEL" --basis attention || return $?
     step stage10 $PY scripts/10_explanation_correctness.py --model "$MODEL" || return $?
     step stage11_text  $PY scripts/11_report.py --model "$MODEL" --format text \
         --out "$XAI_RESULTS_DIR/report_$MODEL.txt"                         || return $?

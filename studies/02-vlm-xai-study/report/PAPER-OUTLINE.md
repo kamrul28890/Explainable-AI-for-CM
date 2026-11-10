@@ -260,6 +260,22 @@ means — from causal ("removing it changes the answer") to attentional ("the mo
 looked there") — and that change must be argued in the paper, not slipped in.
 Not done pending a decision.
 
+**Decided 2026-11-10: redefine on attention.** `09_completeness.py --basis attention`
+writes `completeness_attention_{model}.csv`; `supported` = Stage 5 mass inside the
+named region exceeds the region's area fraction. The ablation file is kept and
+never reported. Local / A40:
+
+```
+explanation supported     67.0% [65.5, 68.4]  /  66.5% [64.9, 68.0]   (n=3,882)
+explanation weak          11.1% [10.1, 12.1]  /  11.4% [10.4, 12.4]
+no usable explanation     21.9%               /  22.2%
+lift >= 2x, regions only  43.4% [41.6, 45.2]  /  42.6% [40.8, 44.3]   (median lift 1.74 / 1.73)
+```
+
+The paper must say the claim is now attentional ("the model looked where it
+said"), not causal, and give the lift line beside the headline: `supported` is
+crossed by any lift above 1.0, and under half the regions are at 2x or better.
+
 ### F5 — Cost
 ```
 median 10.1 s   p90 26.5 s   max 477 s   n=3,882
