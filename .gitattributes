@@ -20,6 +20,11 @@
 **/results/*.json  -text
 **/data/*.json     -text
 
+# Study 2 results, at any depth: per-machine trees (results/scholar-a40/) hold
+# state.json fingerprints, reports and job logs that must match the cluster's
+# bytes, and `**/results/*.json` above only reaches one level down.
+studies/02-vlm-xai-study/results/** -text
+
 # Shell and SLURM scripts run on Linux (RCAC Scholar). With autocrlf a Windows
 # checkout or `git archive` would hand bash CRLF lines, and `\r` breaks it.
 *.sh      text eol=lf
