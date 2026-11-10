@@ -168,3 +168,67 @@ def test_sparsity_is_reported_per_rule(tmp_path):
                if r["section"] == "Stage 5 - attention vs area null by rule"}
     assert by_rule["rule_1"]["point"] == 30 / 40
     assert by_rule["rule_4"]["point"] == 10 / 40
+
+
+def _stability_row(image_id, baseline, verdicts, regions, error=""):
+    from xai_vlm.metrics.stability import is_flickering, pairwise_agreement
+    return {
+        "image_id": image_id, "rule_id": "rule_1", "baseline_verdict": baseline,
+        "verdicts": "|".join(verdicts), "regions": "|".join(regions),
+        "agreement_rate": "" if error else f"{pairwise_agreement(verdicts):.4f}",
+        "region_presence_rate": "", "flickering": "" if error else str(is_flickering(regions)),
+        "mean_centroid_drift": "", "latency_ms": "1000", "error": error,
+    }
+
+
+def _stability_csv(tmp_path):
+    """40 baseline-YES rows (30 unanimous) and 40 baseline-NO rows (10 unanimous).
+    Regions flicker on 12 rows. Two errored rows must count nowhere."""
+    box, rows = "(1.0, 1.0, 2.0, 2.0)", []
+    for i in range(40):
+        v = ["YES"] * 5 if i < 30 else ["YES", "NO", "YES", "YES", "YES"]
+        r = [box] * 5 if i >= 12 else [box, "", box, box, box]
+        rows.append(_stability_row(f"y-{i:03d}", "YES", v, r))
+    for i in range(40):
+        if i < 10:
+            v = ["NO"] * 5
+        elif i < 20:
+            v = ["YES", "YES", "NO", "YES", "NO"]   # majority overturns NO
+        else:
+            v = ["NO", "YES", "NO", "YES", "NO"]
+        rows.append(_stability_row(f"n-{i:03d}", "NO", v, [""] * 5))
+    rows += [_stability_row(f"e-{i}", "YES", [], [], error="boom") for i in range(2)]
+    _write(tmp_path / "stability_m.csv", rows)
+    return tmp_path
+
+
+def _by_label(rows, section):
+    return {r["label"]: r for r in rows if r["section"] == section}
+
+
+def test_stability_reports_unanimity_and_flicker(tmp_path):
+    rows = stage11.collect(_stability_csv(tmp_path), "m", n_boot=200)
+    got = _by_label(rows, "Stage 6 - stability")
+    assert got["verdict unanimous (all reruns)"]["n"] == 80
+    assert abs(got["verdict unanimous (all reruns)"]["point"] - 40 / 80) < 1e-9
+    assert got["flickering region"]["n"] == 80
+    assert abs(got["flickering region"]["point"] - 12 / 80) < 1e-9
+
+
+def test_stability_is_split_by_baseline_verdict(tmp_path):
+    """A model that is steady on YES and erratic on NO -- as this one is
+    suspected to be -- would be averaged into one unremarkable number."""
+    rows = stage11.collect(_stability_csv(tmp_path), "m", n_boot=200)
+    got = _by_label(rows, "Stage 6 - unanimity by baseline verdict")
+    assert abs(got["baseline YES"]["point"] - 30 / 40) < 1e-9
+    assert abs(got["baseline NO"]["point"] - 10 / 40) < 1e-9
+
+
+def test_stability_reports_majority_disagreeing_with_greedy_baseline(tmp_path):
+    """Sampling at T=0.7 against the greedy Stage 2 verdict: how often does the
+    majority of reruns overturn the answer the paper reports?"""
+    rows = stage11.collect(_stability_csv(tmp_path), "m", n_boot=200)
+    got = _by_label(rows, "Stage 6 - stability")
+    # YES rows keep a YES majority; NO rows 10..19 get a YES majority.
+    assert abs(got["majority overturns baseline"]["point"] - 10 / 80) < 1e-9
+    assert got["majority overturns baseline"]["n"] == 80

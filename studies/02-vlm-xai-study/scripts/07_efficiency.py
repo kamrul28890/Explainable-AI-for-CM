@@ -4,6 +4,7 @@
 """
 import argparse
 import csv
+import json
 import sys
 from pathlib import Path
 
@@ -15,8 +16,46 @@ from xai_vlm import config  # noqa: E402
 from xai_vlm.metrics.efficiency import latency_stats, per_rule_stats  # noqa: E402
 
 # Measured standalone on the same images, for the caveat below. See the Plan 3a
-# design doc and runner.py: identical work costs 3.1 s alone and ~10 s in a run.
+# design doc and runner.py: on the local machine identical work cost 3.1 s alone
+# and ~10 s inside a run. That standalone figure belongs to that GPU only.
 STANDALONE_MEDIAN_S = 3.1
+STANDALONE_DEVICE = "NVIDIA GeForce RTX 3070"   # torch.cuda.get_device_name() here
+
+
+def run_device(results_dir: Path, model: str) -> str:
+    """The GPU that produced this tree's baseline, from its Stage 2 fingerprint.
+
+    State files written before 2026-11-09 have no `device` key; every one of them
+    is the frozen local run, so a missing key names the local GPU."""
+    path = results_dir / f"baseline_{model}.state.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("device") or STANDALONE_DEVICE
+    except FileNotFoundError:
+        return "unknown"
+
+
+def latency_caveat(in_run_median_s: float, device: str) -> list[str]:
+    """The caveat printed with every efficiency figure.
+
+    A standalone/in-run ratio is quoted only on the GPU that measured the
+    standalone figure -- dividing an A40 latency by a 3070 latency measures the
+    hardware, not the harness."""
+    lines = [
+        "CAVEAT, reported with every efficiency figure:",
+        f"  in-run median      {in_run_median_s:.1f}s on {device}   <- PRIMARY, what a batch costs",
+        f"  standalone median  {STANDALONE_MEDIAN_S:.1f}s on {STANDALONE_DEVICE}",
+    ]
+    if device == STANDALONE_DEVICE:
+        lines.append(f"  in a run the same images take {in_run_median_s / STANDALONE_MEDIAN_S:.1f}x "
+                     "longer than alone on this machine.")
+    else:
+        lines.append("  different GPUs: no standalone/in-run ratio is meaningful here.")
+    lines += [
+        "  The gap is a property of the local machine, not of the harness: the same",
+        "  code and data ran at 2.3s per call in-run on an A40 (results/scholar-a40,",
+        "  2026-11-09). Compare latencies only within one machine's results tree.",
+    ]
+    return lines
 
 
 def main() -> int:
@@ -57,14 +96,8 @@ def main() -> int:
     for rule, s in by_rule.items():
         print(f"  {rule}: median {s['median']:.1f}s  p90 {s['p90']:.1f}s  n={s['n']}")
     print()
-    print("CAVEAT, reported with every efficiency figure:")
-    print(f"  in-run median      {overall['median']:.1f}s   <- PRIMARY, what a batch costs")
-    print(f"  standalone median  {STANDALONE_MEDIAN_S:.1f}s   <- same images, measured alone")
-    print("  The 3.5x gap is real, reproducible and unexplained. Ruled out: VRAM")
-    print("  (6.97 GB peak of 8, stable), system RAM (18 GB free), image size, and")
-    print("  reply length. Quoting only the standalone figure understates deployment")
-    print("  cost; quoting only the in-run figure charges the model for harness")
-    print("  overhead. Report both.")
+    for line in latency_caveat(overall["median"], run_device(config.RESULTS_DIR, args.model)):
+        print(line)
     print(f"wrote {out}")
     print("=" * 66)
     return 0

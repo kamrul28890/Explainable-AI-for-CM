@@ -165,11 +165,15 @@ PARSE_RATE_FLOOR = 0.95
 # and still well under the 34.0 s degradation actually observed, so it keeps a
 # real detector without firing on healthy work.
 #
-# The 3.5x standalone-vs-in-run gap is NOT understood. It is not VRAM (peak 6.97 GB
-# against 8 GB, stable), not system RAM (18 GB free), not image size, not reply
-# length. The leading unverified hypothesis is CPU contention between parquet
-# decoding and Qwen's CPU-side image preprocessing, which is inside the timed call.
-# Until that is settled this ceiling is empirical, not principled.
+# The 3.5x standalone-vs-in-run gap belongs to the LOCAL machine (RTX 3070, 8 GB,
+# Windows), not to this harness: the identical code, data and pins ran in-run at a
+# 2.3 s median on an A40 (results/scholar-a40, 2026-11-09). On the local machine it
+# was not VRAM (peak 6.97 GB of 8, stable), system RAM (18 GB free), image size or
+# reply length; CPU contention there remains the unverified hypothesis.
+#
+# Consequence for this ceiling: calibrated on the local machine, it sits ~10x
+# above a healthy A40 run, so on the A40 it only catches gross degradation.
+# Still empirical, not principled.
 LATENCY_CEILING_S = 25.0
 
 # Guards evaluate rows from the CURRENT PROCESS only, and not until this many exist.

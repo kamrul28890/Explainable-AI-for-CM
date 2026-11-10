@@ -31,11 +31,11 @@ safety judgement can be trusted — not just whether its answer is right.
 | `metrics/correctness.py` — Stage 10 | ✅ run |
 | `metrics/descriptive_accuracy.py` — Stage 4 | ✅ run, full set n=3,031 |
 | `metrics/sparsity.py` — Stage 5 | ✅ run, full set n=3,882 |
-| `metrics/stability.py` — Stage 6 | ✅ implemented and tested; ⬜ not run |
+| `metrics/stability.py` — Stage 6 | ✅ implemented and tested; ✅ run on Scholar A40 only (`results/scholar-a40/`) |
 | `metrics/completeness.py` — Stage 9 | ✅ run; ⚠️ not reportable (see F7) |
 | `metrics/` — Stage 8 (robustness) | ⬜ not started (Plan 3c) |
 
-262 tests: 249 without a GPU, 13 requiring `--gpu`.
+269 tests: 256 without a GPU, 13 requiring `--gpu`.
 
 ## Results so far
 
@@ -78,11 +78,13 @@ per-rule medians: 10.0-10.3 s across all four rules
 Per-rule medians are near-identical despite different question complexity, which
 suggests a roughly constant per-call overhead rather than content-dependent cost.
 
-**The standalone/in-run gap is unexplained and both figures must be reported.**
-The same images answered alone take 3.1 s. Ruled out: VRAM (peak 6.97 GB of 8,
-stable), system RAM (18 GB free), image dimensions, reply length. Leading
-unverified hypothesis: CPU contention between parquet decoding and Qwen's
-CPU-side preprocessing, which falls inside the timed call.
+**The standalone/in-run gap belongs to the local machine.** On the RTX 3070 the
+same images answered alone take 3.1 s, ~3.3x faster than inside a run. Ruled out
+there: VRAM (peak 6.97 GB of 8, stable), system RAM (18 GB free), image
+dimensions, reply length. The A40 run on Scholar settled where it lives: the
+identical code, data and pins gave a 2.3 s in-run median (p90 2.8 s), so the gap
+is not in the harness or the model. Latencies are compared only within one
+machine's results tree, and Stage 7 now names the GPU beside every figure.
 
 ### Stage 10 — explanation correctness
 
@@ -119,6 +121,25 @@ Three caveats belong with the 2.4%:
 3. **Zero IoU may mean the model found a real violation nobody boxed.** 47% of the
    corpus is self-flagged "poor info"; separating that from a genuine miss needs
    the §5.5 human audit.
+
+### Stage 6 — stability (Scholar A40 only)
+
+Run once, on Scholar (`results/scholar-a40/`), so it is compared only with that
+tree's Stage 2. 799 rows (400 baseline-YES, 399 baseline-NO), 5 reruns each at
+temperature 0.7:
+
+```
+verdict unanimous (all 5 reruns)   51.9%  [48.4, 55.4]
+  baseline YES                     54.2%     baseline NO   49.6%
+majority overturns greedy verdict  17.9%  [15.3, 20.7]
+flickering region                  38.0%  [34.7, 41.4]
+```
+
+Stage 6's own summary prints a median pairwise agreement of 100%, which reads as
+stable and is not: half the rows disagree with themselves at least once, and on
+nearly one in five the verdict the paper reports from greedy decoding is the
+*minority* answer under sampling. A region that appears in some reruns and not
+others (38%) is the explanation-level version of the same problem.
 
 ### Pre-registered thresholds
 

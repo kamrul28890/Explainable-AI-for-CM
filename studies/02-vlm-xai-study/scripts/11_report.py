@@ -162,6 +162,38 @@ def collect(res: Path, model: str, n_boot: int) -> list[dict]:
                                   > float(r["region_area_fraction"]) for r in sub],
                                  n_boot)})
 
+    st = _read(res / f"stability_{model}.csv")
+    if st:
+        # Rows that errored have no agreement rate and count nowhere: "not
+        # measured" again, not "measured and unstable".
+        ok = [r for r in st if r.get("agreement_rate") and not r.get("error")]
+        if ok:
+            # Unanimity, not the mean pairwise agreement: a median of 100% hid a
+            # quarter of rows at 60% or worse in the first run, and "all five
+            # reruns gave the same answer" is the property a user relies on.
+            unanimous = lambda r: float(r["agreement_rate"]) == 1.0  # noqa: E731
+            rows.append({"section": "Stage 6 - stability", **rate_row(
+                "verdict unanimous (all reruns)", [unanimous(r) for r in ok], n_boot)})
+            rows.append({"section": "Stage 6 - stability", **rate_row(
+                "flickering region", [_truthy(r["flickering"]) for r in ok], n_boot)})
+
+            # Reruns sample at T=0.7; Stage 2 is greedy. A strict majority of
+            # reruns against the greedy verdict means the reported answer is
+            # the minority one under the model's own distribution.
+            def overturns(r) -> bool:
+                vs = [v for v in r["verdicts"].split("|") if v]
+                other = sum(1 for v in vs if v != r["baseline_verdict"])
+                return other * 2 > len(vs)
+            rows.append({"section": "Stage 6 - stability", **rate_row(
+                "majority overturns baseline", [overturns(r) for r in ok], n_boot)})
+
+            for v in ("YES", "NO"):
+                sub = [r for r in ok if r["baseline_verdict"] == v]
+                if sub:
+                    rows.append({"section": "Stage 6 - unanimity by baseline verdict",
+                                 **rate_row(f"baseline {v}", [unanimous(r) for r in sub],
+                                            n_boot)})
+
     return rows
 
 
@@ -222,7 +254,9 @@ def main() -> int:
     text = header + "\n" + body if args.format == "text" else body
 
     if args.out:
-        Path(args.out).write_text(text + "\n", encoding="utf-8")
+        # Bytes, not write_text: Windows text mode turns \n into \r\n, so the same
+        # CSVs would give a different report file on each machine.
+        Path(args.out).write_bytes((text + "\n").encode("utf-8"))
         print(f"wrote {args.out}")
     else:
         print(text)
