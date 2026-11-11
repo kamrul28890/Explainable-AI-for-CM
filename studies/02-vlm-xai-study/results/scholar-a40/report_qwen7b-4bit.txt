@@ -16,6 +16,19 @@ Stage 2 - sensitivity by rule
   rule_3                           98.8% [97.1, 100.0] (n=172)
   rule_4                           25.7% [15.7, 35.7] (n=70)
 
+Stage 2 - every compliant image
+-------------------------------
+  specificity, matched (C)         45.1% [42.5, 47.9] (n=1278)
+  specificity, unsampled (R)       42.6% [41.5, 43.7] (n=7457)
+  specificity, all compliant       43.0% [41.9, 44.0] (n=8735)
+
+Stage 2 - false-alarm rate by rule, all compliant
+-------------------------------------------------
+  rule_1                           57.5% [55.7, 59.4] (n=2670)
+  rule_2                           35.4% [33.6, 37.2] (n=2713)
+  rule_3                           93.2% [92.2, 94.1] (n=2599)
+  rule_4                           8.5% [6.5, 10.6] (n=753)
+
 Stage 3 - regions
 -----------------
   no-region rate (all)             22.2% [20.8, 23.5] (n=3882)
@@ -70,10 +83,39 @@ Stage 5 - attention vs area null by rule
   rule_3                           88.2% [86.1, 90.1] (n=981)
   rule_4                           90.5% [86.4, 94.2] (n=242)
 
+Stage 9 - completeness (attentional, not causal)
+------------------------------------------------
+  explanation supported            66.5% [64.9, 68.0] (n=3882)
+  explanation weak                 11.4% [10.4, 12.4] (n=3882)
+  no usable explanation            22.2% [20.8, 23.5] (n=3882)
+  lift >= 2x (regions only)        42.6% [40.8, 44.3] (n=3022)
+
+Stage 8 - verdict survives the perturbation
+-------------------------------------------
+  blur                             70.4% [68.2, 72.6] (n=1600)
+  low_light                        90.7% [89.2, 92.1] (n=1600)
+  occlusion                        80.2% [78.2, 82.1] (n=1600)
+  contrast                         90.4% [88.9, 91.8] (n=1600)
+  desaturate                       86.6% [84.9, 88.2] (n=1600)
+
+Stage 8 - occlusion survival by hazard hidden
+---------------------------------------------
+  hazard >= 10% hidden             67.9% [62.8, 73.1] (n=290)
+  hazard < 10% hidden              85.1% [79.4, 90.8] (n=141)
+
+Stage 8 - survived, but region moved > 10% of diagonal
+------------------------------------------------------
+  blur                             47.7% [43.1, 52.3] (n=459)
+  low_light                        13.8% [11.5, 16.2] (n=884)
+  occlusion                        35.1% [31.4, 38.9] (n=643)
+  contrast                         14.8% [12.5, 17.2] (n=865)
+  desaturate                       20.9% [18.1, 23.8] (n=789)
+
 Stage 6 - stability
 -------------------
   verdict unanimous (all reruns)   51.9% [48.4, 55.4] (n=799)
   flickering region                38.0% [34.7, 41.4] (n=799)
+  unreadable reply                 0.7% [0.5, 1.0] (n=3995)
   majority overturns baseline      17.9% [15.3, 20.7] (n=799)
 
 Stage 6 - unanimity by baseline verdict

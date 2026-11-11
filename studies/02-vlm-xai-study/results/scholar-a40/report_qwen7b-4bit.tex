@@ -23,6 +23,29 @@ rule\_4 & 25.7\% & [15.7, 35.7] & 70 \\
 \bottomrule
 \end{tabular}
 
+% Stage 2 - every compliant image
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+specificity, matched (C) & 45.1\% & [42.5, 47.9] & 1278 \\
+specificity, unsampled (R) & 42.6\% & [41.5, 43.7] & 7457 \\
+specificity, all compliant & 43.0\% & [41.9, 44.0] & 8735 \\
+\bottomrule
+\end{tabular}
+
+% Stage 2 - false-alarm rate by rule, all compliant
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+rule\_1 & 57.5\% & [55.7, 59.4] & 2670 \\
+rule\_2 & 35.4\% & [33.6, 37.2] & 2713 \\
+rule\_3 & 93.2\% & [92.2, 94.1] & 2599 \\
+rule\_4 & 8.5\% & [6.5, 10.6] & 753 \\
+\bottomrule
+\end{tabular}
+
 % Stage 3 - regions
 \begin{tabular}{lrrr}
 \toprule
@@ -122,6 +145,54 @@ rule\_4 & 90.5\% & [86.4, 94.2] & 242 \\
 \bottomrule
 \end{tabular}
 
+% Stage 9 - completeness (attentional, not causal)
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+explanation supported & 66.5\% & [64.9, 68.0] & 3882 \\
+explanation weak & 11.4\% & [10.4, 12.4] & 3882 \\
+no usable explanation & 22.2\% & [20.8, 23.5] & 3882 \\
+lift $\geq$ 2x (regions only) & 42.6\% & [40.8, 44.3] & 3022 \\
+\bottomrule
+\end{tabular}
+
+% Stage 8 - verdict survives the perturbation
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+blur & 70.4\% & [68.2, 72.6] & 1600 \\
+low\_light & 90.7\% & [89.2, 92.1] & 1600 \\
+occlusion & 80.2\% & [78.2, 82.1] & 1600 \\
+contrast & 90.4\% & [88.9, 91.8] & 1600 \\
+desaturate & 86.6\% & [84.9, 88.2] & 1600 \\
+\bottomrule
+\end{tabular}
+
+% Stage 8 - occlusion survival by hazard hidden
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+hazard $\geq$ 10% hidden & 67.9\% & [62.8, 73.1] & 290 \\
+hazard < 10% hidden & 85.1\% & [79.4, 90.8] & 141 \\
+\bottomrule
+\end{tabular}
+
+% Stage 8 - survived, but region moved > 10% of diagonal
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+blur & 47.7\% & [43.1, 52.3] & 459 \\
+low\_light & 13.8\% & [11.5, 16.2] & 884 \\
+occlusion & 35.1\% & [31.4, 38.9] & 643 \\
+contrast & 14.8\% & [12.5, 17.2] & 865 \\
+desaturate & 20.9\% & [18.1, 23.8] & 789 \\
+\bottomrule
+\end{tabular}
+
 % Stage 6 - stability
 \begin{tabular}{lrrr}
 \toprule
@@ -129,6 +200,7 @@ Metric & Estimate & 95\% CI & $n$ \\
 \midrule
 verdict unanimous (all reruns) & 51.9\% & [48.4, 55.4] & 799 \\
 flickering region & 38.0\% & [34.7, 41.4] & 799 \\
+unreadable reply & 0.7\% & [0.5, 1.0] & 3995 \\
 majority overturns baseline & 17.9\% & [15.3, 20.7] & 799 \\
 \bottomrule
 \end{tabular}
