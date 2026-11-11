@@ -166,20 +166,21 @@ def _summarise(out_csv: Path) -> None:
     print("=" * 66)
 
 
-def row_ok(out_row: dict) -> bool:
-    """Every rerun answered.
+def reply_parse_share(out_row: dict) -> float:
+    """Share of this row's sampled replies that produced a verdict.
 
     Not `verdict`: that column is inherited from the baseline CSV this stage
-    draws its subset from, so the default guard grades Stage 2's output.
+    draws its subset from, so the default guard would grade Stage 2's output.
 
-    An empty slot between the `|` separators means a sampled decode produced
-    nothing parseable. Agreement computed across blanks is not a stability
-    measurement, and sampling decoding is exactly the setting where parse rates
-    degrade -- which is the pre-registered risk this guard exists to catch.
+    Per reply, not per row (decided 2026-11-10). The row-level reading -- one
+    unreadable reply fails all five -- tripped bf16 at 10% of rows from 2.6% of
+    replies, mostly a bare "NONE" at T=0.7. Stage 2's parse rate is per reply,
+    and the guard exists to catch a degrading prompt, which a per-reply rate
+    still does. An empty slot still counts as a disagreement in the agreement
+    rate, and the report gives the unreadable-reply rate on its own line.
     """
-    verdicts = out_row.get("verdicts") or ""
-    parts = verdicts.split("|")
-    return bool(verdicts) and all(p.strip() for p in parts)
+    parts = (out_row.get("verdicts") or "").split("|")
+    return sum(1 for p in parts if p.strip()) / len(parts)
 
 
 def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
@@ -190,7 +191,7 @@ def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
         Path(out_csv), Path(state_json), RESULT_FIELDS, fingerprint,
         resume=resume, force_resume=force_resume,
         checkpoint_every=checkpoint_every, progress_fn=_progress, guards=Guards(),
-        ok_fn=row_ok,
+        ok_fn=reply_parse_share,
     )
 
 

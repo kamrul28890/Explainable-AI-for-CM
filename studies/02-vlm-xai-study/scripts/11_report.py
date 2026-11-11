@@ -238,6 +238,11 @@ def collect(res: Path, model: str, n_boot: int) -> list[dict]:
                 "verdict unanimous (all reruns)", [unanimous(r) for r in ok], n_boot)})
             rows.append({"section": "Stage 6 - stability", **rate_row(
                 "flickering region", [_truthy(r["flickering"]) for r in ok], n_boot)})
+            # Per sampled reply. The bootstrap resamples replies, not rows, so
+            # this CI is somewhat narrow; the rate itself is the point.
+            replies = [v for r in ok for v in r["verdicts"].split("|")]
+            rows.append({"section": "Stage 6 - stability", **rate_row(
+                "unreadable reply", [not v.strip() for v in replies], n_boot)})
 
             # Reruns sample at T=0.7; Stage 2 is greedy. A strict majority of
             # reruns against the greedy verdict means the reported answer is

@@ -204,9 +204,12 @@ class Guards:
         self._ok = 0
         self._latencies: list[float] = []
 
-    def record(self, parsed_ok: bool, latency_s: float) -> None:
+    def record(self, parsed_ok: bool | float, latency_s: float) -> None:
+        """`parsed_ok` is True/False for a one-reply row, or the share of a
+        multi-reply row's replies that parsed (Stage 6), so the parse rate is
+        always per reply."""
         self.n += 1
-        self._ok += bool(parsed_ok)
+        self._ok += float(parsed_ok)
         self._latencies.append(latency_s)
 
     @property
@@ -254,7 +257,7 @@ def run_stage(
     checkpoint_every: int = 100,
     progress_fn: Optional[Callable[[dict], None]] = None,
     guards: Optional[Guards] = None,
-    ok_fn: Optional[Callable[[dict], bool]] = None,
+    ok_fn: Optional[Callable[[dict], bool | float]] = None,
     latency_fn: Optional[Callable[[dict], float]] = None,
 ) -> dict:
     """Run `work_fn` over `rows`, checkpointing every row and skipping done work.
@@ -314,7 +317,7 @@ def run_stage(
             summary["done"] += 1
 
             guards.record(
-                parsed_ok=_row_ok(out_row) if ok_fn is None else bool(ok_fn(out_row)),
+                parsed_ok=_row_ok(out_row) if ok_fn is None else float(ok_fn(out_row)),
                 latency_s=(float(out_row.get("latency_ms") or 0.0) / 1000.0
                            if latency_fn is None else float(latency_fn(out_row))),
             )

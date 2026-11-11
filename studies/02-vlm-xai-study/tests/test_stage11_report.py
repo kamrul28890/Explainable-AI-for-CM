@@ -234,6 +234,20 @@ def test_stability_reports_majority_disagreeing_with_greedy_baseline(tmp_path):
     assert got["majority overturns baseline"]["n"] == 80
 
 
+def test_stability_reports_the_unreadable_reply_rate(tmp_path):
+    """Per sampled reply, not per row: the bf16 failure mode (a bare "NONE"
+    at T=0.7) is a finding in its own right, not a hidden exclusion."""
+    rows = [_stability_row(f"u-{i:03d}", "YES",
+                           ["YES", "", "YES", "YES", "YES"] if i < 10 else ["YES"] * 5,
+                           [""] * 5) for i in range(40)]
+    _write(tmp_path / "stability_m.csv", rows)
+    got = _by_label(stage11.collect(tmp_path, "m", n_boot=200), "Stage 6 - stability")
+    assert got["unreadable reply"]["n"] == 200
+    assert abs(got["unreadable reply"]["point"] - 10 / 200) < 1e-9
+    # a row with a blank reply is not unanimous
+    assert abs(got["verdict unanimous (all reruns)"]["point"] - 30 / 40) < 1e-9
+
+
 def _baseline_row(image_id, stratum, expected, verdict, rule="rule_1"):
     return {"image_id": image_id, "rule_id": rule, "stratum": stratum,
             "is_negative_control": str(expected == "NO"), "expected": expected,

@@ -64,17 +64,33 @@ def test_stage6_latency_is_a_declared_result_field():
     assert "latency_ms" in stage6.RESULT_FIELDS
 
 
-def test_stage6_row_is_healthy_only_when_the_reruns_produced_verdicts():
-    assert stage6.row_ok({"verdicts": "YES|YES|NO|YES|NO"}) is True
-    assert stage6.row_ok({"verdicts": ""}) is False
+def test_stage6_grades_each_reply_not_each_row():
+    """Decided 2026-11-10, after bf16 tripped the guard at T=0.7: 13 of 500
+    sampled replies were unreadable (mostly a bare "NONE"), 2.6% per reply, but
+    one bad reply in five failed the whole row, so 10% of rows. Stage 2's parse
+    rate is per reply; Stage 6's now is too. An unreadable reply still counts as
+    a disagreement in the agreement rate -- nothing about the measurement moved."""
+    assert stage6.reply_parse_share({"verdicts": "YES|YES|NO|YES|NO"}) == 1.0
+    assert stage6.reply_parse_share({"verdicts": "YES||NO|YES|NO"}) == 0.8
+    assert stage6.reply_parse_share({"verdicts": "||||"}) == 0.0
+    assert stage6.reply_parse_share({"verdicts": ""}) == 0.0
 
 
-def test_stage6_row_ok_requires_every_rerun_to_have_answered():
-    """`||` between reruns means a sampled decode produced nothing parseable.
-    Agreement computed over blanks is not a stability measurement."""
-    assert stage6.row_ok({"verdicts": "YES||NO|YES|NO"}) is False
-
-
-def test_stage6_row_ok_ignores_the_inherited_baseline_verdict():
+def test_stage6_parse_share_ignores_the_inherited_baseline_verdict():
     row = {"verdict": "YES", "baseline_verdict": "YES", "verdicts": ""}
-    assert stage6.row_ok(row) is False
+    assert stage6.reply_parse_share(row) == 0.0
+
+
+def test_the_bf16_failure_rate_passes_and_a_real_collapse_does_not():
+    from xai_vlm.runner import GUARD_MIN_ROWS, GuardTripped, Guards
+    import pytest
+    g = Guards()
+    for i in range(GUARD_MIN_ROWS):                 # 13 bad replies in 500
+        g.record(parsed_ok=stage6.reply_parse_share(
+            {"verdicts": "YES||NO|YES|NO" if i < 13 else "YES|NO|YES|NO|YES"}), latency_s=9.0)
+    g.check()
+    g = Guards()
+    for i in range(GUARD_MIN_ROWS):                 # half the replies blank
+        g.record(parsed_ok=stage6.reply_parse_share({"verdicts": "YES|||NO|"}), latency_s=9.0)
+    with pytest.raises(GuardTripped):
+        g.check()

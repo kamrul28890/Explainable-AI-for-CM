@@ -138,6 +138,17 @@ def test_healthy_run_does_not_trip():
     g.check()  # must not raise
 
 
+def test_a_row_can_report_the_share_of_its_replies_that_parsed():
+    """Stage 6 asks five times per row. Decided 2026-11-10: its parse rate is
+    per reply, as Stage 2's is, so a row contributes the share that parsed."""
+    g = Guards()
+    for _ in range(GUARD_MIN_ROWS):
+        g.record(parsed_ok=0.8, latency_s=2.9)
+    assert abs(g.parse_rate - 0.8) < 1e-9
+    with pytest.raises(GuardTripped):
+        g.check()
+
+
 def test_latency_spill_aborts():
     g = Guards()
     for _ in range(GUARD_MIN_ROWS):
