@@ -1,0 +1,45 @@
+\chapter{The \S5.5 Annotation Audit: Draw and Labelling Page}
+\label{chap:s2-6}
+
+\section{Goal}
+
+The dataset grades its own annotations, and 47\% of images are self-flagged ``poor info''. Every Study~2
+figure is measured against those annotations, so they are a reference standard, not ground truth.
+Architecture document \S5.5 asks a person to relabel 100 images, 50 per quality tier, so that the
+annotation error rate can be reported beside every result.
+
+\section{What Was Done}
+
+\textbf{The draw.} \texttt{12\_audit\_sample.py} draws from the whole corpus (10,013 images), not the study
+sample. The pre-registered draw was a pure random 50 per tier with seed 42. It held 3 hazard images in 100,
+too few to estimate how often a \emph{marked} violation is wrong. \textbf{Decided 2026-11-10:} stratify by
+hazard within tier --- 25 images with an annotated violation and 25 without, per tier, each pool drawn with
+its own seeded generator and independent of record order. Corpus-level error rates are reweighted to the
+true 12.8\% hazard prevalence. The 50 hazard images carry 38 rule\_1, 7 rule\_3, 3 rule\_2 and 3 rule\_4
+violations, so per-rule rates beyond PPE will rest on very few images. 61 of the 100 images were in the
+study sample and carry a model answer.
+
+\textbf{The labelling page.} A private web page presents each image, downscaled to a 1,024-pixel long side.
+Step one is blind: the auditor answers the four rule questions (yes / no / can't tell) from the photograph
+alone and saves. Only then does the page reveal the dataset's annotation boxes and the model's answer and
+region, and the blind answers lock. Step two asks, per annotated box, whether it sits on its hazard (yes /
+partly / no), with a free-text note. Each auditor's answers are stored under their own identity; the owner
+can read all of them.
+
+\section{Status}
+
+Built and checked empty at owner and contributor access. Awaiting an auditor. A scoring script --- error
+rates per tier with intervals, reweighted to prevalence --- is written once answers exist.
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Standard.} Blind relabelling of a reference standard; stratified sampling with reweighting.
+
+\textbf{Non-standard, and stated in the paper.} The stratified draw replaces the pre-registered pure random
+draw, decided after seeing that the random draw could not answer the question it was for. Blind-then-reveal
+in one page keeps the first answers uncontaminated while still collecting box-level judgements.
+
+\section{Implications}
+
+Until the audit is done, every accuracy and explanation figure in Study~2 is ``agreement with the dataset's
+annotations''. The audit turns that into an estimate with a known error.

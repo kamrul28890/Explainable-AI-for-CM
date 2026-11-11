@@ -1,0 +1,69 @@
+\chapter{Every Compliant Image, Not Only the Sampled Ones}
+\label{chap:s2-2}
+
+\section{Goal}
+
+The Stage~1 sample is deliberate (architecture document \S5.3): all 1,278 images with an annotated violation
+and 1,278 compliant images matched to them, 3,882 (image, rule) questions in all. That left 7,457 compliant
+images the model never saw. Specificity measured on the matched stratum is only as good as the matching, so
+this phase asks the model about every one of them.
+
+\section{What Was Done}
+
+\texttt{01\_build\_sample.py -{}-complement} writes \texttt{complement\_manifest.csv}: one row per unsampled
+compliant image, stratum ``R'', with the rule asked chosen by the same \texttt{rules\_to\_ask} logic as the
+main sample (one rule per image, as before). The manifest was built locally first (7,457 rows, SHA-256
+\texttt{cccec48c\ldots}); Scholar rebuilt it and the chain refused to start unless the hash matched, which it
+did byte for byte. Stage~2 then ran on it in a separate chain, writing
+\texttt{baseline\_qwen7b-4bit\_complement.csv}, so the frozen sample files are untouched.
+
+\section{Results}
+
+\begin{center}
+\begin{tabular}{p{6.4cm}rr}
+\toprule
+\textbf{specificity} & \textbf{estimate [95\% CI]} & $n$ \\
+\midrule
+matched compliant stratum (C)  & 45.1\% [42.5, 47.9] & 1,278 \\
+unsampled compliant images (R) & 42.6\% [41.5, 43.7] & 7,457 \\
+all compliant questions        & 43.0\% [41.9, 44.0] & 8,735 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Specificity on the whole compliant corpus (A40, 4-bit). The matched stratum is within
+2.5 points of the images it was meant to stand for.}
+\label{tab:s22-spec}
+\end{center}
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+\textbf{rule} & \textbf{false-alarm rate, all compliant} & $n$ \\
+\midrule
+rule\_1 (PPE)            & 57.5\% & 2,670 \\
+rule\_2 (fall protection) & 35.4\% & 2,713 \\
+rule\_3 (unprotected edge) & 93.2\% & 2,599 \\
+rule\_4 (machinery zone)   & 8.5\%  & 753 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{False alarms by rule over every compliant question.}
+\label{tab:s22-rules}
+\end{center}
+
+\section{Problems and Solutions}
+
+None at run time. The one design choice --- a single rule per unsampled image rather than all applicable
+rules --- was kept from the main sample so the two strata are comparable; asking every applicable rule would
+have roughly doubled the run for a different estimand.
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Standard.} Validating a stratified sample against the population it represents.
+
+\textbf{Non-standard.} Hash-gating the manifest across machines, so the cluster run provably asked the
+questions that were built and reviewed locally.
+
+\section{Implications}
+
+The study sample does not flatter the model: specificity is about 43\% whichever compliant images are used.
+rule\_3 is the extreme --- on 93\% of compliant questions the model reports a violation --- and the paper
+should state it per rule, since the pooled false-alarm rate hides a range from 8.5\% to 93.2\%.

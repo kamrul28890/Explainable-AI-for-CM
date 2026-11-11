@@ -405,7 +405,7 @@ throughout.
 | 2 | Related work — VLM safety eval, XAI metrics | **not started** |
 | 3 | Dataset, two-stratum sampling, prevalence reweighting | data ready |
 | 4 | Protocol — seven metrics, pre-registration, the harness | mostly written in specs |
-| 5 | Results — F1–F7 | F1–F6 ready; F7 blocked, see entry |
+| 5 | Results — F1–F7, plus Stage 6, Stage 8, whole-corpus specificity, bf16 arm | F1–F6 ready; F7 redefined on attention (decided 2026-11-10); the rest in `report/log/` (Study 2 engineering log) |
 | 6 | Discussion — what accuracy hides | outline |
 | 7 | Threats to validity — annotation quality, IoU severity, single model | partly written |
 | 8 | Methodological lessons — M1–M8 | outline |

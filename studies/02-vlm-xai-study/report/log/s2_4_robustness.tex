@@ -1,0 +1,70 @@
+\chapter{Stage 8 Robustness at Pre-Approved Strengths}
+\label{chap:s2-4}
+
+\section{Goal}
+
+Does a verdict, and the region that explains it, survive the kind of image degradation a site camera
+produces? Stage~8 had not been built. This phase builds it, with the perturbation strengths fixed and
+approved before any run, so they could not be tuned against results.
+
+\section{What Was Done}
+
+Five perturbations, applied one at a time, never combined:
+
+\begin{center}
+\begin{tabular}{lp{9.2cm}}
+\toprule
+\textbf{perturbation} & \textbf{strength (approved 2026-11-10)} \\
+\midrule
+blur       & Gaussian, $\sigma = 1\%$ of the image's long side \\
+low light  & $-2$ EV, applied in linear light, not gamma-encoded values \\
+occlusion  & a mean-luminance grey block over the centre 50\% $\times$ 50\% of the image \\
+contrast   & factor 0.4 \\
+desaturate & ITU-R 601-2 luma \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The subset is 1,600 Stage~2 rows (800 YES, 800 NO, at least 40 per rule), seed 42; each row is asked again
+under each perturbation with greedy decoding. Per perturbation the stage records the new verdict, whether it
+matches the baseline, the region, and the baseline-to-perturbed centroid distance over the image diagonal.
+A surviving verdict whose region moved more than 10\% of the diagonal is flagged --- the same cut-off Stage~6
+now uses. For occlusion it also records how much of the annotated hazard the block hides, so the case where
+the block covers the hazard itself is reported separately. The strengths are part of the run fingerprint.
+
+\section{Results}
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+\textbf{perturbation} & \textbf{verdict survives} & \textbf{survived, region moved $>10\%$} \\
+\midrule
+blur       & 70.4\% [68.2, 72.6] & 47.7\% ($n=459$) \\
+low light  & 90.7\% [89.2, 92.1] & 13.8\% ($n=884$) \\
+occlusion  & 80.2\% [78.2, 82.1] & 35.1\% ($n=643$) \\
+contrast   & 90.4\% [88.9, 91.8] & 14.8\% ($n=865$) \\
+desaturate & 86.6\% [84.9, 88.2] & 20.9\% ($n=789$) \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Stage 8, A40, 4-bit, $n=1{,}600$ per perturbation. The drift column is over rows that
+survived and named a region both times.}
+\label{tab:s24}
+\end{center}
+
+Occlusion that hides at least 10\% of the annotated hazard leaves the verdict standing 67.9\% of the time
+($n=290$); occlusion that hides less leaves it standing 85.1\% ($n=141$). That is the direction expected if
+the model's verdict depends on the hazard rather than on the scene around it.
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Standard.} One-factor-at-a-time perturbation; survival rate per perturbation, never pooled.
+
+\textbf{Non-standard.} Strengths fixed and approved before any run; low light simulated in linear light;
+the occluder's coverage of the annotated hazard recorded per row, so occlusion results separate ``hid the
+evidence'' from ``hid something else''.
+
+\section{Implications}
+
+Mild blur is the most damaging change: three verdicts in ten flip, and when the verdict survives, the
+region moves in almost half the cases. A surviving verdict is not a surviving explanation --- the paper
+should report both columns.

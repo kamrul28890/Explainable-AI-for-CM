@@ -1,0 +1,25 @@
+\documentclass[11pt,letterpaper]{report}
+% Study 2 reuses the Study 1 report's preamble (colours, fonts, tikz styles) so the
+% two engineering logs read as one document family.
+\input{../../../01-florence2-pilot/report/chapters/preamble}
+
+\lhead{\footnotesize\color{mutedgray}Study 2 --- Scholar Phase}
+\rhead{\footnotesize\color{mutedgray}Explainable VLMs for Construction Safety}
+
+\title{\bfseries\color{inkblue} Study 2, Qwen2.5-VL-7B:\\ The Full Battery on an A40, the Whole Corpus,\\ and the Unquantised Arm}
+\author{Engineering log, prepared for research collaboration with Professor Mustafa Abdallah}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+% One \include per phase item, in the order the work was done.
+\include{s2_1_a40_battery}
+\include{s2_2_whole_corpus}
+\include{s2_3_attention_completeness}
+\include{s2_4_robustness}
+\include{s2_5_bf16}
+\include{s2_6_audit}
+
+\end{document}
