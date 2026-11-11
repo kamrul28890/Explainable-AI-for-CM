@@ -1,0 +1,80 @@
+== chain final link 1  job 487387  successor 487388  host scholar-j001.rcac.purdue.edu
+== commit 2530e9d0a9a5a9bac0ec4886d4aa5d0103f35bf5  model qwen7b-bf16  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40
+NVIDIA A40, 46068 MiB
+-- stage9: start 2026-11-11T04:25:55-05:00  (budget 12900s)
+======================================================================
+BOUNDED COMPLETENESS, ablation basis  (n=3882)
+  no_usable_explanation    20.5%
+  explanation_supported    7.4%
+  explanation_weak         72.1%
+  not_measured             0.0%
+
+  among measured rows:
+    supported : 7.4% [6.5, 8.2] (n=3882)
+    weak      : 72.1% [70.7, 73.5] (n=3882)
+
+  `explanation_weak` is the result to read hardest: the model named
+  a region, the region did not matter, and a reader shown only that
+  region would have been misled about why the system decided.
+  NOT REPORTABLE (F7): the token-ablation flip it rests on has a
+  51.7% artefact floor against a 5.9% signal.
+
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/completeness_qwen7b-bf16.csv
+======================================================================
+-- stage9: rc=0  2026-11-11T04:26:06-05:00
+-- stage9_attention: start 2026-11-11T04:26:06-05:00  (budget 12889s)
+======================================================================
+BOUNDED COMPLETENESS, attention basis  (n=3882)
+  no_usable_explanation    20.5%
+  explanation_supported    68.3%
+  explanation_weak         11.2%
+  not_measured             0.0%
+
+  among measured rows:
+    supported : 68.3% [66.8, 69.8] (n=3882)
+    weak      : 11.2% [10.2, 12.2] (n=3882)
+
+  attention lift (mass / area, 1.0 = chance): median 1.76, >= 2x in 43.2% of regions
+  ATTENTIONAL, not causal: `supported` means the model looked inside
+  the region it named more than chance, not that the region drove the
+  answer. `weak`: it named a region and looked no more there than
+  anywhere else.
+
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/completeness_attention_qwen7b-bf16.csv
+======================================================================
+-- stage9_attention: rc=0  2026-11-11T04:26:08-05:00
+-- stage10: start 2026-11-11T04:26:08-05:00  (budget 12887s)
+loading annotations ...
+  2556 images
+scoring ...
+
+==================================================================
+scored 1232 of 3882   undefined 2650
+     1617  no_annotation_box
+     1002  verdict_no
+       31  no_region
+
+explanation CORRECT rate : 2.1%
+RIGHT ANSWER, WRONG REASON : 97.9% (1206/1232)
+  the model was right, and could not say why correctly
+
+signal pass rates among scored rows:
+  similarity >= 0.6 : 58.4%
+  hazard match          : 93.6%
+  IoU >= 0.3          : 6.6%
+
+split by quality_of_info:
+  poor info    2.7%  (n=477)
+  rich info    1.7%  (n=755)
+
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/explanation_correctness_qwen7b-bf16.csv
+==================================================================
+-- stage10: rc=0  2026-11-11T04:29:30-05:00
+-- stage11_text: start 2026-11-11T04:29:30-05:00  (budget 12685s)
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/report_qwen7b-bf16.txt
+-- stage11_text: rc=0  2026-11-11T04:29:46-05:00
+-- stage11_latex: start 2026-11-11T04:29:46-05:00  (budget 12669s)
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/report_qwen7b-bf16.tex
+-- stage11_latex: rc=0  2026-11-11T04:30:03-05:00
+== chain final DONE
+== BATTERY COMPLETE  2026-11-11T04:30:03-05:00

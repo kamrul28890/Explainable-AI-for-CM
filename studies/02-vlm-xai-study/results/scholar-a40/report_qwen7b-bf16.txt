@@ -1,0 +1,111 @@
+Study 2 headline figures -- qwen7b-bf16
+bootstrap 95% CI, 10000 resamples, reporting floor n=30
+
+Stage 2 - baseline
+------------------
+  sensitivity                      93.8% [92.5, 95.1] (n=1327)
+  specificity                      36.0% [34.2, 37.9] (n=2555)
+  false-alarm rate                 64.0% [62.1, 65.8] (n=2555)
+  YES share                        74.2% [72.8, 75.6] (n=3882)
+  parse rate                       100.0% [99.9, 100.0] (n=3882)
+
+Stage 2 - sensitivity by rule
+-----------------------------
+  rule_1                           93.7% [92.2, 95.2] (n=1001)
+  rule_2                           96.4% [91.7, 100.0] (n=84)
+  rule_3                           98.3% [95.9, 100.0] (n=172)
+  rule_4                           81.4% [71.4, 90.0] (n=70)
+
+Stage 3 - regions
+-----------------
+  no-region rate (all)             20.5% [19.2, 21.8] (n=3882)
+  no-region rate (YES only)        1.1% [0.7, 1.5] (n=2880)
+
+Stage 10 - explanation correctness
+----------------------------------
+  explanation correct              2.1% [1.4, 2.9] (n=1232)
+  similarity >= 0.60               58.4% [55.8, 61.1] (n=1232)
+  hazard match                     93.6% [92.2, 94.9] (n=1232)
+  IoU >= 0.30                      6.6% [5.2, 8.0] (n=1232)
+  right answer, wrong reason       97.9% [97.1, 98.6] (n=1232)
+
+Stage 10 - by quality_of_info
+-----------------------------
+  poor info                        2.7% [1.5, 4.2] (n=477)
+  rich info                        1.7% [0.8, 2.8] (n=755)
+
+Stage 4 - descriptive accuracy
+------------------------------
+  flip rate (black)                6.8% [5.9, 7.7] (n=2849)
+  flip rate (tokens)               5.2% [4.4, 6.0] (n=2849)
+
+Stage 4 - flip rate by rule (black)
+-----------------------------------
+  rule_1                           3.9% [2.8, 5.0] (n=1233)
+  rule_2                           10.5% [7.6, 13.5] (n=446)
+  rule_3                           7.9% [6.3, 9.7] (n=974)
+  rule_4                           11.2% [7.1, 15.8] (n=196)
+
+Stage 4 - flip rate by rule (tokens)
+------------------------------------
+  rule_1                           3.2% [2.3, 4.3] (n=1233)
+  rule_2                           9.6% [7.0, 12.6] (n=446)
+  rule_3                           4.2% [3.0, 5.5] (n=974)
+  rule_4                           12.2% [7.7, 17.3] (n=196)
+
+Stage 4 - artefact floor
+------------------------
+  NO->YES (black)                  31.6% [25.7, 37.6] (n=237)
+  NO->YES (tokens)                 58.2% [51.9, 64.6] (n=237)
+  methods disagree                 10.6% [9.5, 11.7] (n=3086)
+
+Stage 5 - sparsity
+------------------
+  attention exceeds area null      85.9% [84.7, 87.1] (n=3086)
+
+Stage 5 - attention vs area null by rule
+----------------------------------------
+  rule_1                           82.8% [80.7, 84.8] (n=1346)
+  rule_2                           86.2% [83.2, 89.1] (n=523)
+  rule_3                           89.0% [86.9, 90.8] (n=979)
+  rule_4                           90.3% [86.6, 93.7] (n=238)
+
+Stage 9 - completeness (attentional, not causal)
+------------------------------------------------
+  explanation supported            68.3% [66.8, 69.8] (n=3882)
+  explanation weak                 11.2% [10.2, 12.2] (n=3882)
+  no usable explanation            20.5% [19.2, 21.8] (n=3882)
+  lift >= 2x (regions only)        43.2% [41.4, 44.9] (n=3086)
+
+Stage 8 - verdict survives the perturbation
+-------------------------------------------
+  blur                             68.8% [66.5, 71.0] (n=1598)
+  low_light                        90.9% [89.6, 92.3] (n=1599)
+  occlusion                        79.4% [77.4, 81.3] (n=1599)
+  contrast                         89.4% [87.9, 90.9] (n=1599)
+  desaturate                       86.0% [84.2, 87.7] (n=1599)
+
+Stage 8 - occlusion survival by hazard hidden
+---------------------------------------------
+  hazard >= 10% hidden             70.8% [65.3, 76.4] (n=271)
+  hazard < 10% hidden              81.2% [74.4, 87.2] (n=133)
+
+Stage 8 - survived, but region moved > 10% of diagonal
+------------------------------------------------------
+  blur                             42.6% [37.6, 47.6] (n=380)
+  low_light                        14.6% [12.2, 17.1] (n=841)
+  occlusion                        34.2% [30.4, 38.1] (n=593)
+  contrast                         13.8% [11.4, 16.3] (n=804)
+  desaturate                       18.5% [15.8, 21.3] (n=764)
+
+Stage 6 - stability
+-------------------
+  verdict unanimous (all reruns)   47.0% [43.5, 50.4] (n=800)
+  flickering region                40.4% [37.0, 43.8] (n=800)
+  unreadable reply                 2.3% [1.8, 2.8] (n=4000)
+  majority overturns baseline      17.4% [14.8, 20.0] (n=800)
+
+Stage 6 - unanimity by baseline verdict
+---------------------------------------
+  baseline YES                     57.2% [52.2, 62.0] (n=400)
+  baseline NO                      36.8% [32.0, 41.5] (n=400)
