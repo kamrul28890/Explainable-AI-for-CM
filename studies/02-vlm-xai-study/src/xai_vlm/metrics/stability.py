@@ -39,6 +39,12 @@ def region_presence_rate(regions: list[str]) -> float:
     return sum(1 for r in regions if (r or "").strip()) / len(regions)
 
 
+# A region "moved" when its centroid shifts by more than this share of the image
+# diagonal. One cut-off for Stage 6 (between reruns) and Stage 8 (under a
+# perturbation), so the two drift rates read on one scale.
+DRIFT_FLAG = 0.10
+
+
 def centroid(box: Box) -> tuple[float, float]:
     x0, y0, x1, y1 = box
     return ((x0 + x1) / 2.0, (y0 + y1) / 2.0)

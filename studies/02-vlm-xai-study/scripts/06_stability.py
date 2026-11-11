@@ -166,6 +166,21 @@ def _summarise(out_csv: Path) -> None:
     print("=" * 66)
 
 
+def attach_sizes(work_rows: list[dict], region_rows: list[dict]) -> list[dict]:
+    """Copy each row's image size from Stage 3's regions file.
+
+    Stage 2 rows carry no image size, so without this `mean_centroid_drift` is
+    never computed (the first two Stage 6 runs left it empty; the report now
+    recomputes it from the stored regions)."""
+    sizes = {(r["image_id"], r["rule_id"]): (r.get("image_w"), r.get("image_h"))
+             for r in region_rows}
+    out = []
+    for row in work_rows:
+        w, h = sizes.get((row["image_id"], row["rule_id"]), (None, None))
+        out.append({**row, "image_w": w, "image_h": h} if w and h else dict(row))
+    return out
+
+
 def reply_parse_share(out_row: dict) -> float:
     """Share of this row's sampled replies that produced a verdict.
 
@@ -237,6 +252,10 @@ def main() -> int:
     with baseline.open(newline="", encoding="utf-8") as fh:
         baseline_rows = list(csv.DictReader(fh))
     work_rows = build_subset(baseline_rows, seed=args.seed)
+    regions_csv = res / f"regions_{args.model}.csv"
+    if regions_csv.exists():
+        with regions_csv.open(newline="", encoding="utf-8") as fh:
+            work_rows = attach_sizes(work_rows, list(csv.DictReader(fh)))
     if args.limit is not None:
         work_rows = work_rows[:args.limit]
     n_yes = sum(1 for r in work_rows if r["verdict"] == "YES")

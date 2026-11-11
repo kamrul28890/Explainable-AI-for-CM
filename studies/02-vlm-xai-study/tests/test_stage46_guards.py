@@ -94,3 +94,11 @@ def test_the_bf16_failure_rate_passes_and_a_real_collapse_does_not():
         g.record(parsed_ok=stage6.reply_parse_share({"verdicts": "YES|||NO|"}), latency_s=9.0)
     with pytest.raises(GuardTripped):
         g.check()
+
+
+def test_stage6_takes_image_sizes_from_stage3_so_drift_can_be_computed():
+    work = [{"image_id": "a", "rule_id": "rule_1"}, {"image_id": "b", "rule_id": "rule_2"}]
+    regions = [{"image_id": "a", "rule_id": "rule_1", "image_w": "1000", "image_h": "800"}]
+    got = stage6.attach_sizes(work, regions)
+    assert (got[0]["image_w"], got[0]["image_h"]) == ("1000", "800")
+    assert "image_w" not in got[1]

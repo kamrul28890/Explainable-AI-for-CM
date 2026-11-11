@@ -23,6 +23,8 @@ sys.path.insert(0, str(STUDY_ROOT / "src"))
 from xai_vlm import config  # noqa: E402
 
 from xai_vlm.metrics.reporting import MIN_N_FLOOR, rate_row  # noqa: E402
+from xai_vlm.metrics.stability import (  # noqa: E402
+    DRIFT_FLAG, mean_pairwise_centroid_drift, parse_box)
 
 
 def _read(path: Path) -> list[dict]:
@@ -238,6 +240,25 @@ def collect(res: Path, model: str, n_boot: int) -> list[dict]:
                 "verdict unanimous (all reruns)", [unanimous(r) for r in ok], n_boot)})
             rows.append({"section": "Stage 6 - stability", **rate_row(
                 "flickering region", [_truthy(r["flickering"]) for r in ok], n_boot)})
+            # Region drift across reruns. Stage 6's own column is empty: its
+            # input rows (Stage 2) carry no image size, so the drift was never
+            # computed in-run. Stage 3's regions file has the size of every
+            # (image, rule), so it is recomputed here from the stored regions.
+            # Same 10%-of-diagonal cut-off as Stage 8's "region moved".
+            sizes = {(r["image_id"], r["rule_id"]): (r.get("image_w"), r.get("image_h"))
+                     for r in _read(res / f"regions_{model}.csv")}
+            drifted = []
+            for r in ok:
+                w, h = sizes.get((r["image_id"], r["rule_id"]), (None, None))
+                boxes = [b for b in (parse_box(x) for x in r["regions"].split("|"))
+                         if b is not None]
+                if w and h and len(boxes) >= 2:
+                    drifted.append(mean_pairwise_centroid_drift(
+                        boxes, (int(w), int(h))) > DRIFT_FLAG)
+            if drifted:
+                rows.append({"section": "Stage 6 - stability", **rate_row(
+                    "region drift > 10% of diagonal", drifted, n_boot)})
+
             # Per sampled reply. The bootstrap resamples replies, not rows, so
             # this CI is somewhat narrow; the rate itself is the point.
             replies = [v for r in ok for v in r["verdicts"].split("|")]

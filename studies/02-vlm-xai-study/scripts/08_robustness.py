@@ -32,16 +32,17 @@ sys.path.insert(0, str(STUDY_ROOT / "src"))
 
 from xai_vlm import config  # noqa: E402
 from xai_vlm import perturbations as P  # noqa: E402
-from xai_vlm.metrics.stability import normalized_centroid_distance, parse_box  # noqa: E402
+from xai_vlm.metrics.stability import (  # noqa: E402
+    DRIFT_FLAG, normalized_centroid_distance, parse_box)
 from xai_vlm.runner import Guards, backend_device, manifest_sha256, run_stage  # noqa: E402
 from xai_vlm.sampling import floor_then_proportional_sample  # noqa: E402
 
 # Plan 3c: 1,600 rows, same stratification scheme as Stages 4 and 6, seed 42.
 SUBSET_SIZE = 1600
 PER_RULE_FLOOR = 40
-# A reporting flag, not a strength: a surviving verdict whose region moved more
-# than a tenth of the image diagonal is pointing somewhere else.
-DRIFT_FLAG = 0.10
+# DRIFT_FLAG (metrics.stability, 0.10) is a reporting flag, not a strength: a
+# surviving verdict whose region moved more than a tenth of the image diagonal
+# is pointing somewhere else. Shared with Stage 6.
 
 RESULT_FIELDS = (
     ["image_id", "rule_id", "quality_of_info", "baseline_verdict", "baseline_region",

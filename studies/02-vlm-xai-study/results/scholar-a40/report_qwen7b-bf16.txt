@@ -102,6 +102,7 @@ Stage 6 - stability
 -------------------
   verdict unanimous (all reruns)   47.0% [43.5, 50.4] (n=800)
   flickering region                40.4% [37.0, 43.8] (n=800)
+  region drift > 10% of diagonal   38.2% [34.4, 42.0] (n=602)
   unreadable reply                 2.3% [1.8, 2.8] (n=4000)
   majority overturns baseline      17.4% [14.8, 20.0] (n=800)
 

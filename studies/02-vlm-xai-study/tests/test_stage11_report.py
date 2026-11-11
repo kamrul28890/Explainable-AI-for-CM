@@ -248,6 +248,26 @@ def test_stability_reports_the_unreadable_reply_rate(tmp_path):
     assert abs(got["verdict unanimous (all reruns)"]["point"] - 30 / 40) < 1e-9
 
 
+def test_stability_reports_region_drift_using_stage3_image_sizes(tmp_path):
+    """Stage 6 never filled mean_centroid_drift: its input rows (Stage 2) carry
+    no image size. Stage 3's regions file does, so the report joins on it."""
+    near, far = "(100.0, 100.0, 200.0, 200.0)", "(700.0, 500.0, 800.0, 600.0)"
+    rows, regions = [], []
+    for i in range(40):
+        r = [near, far, near, near, near] if i < 10 else [near] * 5
+        rows.append(_stability_row(f"d-{i:03d}", "YES", ["YES"] * 5, r))
+        regions.append({"image_id": f"d-{i:03d}", "rule_id": "rule_1", "verdict": "YES",
+                        "source": "model", "region": near, "image_w": "1000", "image_h": "800"})
+    rows.append(_stability_row("one-box", "YES", ["YES"] * 5, [near, "", "", "", ""]))
+    rows.append(_stability_row("no-size", "YES", ["YES"] * 5, [near, far, near, near, near]))
+    _write(tmp_path / "stability_m.csv", rows)
+    _write(tmp_path / "regions_m.csv", regions)
+    got = _by_label(stage11.collect(tmp_path, "m", n_boot=200), "Stage 6 - stability")
+    lab = "region drift > 10% of diagonal"
+    assert got[lab]["n"] == 40          # one-box and no-size rows count nowhere
+    assert abs(got[lab]["point"] - 10 / 40) < 1e-9
+
+
 def _baseline_row(image_id, stratum, expected, verdict, rule="rule_1"):
     return {"image_id": image_id, "rule_id": rule, "stratum": stratum,
             "is_negative_control": str(expected == "NO"), "expected": expected,
