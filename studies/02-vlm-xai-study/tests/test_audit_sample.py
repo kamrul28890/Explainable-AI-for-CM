@@ -69,3 +69,13 @@ def test_model_regions_are_normalised_by_the_original_image_size():
     item = audit.to_item(rec, size=(1200, 900), model_rows=rows)
     assert item["model"]["rule_1"]["region"] == [0.1, 0.1, 0.2, 0.2]
     assert item["model"]["rule_1"]["verdict"] == "YES"
+
+
+def test_strata_give_each_tier_its_size_and_hazard_count_for_reweighting():
+    from xai_vlm.rules import violated_rules
+    recs = _records()
+    got = {r["quality_of_info"]: r for r in audit.strata_rows(recs)}
+    assert got["rich info"]["images"] == 280
+    assert got["rich info"]["hazard_images"] == sum(
+        1 for r in recs if r["quality_of_info"] == "rich info" and violated_rules(r))
+    assert got["poor info"]["images"] == 210

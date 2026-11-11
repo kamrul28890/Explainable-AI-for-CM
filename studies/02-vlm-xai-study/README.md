@@ -35,7 +35,7 @@ safety judgement can be trusted — not just whether its answer is right.
 | `metrics/completeness.py` — Stage 9 | ablation basis: ✅ run, ⚠️ not reportable (F7) · attention basis (`--basis attention`): ✅ run, reported |
 | `perturbations.py` + `08_robustness.py` — Stage 8 | ✅ implemented and tested; strengths approved 2026-11-10 before any run; running on Scholar |
 
-321 tests: 308 without a GPU, 13 requiring `--gpu`.
+328 tests: 315 without a GPU, 13 requiring `--gpu`.
 
 ## Results so far
 

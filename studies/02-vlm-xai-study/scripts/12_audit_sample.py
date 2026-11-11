@@ -8,7 +8,7 @@ the reference is -- reported beside every result.
 Drawn from the whole corpus (10,013 images), not the study sample: per quality
 tier, 25 images with an annotated violation and 25 without (see `draw`).
 
-    python scripts/12_audit_sample.py                    # writes audit_manifest.csv
+    python scripts/12_audit_sample.py                    # audit_manifest.csv + audit_strata.csv
     python scripts/12_audit_sample.py --export DIR       # + images and items.json
 
 `--export` writes what the labelling page shows: each image downscaled to a
@@ -53,6 +53,15 @@ def draw(records: list[dict], per_tier: int = PER_TIER, seed: int = 42) -> list[
             rng = random.Random(f"audit-{tier}-{'H' if hazard else 'C'}-{seed}")
             out.extend(rng.sample(pool, per_tier // 2))
     return sorted(out, key=lambda r: (TIERS.index(r["quality_of_info"]), r["image_id"]))
+
+
+def strata_rows(records: list[dict]) -> list[dict]:
+    """Corpus size and hazard count per tier: what the audit score reweights to."""
+    return [{"quality_of_info": t,
+             "images": sum(1 for r in records if r.get("quality_of_info") == t),
+             "hazard_images": sum(1 for r in records
+                                  if r.get("quality_of_info") == t and violated_rules(r))}
+            for t in TIERS]
 
 
 def _region_norm(text: str, size: tuple[int, int]):
@@ -110,6 +119,10 @@ def main() -> int:
         for r in chosen:
             w.writerow([r["image_id"], r["quality_of_info"],
                         "|".join(rid for rid in RULE_IDS if r.get(f"{rid}_violation"))])
+    with (config.RESULTS_DIR / "audit_strata.csv").open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=["quality_of_info", "images", "hazard_images"])
+        w.writeheader()
+        w.writerows(strata_rows(records))
     n_h = sum(any(r.get(f"{rid}_violation") for rid in RULE_IDS) for r in chosen)
     print(f"wrote {out}: {len(chosen)} images, {n_h} with an annotated violation")
     if not args.export:
