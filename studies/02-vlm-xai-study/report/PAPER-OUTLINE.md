@@ -65,6 +65,16 @@ model handles worst is among the most lethal.
 only rule with a context gate (`excavator`). Testing this needs a prompt ablation,
 not yet run.
 
+*The rule_4 audit (2026-11-12, chapter s2-7) confirms this against a corrected
+reference.* 92 rule_4 rows were drawn stratified by both tiers' answers and
+relabelled blind. The owner adjudicated the 40 disagreement or can't-tell images
+and changed 8. 4-bit corrected sensitivity is 26.4% [18.3, 34.5] (annotation
+25.7%). bf16 is 82.2%. The annotation under-marks rule_4: about 80 real
+violations among the 253 unannotated rows, against 70 marked. So the bf16 tier's
+rule_4 false-alarm rate on compliant images is 20.3% [10.8, 28.6], not 31.2%, and
+its specificity is 58.1%, not 45.1%. This qualifies F1 for rule_4: some of the
+"false alarms" are hazards the annotators missed.
+
 ### F3 — The model describes hazards well and locates them badly
 `results/explanation_correctness_qwen7b-4bit.csv`, scored n=1,191
 

@@ -1,0 +1,10 @@
+{
+  "image_id": "0010407",
+  "rule_4": "yes",
+  "note": "",
+  "auditor": "owner-adjudicated",
+  "standard": "Dataset rule 4: worker in the blind spot or operating radius of an excavator in operation or with an operator inside. Yes needs a worker on foot within the arm's reach or tail swing of an excavator that is working or manned; unsure when distance (perspective) or operation cannot be judged.",
+  "saved_at": "2026-11-12T20:07:53+00:00",
+  "first_reader": "yes",
+  "source": "owner"
+}
