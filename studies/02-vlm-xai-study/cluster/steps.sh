@@ -52,7 +52,7 @@ chain_base() {
     step stage7 $PY scripts/07_efficiency.py --model "$MODEL"               || return $?
 }
 chain_s4() { step stage4 $PY scripts/04_descriptive_accuracy.py --model "$MODEL" --resume; }
-chain_s5() { step stage5 $PY scripts/05_sparsity.py --model "$MODEL" --resume; }
+chain_s5() { step stage5 $PY scripts/05_sparsity.py --model "$MODEL" --resume ${S5_EXTRA:-}; }
 chain_s6() { step stage6 $PY scripts/06_stability.py --model "$MODEL" --resume; }
 chain_s8() { step stage8 $PY scripts/08_robustness.py --model "$MODEL" --resume; }
 

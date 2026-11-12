@@ -43,6 +43,25 @@ it verifies the manifest already in the tree is the frozen one. `qwen7b-bf16` is
 the same checkpoint as `qwen7b-4bit` (`models/qwen7b-4bit` holds full-precision
 weights; nf4 is applied at load time), loaded unquantised -- ~16 GB, A40 only.
 
+### The region-frame rerun (2026-11-12)
+
+Qwen2.5-VL states boxes in its resized input frame (`src/xai_vlm/frames.py`).
+The corrected tree `results/scholar-a40-rf/` was built locally by
+`scripts/17_region_frame_fix.py` (Stages 2, 3, 6, 7, 8 and 10 need no GPU) and
+uploaded byte-exact. Only the stages whose masks or attention mass used the
+misplaced regions run again, with the backend mapping regions itself:
+
+```bash
+sbatch cluster/rf_validate.sbatch       # backend mapping == offline mapping, 40 rows
+for m in qwen7b-4bit qwen7b-bf16; do for c in s4 s5; do
+  sbatch --export=ALL,RUN_NAME=scholar-a40-rf,XAI_REGION_FRAME=rescaled,MODEL=$m,S5_EXTRA=--save-grids \
+         --job-name=$c cluster/chain.sbatch $c
+done; done
+```
+
+`s6.done` and `s8.done` are pre-marked in each state dir (their regions were
+mapped offline), so `final` (Stages 9, 10, 11) follows s4 and s5 on its own.
+
 Output goes to `results/scholar-a40/` via `XAI_RESULTS_DIR` -- **never** into
 `results/`, which holds the frozen local run. Progress markers live in
 `results/scholar-a40/.chain-state/`; `COMPLETE` appears there at the end, and
