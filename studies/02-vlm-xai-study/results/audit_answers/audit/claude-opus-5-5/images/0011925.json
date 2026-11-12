@@ -1,0 +1,16 @@
+{
+ "image_id": "0011925",
+ "blind": {
+  "rule_1": "yes",
+  "rule_2": "no",
+  "rule_3": "yes",
+  "rule_4": "yes"
+ },
+ "blind_note": "r1/r4: man in white shirt, no hard hat, stands beside the tracks of an excavator with its operator in the cab and bucket in the pit. r3: pit with near-vertical earth walls well over head height, no barrier along the top where a pedestrian walks.",
+ "boxes": {},
+ "note": "",
+ "auditor": "claude-opus-5-5",
+ "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+ "saved_at": "2026-11-12T03:28:36+00:00",
+ "first_saved_at": "2026-11-12T03:28:36+00:00"
+}

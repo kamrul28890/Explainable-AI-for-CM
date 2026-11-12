@@ -1,0 +1,16 @@
+{
+ "image_id": "0010267",
+ "blind": {
+  "rule_1": "yes",
+  "rule_2": "no",
+  "rule_3": "yes",
+  "rule_4": "unsure"
+ },
+ "blind_note": "r1: the man in the brown jacket wears a soft cap, not a hard hat. r3: the group stands at the unguarded top of a vertical wall several metres above the pit. r4: they are some metres from the operating excavator; inside its swing is unclear.",
+ "boxes": {},
+ "note": "",
+ "auditor": "claude-opus-5-5",
+ "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+ "saved_at": "2026-11-12T03:28:36+00:00",
+ "first_saved_at": "2026-11-12T03:28:36+00:00"
+}

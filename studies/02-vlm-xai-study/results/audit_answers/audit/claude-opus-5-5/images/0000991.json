@@ -1,0 +1,15 @@
+{
+ "image_id": "0000991",
+ "blind": {
+  "rule_1": "unsure",
+  "rule_2": "yes",
+  "rule_3": "no"
+ },
+ "blind_note": "r2: two workers climb a steep soil-nailed slope several metres up with no harness or line. r1: their headwear cannot be resolved.",
+ "boxes": {},
+ "note": "",
+ "auditor": "claude-opus-5-5",
+ "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+ "saved_at": "2026-11-12T03:28:36+00:00",
+ "first_saved_at": "2026-11-12T03:28:36+00:00"
+}

@@ -1,0 +1,15 @@
+{
+ "image_id": "0002260",
+ "blind": {
+  "rule_1": "no",
+  "rule_2": "no",
+  "rule_3": "no"
+ },
+ "blind_note": "Two workers by the pump truck appear to wear hard hats; nothing else.",
+ "boxes": {},
+ "note": "",
+ "auditor": "claude-opus-5-5",
+ "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+ "saved_at": "2026-11-12T03:28:36+00:00",
+ "first_saved_at": "2026-11-12T03:28:36+00:00"
+}
