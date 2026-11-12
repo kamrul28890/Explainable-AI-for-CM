@@ -1,0 +1,122 @@
+\chapter{The Rule~4 Audit: Are the Excavator False Alarms Real?}
+\label{chap:s2-7}
+
+\section{Goal}
+
+The \S5.5 audit (Chapter~\ref{chap:s2-6}) found that rule~4 is the rule the annotation most often leaves
+unmarked: a worker within reach of an operating excavator. Every rule~4 accuracy figure in Study~2 is
+scored against that incomplete reference. Two readings depend on it. The unquantised model's rule~4
+``false alarms'' (31\% of compliant images) may be real hazards. Its much higher rule~4 sensitivity (81\%
+against 26\% for 4-bit) is measured against the same incomplete reference. This chapter relabels a
+stratified draw of the sample's rule~4 questions and corrects both tiers' rule~4 confusion matrix.
+
+\section{What Was Done}
+
+\textbf{The draw (decided 2026-11-12, committed as \texttt{1973153} before any image was viewed).} The
+frozen sample holds 323 rule~4 questions, one per image. \texttt{15\_rule4\_audit\_sample.py} splits them
+into nine cells by stratum and by what each tier answered:
+\begin{itemize}
+\item C: compliant images;
+\item H: hazard images where rule~4 is not annotated;
+\item P: images where rule~4 is annotated.
+\end{itemize}
+Each cell is drawn with its own seeded generator (12 per negative cell, 8 per positive cell; small cells
+whole), giving 92 images. The positive cells are in the draw so the reader cannot infer the answer from
+the draw itself, and they estimate how often a marked rule~4 violation is wrong.
+
+\textbf{The reader.} As in Chapter~\ref{chap:s2-6}, Claude (Opus~5.5) answered first. It answered rule~4
+only, in a seeded random order, against the dataset's rule text, without seeing the cell, the annotation,
+or either model's answer. The answers were committed (\texttt{687059b}) before scoring. The standard
+applied the owner's two corrections from the \S5.5 review:
+\begin{itemize}
+\item camera angle shortens distances;
+\item the excavator must be working or visibly manned.
+\end{itemize}
+Where either could not be judged, the answer is ``can't tell''.
+
+\textbf{The correction.} \texttt{16\_rule4\_audit\_score.py} takes, per cell, the share of answered rows the
+reader calls a violation and gives every one of the 323 rows its cell's share as the probability that it
+is a real violation. Each tier's confusion matrix is then recomputed in expectation, beside the
+annotation-based one, with a bootstrap over answered rows within each cell.
+
+\section{Results (first reader; owner review pending)}
+
+\begin{table}[tbp]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+cell & size & drawn & reader says violation \\
+\midrule
+C, both tiers No & 85 & 12 & 1 / 12 \\
+C, 4-bit No, bf16 Yes & 32 & 12 & 7 / 10 \\
+C, 4-bit Yes & 8 & 8 & 3 / 7 \\
+H, both No & 28 & 12 & 2 / 9 \\
+H, 4-bit No, bf16 Yes & 59 & 12 & 5 / 10 \\
+H, both Yes & 41 & 12 & 7 / 11 \\
+P (annotated), all cells & 70 & 24 & 18 / 18 \\
+\bottomrule
+\end{tabular}
+\caption{Rule~4 audit by draw cell. ``Can't tell'' (15 of 92) is excluded from the share.}
+\label{tab:s27cells}
+\end{table}
+
+\begin{table}[tbp]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{4-bit} & \multicolumn{2}{c}{bf16} \\
+ & annotation & corrected & annotation & corrected \\
+\midrule
+sensitivity & 25.7\% & 28.8\% [21.9, 35.8] & 81.4\% & 83.8\% [75.0, 90.9] \\
+specificity & 80.6\% & 87.7\% [80.5, 94.7] & 45.1\% & 63.3\% [54.0, 74.9] \\
+false alarm, compliant images & 6.4\% & 5.0\% [1.4, 8.2] & 31.2\% & 14.8\% [5.7, 23.5] \\
+false alarm, other-hazard images & 32.0\% & 22.5\% [6.4, 38.2] & 78.1\% & 67.1\% [50.3, 79.2] \\
+\bottomrule
+\end{tabular}
+\caption{Rule~4 over the 323 sample rows, scored against the annotation and corrected by the first
+reader's relabels.}
+\label{tab:s27}
+\end{table}
+
+\textbf{The annotation misses more rule~4 violations than it marks.} The reader confirmed every annotated
+rule~4 violation it could judge (18 of 18). Across the 253 unannotated rows, it estimates about 95 real
+violations, against 70 annotated. Most sit where the unquantised model said Yes: 7 of 10 such compliant
+images, and 5 of 10 such other-hazard images.
+
+\textbf{What changes for the two tiers.}
+\begin{itemize}
+\item \emph{bf16.} Half of its ``false alarms'' on compliant images are real hazards. Its corrected
+false-alarm rate there is 14.8\%, not 31.2\%, and its rule~4 specificity rises from 45\% to 63\%.
+\item \emph{4-bit.} Its rule~4 blindness is real. Corrected sensitivity is still 29\%, and the gap to bf16
+(84\%) is unchanged.
+\end{itemize}
+So quantisation costs rule~4 sensitivity, as Chapter~\ref{chap:s2-5} found, and much of what looked like
+the unquantised model's over-triggering is the annotation's omission.
+
+\textbf{Test--retest.} Four images were also in the \S5.5 draw. The reader gave the same rule~4 answer on
+three. On the fourth (0009901) it moved from Yes to ``can't tell'', applying the stricter standard
+adopted after the owner's review.
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Standard.} Stratified relabelling with design weights. Strata fixed and committed before any
+image was viewed.
+
+\textbf{Non-standard, and stated in the paper.}
+\begin{itemize}
+\item The cells are defined by the models' answers, which is what lets the correction apply to each tier.
+The reader was kept blind to the cells for exactly this reason.
+\item The correction assumes that the share of real violations is the same for every row in a cell. Cells
+of 8 to 12 answered rows make that share coarse, so the intervals are wide.
+\item The first reader is a vision-language model. In the \S5.5 review the owner withdrew 2 of its 11
+unannotated rule~4 calls, both perspective errors. The owner's review of this audit fixes the figures the
+paper reports.
+\end{itemize}
+
+\section{Implications}
+
+The rule~4 row of every Study~2 table reads differently once the reference is corrected. The 4-bit
+model's near-blindness to rule~4 (F2) stands. The unquantised model's rule~4 false-alarm rate on
+compliant images is about half what the annotation says. More generally, a model that is more sensitive
+than the annotators is penalised as a false-alarm generator, which matters for how the paper reads F1
+(``accuracy is bought with false alarms'').
