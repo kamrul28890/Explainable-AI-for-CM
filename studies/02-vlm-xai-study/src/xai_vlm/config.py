@@ -93,7 +93,7 @@ GENERATION = {
 # reads them in the resized model-input frame and maps them to the original,
 # which is what the model actually means. A rescaled run must write to its own
 # results tree (XAI_RESULTS_DIR); its fingerprint records the flag.
-REGION_FRAME = os.environ.get("XAI_REGION_FRAME", "legacy")
+REGION_FRAME = os.environ.get("XAI_REGION_FRAME") or "legacy"  # empty means unset
 if REGION_FRAME not in ("legacy", "rescaled"):
     raise ValueError(f"XAI_REGION_FRAME must be 'legacy' or 'rescaled', not {REGION_FRAME!r}")
 

@@ -49,6 +49,8 @@ def test_region_frame_flag_defaults_to_legacy_and_adds_no_fingerprint_key(monkey
     monkeypatch.setenv("XAI_REGION_FRAME", "rescaled")
     cfg = importlib.reload(config)
     assert cfg.region_frame_fingerprint() == {"region_frame": "rescaled"}
+    monkeypatch.setenv("XAI_REGION_FRAME", "")  # `env XAI_REGION_FRAME= cmd` clears it
+    assert importlib.reload(config).REGION_FRAME == "legacy"
     monkeypatch.setenv("XAI_REGION_FRAME", "bogus")
     with pytest.raises(ValueError):
         importlib.reload(config)
