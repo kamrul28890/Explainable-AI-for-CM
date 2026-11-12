@@ -7,10 +7,12 @@
   "rule_4": "yes"
  },
  "blind_note": "r1/r4: bare-headed man walks along the trench rim directly in front of an excavator with its operator in the cab. r3: the sheet-piled trench is well over 3 m deep with no guardrail along that rim.",
- "boxes": {},
+ "boxes": {
+  "rule_1": "yes"
+ },
  "note": "",
  "auditor": "claude-opus-5-5",
  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
- "saved_at": "2026-11-12T03:28:36+00:00",
+ "saved_at": "2026-11-12T03:30:41+00:00",
  "first_saved_at": "2026-11-12T03:28:36+00:00"
 }

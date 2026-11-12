@@ -7,10 +7,12 @@
   "rule_4": "yes"
  },
  "blind_note": "r1: the man in grey at the piling rig has no hard hat. r4: the worker in red stands right at the bucket of the excavator's lowered arm.",
- "boxes": {},
+ "boxes": {
+  "rule_1": "yes"
+ },
  "note": "",
  "auditor": "claude-opus-5-5",
  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
- "saved_at": "2026-11-12T03:28:36+00:00",
+ "saved_at": "2026-11-12T03:30:41+00:00",
  "first_saved_at": "2026-11-12T03:28:36+00:00"
 }

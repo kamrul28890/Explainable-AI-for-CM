@@ -7,10 +7,12 @@
   "rule_4": "unsure"
  },
  "blind_note": "r1: man in grey hoodie has no hard hat. r4: the three stand beside a stationary excavator with its arm folded; cannot tell whether an operator is in the cab.",
- "boxes": {},
- "note": "",
+ "boxes": {
+  "rule_1": "partly"
+ },
+ "note": "Box spans all three men, two of them helmeted.",
  "auditor": "claude-opus-5-5",
  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
- "saved_at": "2026-11-12T03:28:36+00:00",
+ "saved_at": "2026-11-12T03:30:41+00:00",
  "first_saved_at": "2026-11-12T03:28:36+00:00"
 }

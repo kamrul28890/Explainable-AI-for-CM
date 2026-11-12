@@ -6,10 +6,12 @@
   "rule_3": "no"
  },
  "blind_note": "Every worker wears a hard hat and full coveralls in daylight. The channel side is a graded slope, not a steep retaining wall, and no one stands at the walled edge.",
- "boxes": {},
- "note": "",
+ "boxes": {
+  "rule_3": "yes"
+ },
+ "note": "Box is on the claimed edge, but I judged that bank a graded slope, not a steep wall.",
  "auditor": "claude-opus-5-5",
  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
- "saved_at": "2026-11-12T03:28:36+00:00",
+ "saved_at": "2026-11-12T03:30:41+00:00",
  "first_saved_at": "2026-11-12T03:28:36+00:00"
 }

@@ -7,10 +7,12 @@
   "rule_4": "unsure"
  },
  "blind_note": "r1: man in red jacket at the foot of the spoil bank appears bare-headed. r4: he is below and to the side of a working excavator; cannot judge whether inside its reach.",
- "boxes": {},
- "note": "",
+ "boxes": {
+  "rule_1": "yes"
+ },
+ "note": "Distant figures; boxes are on people.",
  "auditor": "claude-opus-5-5",
  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
- "saved_at": "2026-11-12T03:28:36+00:00",
+ "saved_at": "2026-11-12T03:30:41+00:00",
  "first_saved_at": "2026-11-12T03:28:36+00:00"
 }

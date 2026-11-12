@@ -6,10 +6,12 @@
   "rule_3": "yes"
  },
  "blind_note": "r1: the seated man in the blue shirt has no hard hat. r3: a man stands on loose planks over an open hand-dug pile shaft with no barrier around it.",
- "boxes": {},
+ "boxes": {
+  "rule_1": "yes"
+ },
  "note": "",
  "auditor": "claude-opus-5-5",
  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
- "saved_at": "2026-11-12T03:28:36+00:00",
+ "saved_at": "2026-11-12T03:30:41+00:00",
  "first_saved_at": "2026-11-12T03:28:36+00:00"
 }
