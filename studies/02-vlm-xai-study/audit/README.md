@@ -29,6 +29,16 @@ https://claude.ai/artifact/UqngRF6adtJNJ6aQCoeSNr, built by
 database: `final` (yes/no/unsure per applicable rule), `note`, `claude` (the
 blind answers it was set against), `reviewed_at`.
 
+Owner review (2026-11-12): 40 images reviewed, exported to `results/audit_review/`.
+Merge and score:
+
+    # ArtifactData list, collection review, out_dir=results/audit_review
+    python scripts/14_audit_adjudicate.py   # -> results/audit_answers_adjudicated/
+    python scripts/13_audit_score.py results/audit_answers_adjudicated
+
+Outputs: `results/audit_adjudication.txt` (agreement, every changed rule) and
+`results/audit_score_owner-adjudicated.txt`.
+
 ## Scoring
 
 Export the answers, then score:

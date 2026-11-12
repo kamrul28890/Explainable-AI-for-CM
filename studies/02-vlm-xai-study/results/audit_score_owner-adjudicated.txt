@@ -1,0 +1,20 @@
+== auditor owner-adjudicated
+images answered: 100 of 100
+
+all tiers (question level, as drawn -- not reweighted)
+  marked, not confirmed          2.0% [0.0, 6.1] (n=49)
+  unmarked, auditor sees one     6.4% [3.8, 9.4] (n=266)
+  can't tell                     6.5% [3.9, 9.2] (n=337)
+
+poor info (question level, as drawn -- not reweighted)
+  marked, not confirmed          0.0% [0.0, 0.0] (n=23)  <-- below reporting floor of 30; illustrative only
+  unmarked, auditor sees one     5.8% [2.2, 10.2] (n=137)
+  can't tell                     5.9% [2.4, 9.4] (n=170)
+
+rich info (question level, as drawn -- not reweighted)
+  marked, not confirmed          3.8% [0.0, 11.5] (n=26)  <-- below reporting floor of 30; illustrative only
+  unmarked, auditor sees one     7.0% [3.1, 11.6] (n=129)
+  can't tell                     7.2% [3.6, 11.4] (n=167)
+
+image disagrees with its annotation, reweighted to the corpus: 11.9% [5.2%, 19.9%]
+annotated boxes on their hazard: yes 47, partly 4, no 0 (n=51)

@@ -38,27 +38,30 @@ images and each judged for placement. Answers are stored in the format the label
 A second page, \texttt{audit/review.tpl.html}, shows each answer beside the annotation, disagreements
 first, and records the owner's final answer per rule.
 
-\section{Results (first reader; owner review pending)}
+\section{Results}
 
 \begin{table}[tbp]
 \centering
 \begin{tabular}{lrr}
 \toprule
-\textbf{measure} & \textbf{rate [95\% CI]} & $n$ \\
+\textbf{measure} & \textbf{first reader} & \textbf{adjudicated} \\
 \midrule
-marked, not confirmed & 10.0\% [2.0, 18.0] & 50 \\
-unmarked, auditor sees one & 8.3\% [5.3, 11.7] & 265 \\
-can't tell & 6.5\% [3.9, 9.2] & 337 \\
-image disagrees, reweighted to the corpus & 16.9\% [8.9, 25.9] & 100 \\
-annotated box on its hazard & 47 yes, 4 partly, 0 no & 51 \\
+marked, not confirmed & 10.0\% [2.0, 18.0] (5/50) & 2.0\% [0.0, 6.1] (1/49) \\
+unmarked, auditor sees one & 8.3\% [5.3, 11.7] (22/265) & 6.4\% [3.8, 9.4] (17/266) \\
+can't tell & 6.5\% [3.9, 9.2] (22/337) & 6.5\% [3.9, 9.2] (22/337) \\
+image disagrees, reweighted to the corpus & 16.9\% [8.9, 25.9] & 11.9\% [5.2, 19.9] \\
+annotated box on its hazard & \multicolumn{2}{c}{47 yes, 4 partly, 0 no (n=51)} \\
 \bottomrule
 \end{tabular}
-\caption{Section 5.5 audit, first reader Claude Opus~5.5, question level unless stated.}
+\caption{Section 5.5 audit, question level unless stated. First reader: Claude Opus~5.5, blind.
+Adjudicated: the owner's final answer on the 40 reviewed images, the first reader's on the other 60.}
 \label{tab:s26}
 \end{table}
 
-Table~\ref{tab:s26} gives the scores. They are disagreements between one reader and the annotation, not
-yet established annotation errors.
+Table~\ref{tab:s26} gives the scores. The adjudicated column is the one the paper reports; the first-reader
+column is kept so the effect of the review is visible.
+
+\subsection{First reader}
 
 \textbf{Marked, not confirmed (5 of 50).} Each was looked at after the reveal. One is the reader's own
 miss: two workers in shorts (image 0001305), a rule\_1 violation under the dataset's rule text that the
@@ -75,6 +78,42 @@ proximity.
 
 \textbf{Box placement.} No annotated box was off its hazard. Four were partly off, all rule\_1 boxes drawn
 around a group that included helmeted workers.
+
+\subsection{Owner review (2026-11-12)}
+
+The owner opened the 40 images the review page put first: the 24 where the first reader disagreed with
+the annotation and the 16 where it agreed but answered ``can't tell'' somewhere. The other 60, where the
+first reader agreed with the annotation on every rule, were accepted without being opened. Reviews were
+exported from the page (\texttt{results/audit\_review/}) and merged by \texttt{14\_audit\_adjudicate.py},
+which writes the adjudicated answers (\texttt{results/audit\_answers\_adjudicated/}) for the unchanged scorer.
+
+\textbf{Agreement.} On the 139 rule questions of the reviewed images the owner kept the first reader's answer
+127 times (91.4\%) and changed 12, on 10 images. These 40 are the hardest images by construction, so the
+figure is a lower bound for agreement over all 100. Every one of the 12 changes moved towards the
+annotation.
+\begin{itemize}
+\item \emph{Marked, not confirmed, overturned (3).} Image 0001305 (shorts), the reader's own miss. Image 0002260:
+the distant worker wears a cap, not a hard hat (owner about 80\% sure). Image 0007712: the green guardrail stops
+short along the rim, so part of the edge is unguarded.
+\item \emph{Unmarked violations withdrawn (5).} Two rule\_4: in 0010538 the worker only looks inside the
+excavator's radius because of the camera angle, and in 0010327 it is not clear the machine is operating.
+Three slope calls: in 0000991 (rule\_2) and 0011925 (rule\_3) the ground is a steep graded slope, not a drop,
+and in 0004657 (rule\_3) the left side is guarded and the right is graded.
+\item \emph{Can't tell resolved (4).} Three ``can't tell'' became No (0000991 rule\_1, 0009735 rule\_3, 0011292
+rule\_1); one No became ``can't tell'' (0000991 rule\_3), and in total ``can't tell'' did not change.
+\end{itemize}
+The owner's note on 0000991 asks whether a graded slope falls under the fall-protection rule at all and
+suggests checking the OSHA text. That is a question about the dataset's rule, not this image, and is left open.
+
+\textbf{After adjudication.} One marked violation is not confirmed: 0004032, a rule\_3 box where reader and
+owner both see a graded slope. Seventeen unmarked violations stand: rule\_4 9, rule\_3 4, rule\_2 2, rule\_1 2.
+Eight of the nine rule\_4 cases are on images annotated for another rule, and 11 of the 50 hazard images carry
+at least one violation the annotation does not mark.
+
+\textbf{What the review says about the first reader.} Its errors run one way. It over-calls the two rules that
+need a judgement of three-dimensional space from a flat photograph: proximity to an excavator, where camera
+angle shortens distances, and slopes, which it read as unguarded drops. On PPE it was wrong twice: a
+distant cap it read as a hard hat, and the shorts clause of rule\_1, which it under-applied.
 
 \section{Scoring}
 
@@ -97,14 +136,29 @@ in one page keeps the first answers uncontaminated while still collecting box-le
 \textbf{Non-standard, and stated in the paper.} The first reader is a vision-language model, not a person.
 It is a different and larger model family than the one under study, but it can share that kind of model's
 blind spots, chiefly distant, few-pixel workers (10 of its 22 ``can't tell'' answers were on such
-figures). The owner's review of every answer is what makes the audit a human one. The paper reports the
-first reader's figures, the owner's adjudicated figures, and how often the two differ.
+figures). The owner's review is what makes the audit a human one, and it is partial by design: the owner
+opened the 40 images where the reader disagreed with the annotation or could not tell, and accepted the 60
+where reader and annotation agreed. An error the reader and the annotation share would survive that review.
+The paper reports the first reader's figures, the adjudicated figures, and the 91.4\% agreement between
+reader and owner on the images the owner opened.
 
 \section{Implications}
 
-Every accuracy and explanation figure in Study~2 is ``agreement with the dataset's annotations''. The
-first reader puts the corpus-level image disagreement at about one in six, concentrated in rule\_4. Two
-Study~2 readings depend on that. Some of the model's rule\_4 ``false alarms'' on compliant images may be
-real hazards the annotation left out. The unquantised model's higher rule\_4 sensitivity is measured
-against an incomplete rule\_4 reference. Neither changes a frozen number. Both are stated beside the
-rule\_4 results, and the owner's review fixes the size of the effect.
+Every accuracy and explanation figure in Study~2 is ``agreement with the dataset's annotations''. After
+adjudication about one corpus image in eight (11.9\% [5.2, 19.9]) disagrees with its annotation. Almost
+all of that is violations left unmarked; a marked violation is rarely wrong (1 of 49).
+\begin{itemize}
+\item \textbf{The annotations can be trusted where they mark something.} Marked violations are confirmed 48
+of 49 times and every box is on or partly on its hazard. Low explanation IoU (F3) is therefore not a
+symptom of badly placed boxes.
+\item \textbf{They are incomplete, mostly for rule\_4.} Nine of the 17 unmarked violations are a worker near an
+operating excavator, and 11 of 50 hazard images carry a second, unmarked violation. So F3's third caveat
+(a zero-IoU region may be a real, unannotated hazard) is real but bounded. Some of the model's rule\_4
+``false alarms'' may be real hazards, and the unquantised model's higher rule\_4 sensitivity is measured
+against an incomplete rule\_4 reference. No frozen number changes; both readings are stated beside the
+rule\_4 results.
+\item \textbf{The incompleteness estimate is the soft one.} It rests on the first reader seeing a violation
+and the owner keeping it, and both reviews showed that rule\_4 and slope judgements from a photograph are the
+least certain calls. It can err both ways: some of the 17 may still be perspective effects, and the owner
+did not search the 60 unopened images for violations both reader and annotation missed.
+\end{itemize}

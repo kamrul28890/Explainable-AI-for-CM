@@ -1,0 +1,17 @@
+{
+  "claude": {
+    "rule_1": "yes",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "yes"
+  },
+  "final": {
+    "rule_1": "yes",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "yes"
+  },
+  "image_id": "0013257",
+  "note": "the man in grey is in the radius, but i am not sure about the man in red.",
+  "reviewed_at": "2026-11-12T04:30:42.654Z"
+}

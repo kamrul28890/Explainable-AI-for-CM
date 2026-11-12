@@ -1,0 +1,15 @@
+{
+  "claude": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "no"
+  },
+  "final": {
+    "rule_1": "yes",
+    "rule_2": "no",
+    "rule_3": "no"
+  },
+  "image_id": "0002260",
+  "note": "the person on the left is seems to be wearing a cap, but not a hard hat. ami 80% confirm about that. but its hard to tell.",
+  "reviewed_at": "2026-11-12T04:10:54.664Z"
+}

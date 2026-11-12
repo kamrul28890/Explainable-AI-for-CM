@@ -420,9 +420,12 @@ throughout.
   insensitivity rather than robustness.
 - The Plan 3c spec's pre-registered DECISIONs are **not yet reviewed**.
 - Comparison models (`qwen3b-8bit`, `qwen3b-4bit`) — the size-comparison arm.
-- The §5.5 audit of 100 cases, without which F3's caveat 3 cannot be closed. First
-  reader done (Claude Opus 5.5, blind, 2026-11-11): image-level disagreement 16.9%
-  [8.9, 25.9] reweighted to the corpus, mostly rule_4 left unmarked; all 51 annotated
-  boxes on or partly on their hazard. The owner's review of every answer is pending
+- The §5.5 audit of 100 cases: **done**. First reader Claude Opus 5.5, blind
+  (2026-11-11); owner reviewed the 40 disagreement / can't-tell images (2026-11-12),
+  agreed on 127 of 139 questions, and changed 12, all towards the annotation.
+  Adjudicated: marked-not-confirmed 1/49, unmarked-seen 17/266 (9 rule_4), can't tell
+  22/337, image disagreement 11.9% [5.2, 19.9] reweighted to the corpus; all 51 boxes
+  on or partly on their hazard. F3 caveat 3 is real but bounded (11 of 50 hazard
+  images carry a second, unmarked violation); box placement does not explain low IoU
   (`report/log/`, chapter s2-6).
 - A prompt ablation for F2.
