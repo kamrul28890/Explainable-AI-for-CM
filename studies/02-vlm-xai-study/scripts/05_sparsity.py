@@ -38,8 +38,13 @@ def _parse_box(text: str):
         return None
 
 
-def make_work_fn(backend, image_source):
-    """One region row -> one sparsity result row."""
+def make_work_fn(backend, image_source, grid_dir=None):
+    """One region row -> one sparsity result row.
+
+    With `grid_dir`, each attention grid is also saved as
+    <grid_dir>/<image_id>_<rule_id>.npy, so a later change to the regions can be
+    re-scored without the GPU. Off by default: the frozen run saved none.
+    """
 
     def work(row: dict) -> dict:
         out = {
@@ -75,6 +80,10 @@ def make_work_fn(backend, image_source):
             return out
         out["attention_available"] = "True"
         out["gini"] = round(gini(grid), 4)
+        if grid_dir is not None:
+            import numpy as np
+            np.save(Path(grid_dir) / f"{row['image_id']}_{row['rule_id']}.npy",
+                    np.asarray(grid, dtype=np.float32))
 
         box = _parse_box(row.get("region", "")) if row.get("source") == "model" else None
         if box is not None:
@@ -188,10 +197,10 @@ def row_ok(out_row: dict) -> bool:
 
 
 def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
-        resume, force_resume, checkpoint_every, rows=None) -> dict:
+        resume, force_resume, checkpoint_every, rows=None, grid_dir=None) -> dict:
     return run_stage(
         rows if rows is not None else work_rows,
-        make_work_fn(backend, image_source),
+        make_work_fn(backend, image_source, grid_dir),
         Path(out_csv), Path(state_json), RESULT_FIELDS, fingerprint,
         resume=resume, force_resume=force_resume,
         checkpoint_every=checkpoint_every, progress_fn=_progress,
@@ -212,6 +221,7 @@ def build_fingerprint(manifest_path, baseline_path, regions_path, model, seed, *
         "attention_impl_for_reading": config.ATTENTION_IMPL_FOR_READING,
         "max_pixels": config.MAX_PIXELS,
         "seed": seed,
+        **config.region_frame_fingerprint(),
     }
 
 
@@ -222,6 +232,8 @@ def main() -> int:
     ap.add_argument("--force-resume", action="store_true")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--checkpoint-every", type=int, default=100)
+    ap.add_argument("--save-grids", action="store_true",
+                    help="also save each attention grid under attention_grids_<model>/")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
@@ -250,6 +262,11 @@ def main() -> int:
     fingerprint = build_fingerprint(manifest, baseline, regions, args.model, args.seed,
                                     device=backend_device(backend))
 
+    grid_dir = None
+    if args.save_grids:
+        grid_dir = res / f"attention_grids_{args.model}"
+        grid_dir.mkdir(parents=True, exist_ok=True)
+
     cache: dict = {}
 
     def image_source(image_id):
@@ -266,6 +283,7 @@ def main() -> int:
         out_csv=out_csv, state_json=state_json, fingerprint=fingerprint,
         resume=args.resume, force_resume=args.force_resume,
         checkpoint_every=args.checkpoint_every, rows=rows_with_images(),
+        grid_dir=grid_dir,
     )
     print(f"\ndone={summary['done']}  skipped={summary['skipped']}  "
           f"errors={summary['errors']}")

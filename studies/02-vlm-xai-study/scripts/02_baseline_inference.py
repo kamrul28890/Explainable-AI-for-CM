@@ -67,6 +67,7 @@ def build_fingerprint(manifest_path: Path, model: str, seed: int, *, device: str
         "max_pixels": config.MAX_PIXELS,
         "generation": config.GENERATION,
         "seed": seed,
+        **config.region_frame_fingerprint(),
     }
 
 

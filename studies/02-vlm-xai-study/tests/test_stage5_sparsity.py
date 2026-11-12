@@ -62,3 +62,12 @@ def test_a_missing_image_is_recorded_not_crashed():
     work = stage5.make_work_fn(FakeBackend(), lambda _id: None)
     out = work(_rows()[0])
     assert out["error"] == "image not found"
+
+
+def test_grids_are_saved_only_when_asked(tmp_path):
+    import numpy as np
+    stage5.make_work_fn(FakeBackend(), _images)(_rows()[0])
+    assert not list(tmp_path.iterdir())
+    out = stage5.make_work_fn(FakeBackend(), _images, grid_dir=tmp_path)(_rows()[0])
+    g = np.load(tmp_path / "0001_rule_1.npy")
+    assert g.ndim == 2 and out["attention_available"] == "True"

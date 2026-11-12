@@ -15,10 +15,12 @@ import numpy as np
 import torch
 from PIL import Image
 
+from xai_vlm import config as _config
 from xai_vlm.backends.base import Answer, BackendUnavailable
 from xai_vlm.config import (ATTENTION_IMPL, COMPUTE_DTYPE, GENERATION,
                             MAX_PIXELS, MIN_PIXELS, MODEL_DIR, ModelSpec,
                             resolve_tier)
+from xai_vlm.frames import input_size_from_grid, to_original
 from xai_vlm.parsing import Box, parse_response
 from xai_vlm.rules import RuleId, prompt_for
 
@@ -120,8 +122,22 @@ class QwenBackend:
         latency_ms = (time.perf_counter() - t0) * 1000.0
 
         raw = self._decode_new_tokens(out, inputs)
-        parsed = parse_response(raw, image.size)
+        parsed = self._parse(raw, image, inputs)
         return Answer.from_parsed(parsed, raw_text=raw, latency_ms=latency_ms)
+
+    def _parse(self, raw: str, image: Image.Image, inputs):
+        """Parse one reply, with REGION in original-image pixels when the
+        region-frame fix is on (config.REGION_FRAME, see xai_vlm.frames). The
+        model states boxes in the resized frame it was fed; image_grid_thw says
+        exactly what that frame was."""
+        if _config.REGION_FRAME != "rescaled":
+            return parse_response(raw, image.size)
+        patch = getattr(self.model.config.vision_config, "patch_size", 14)
+        insize = input_size_from_grid(inputs["image_grid_thw"][0].tolist(), patch)
+        parsed = parse_response(raw, insize)
+        if parsed.region is not None:
+            parsed.region = to_original(parsed.region, image.size, insize)
+        return parsed
 
     def answer_masked(self, image: Image.Image, rule_id: RuleId, region: Box,
                       method: str = "black", **kw) -> Answer:
@@ -357,7 +373,7 @@ class QwenBackend:
         raw = self.processor.batch_decode(
             out, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )[0].strip()
-        parsed = parse_response(raw, image.size)
+        parsed = self._parse(raw, image, inputs)
         return Answer.from_parsed(parsed, raw_text=raw, latency_ms=latency_ms,
                                   intervention="tokens")
 

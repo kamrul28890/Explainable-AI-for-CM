@@ -229,6 +229,7 @@ def build_fingerprint(manifest_path, baseline_path, model, seed, *, device: str)
         "subset_size": SUBSET_SIZE,
         "per_rule_floor": PER_RULE_FLOOR,
         "seed": seed,
+        **config.region_frame_fingerprint(),
     }
 
 

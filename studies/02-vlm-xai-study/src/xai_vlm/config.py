@@ -87,6 +87,22 @@ GENERATION = {
 # generation. The backend therefore never GENERATES under eager: it generates with
 # sdpa and, where attention is needed, re-runs a single teacher-forced forward pass
 # over the already-produced sequence.
+# WHICH FRAME A MODEL'S REGION COORDINATES ARE READ IN (found 2026-11-12, see
+# xai_vlm.frames). "legacy" reads them as original-image pixels -- the frozen
+# behaviour, kept so every frozen file reproduces byte-for-byte. "rescaled"
+# reads them in the resized model-input frame and maps them to the original,
+# which is what the model actually means. A rescaled run must write to its own
+# results tree (XAI_RESULTS_DIR); its fingerprint records the flag.
+REGION_FRAME = os.environ.get("XAI_REGION_FRAME", "legacy")
+if REGION_FRAME not in ("legacy", "rescaled"):
+    raise ValueError(f"XAI_REGION_FRAME must be 'legacy' or 'rescaled', not {REGION_FRAME!r}")
+
+
+def region_frame_fingerprint() -> dict:
+    """Empty under the frozen default, so existing run fingerprints still match."""
+    return {} if REGION_FRAME == "legacy" else {"region_frame": REGION_FRAME}
+
+
 COMPUTE_DTYPE = "bfloat16"
 ATTENTION_IMPL = "sdpa"          # generation path
 ATTENTION_IMPL_FOR_READING = "eager"   # single forward pass only, never generation

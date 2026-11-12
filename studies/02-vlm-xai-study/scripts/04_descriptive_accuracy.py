@@ -142,6 +142,7 @@ def build_fingerprint(manifest_path, baseline_path, regions_path, model, seed, *
         "generation": config.GENERATION,
         "masking_methods": ",".join(MASKING_METHODS),
         "seed": seed,
+        **config.region_frame_fingerprint(),
     }
 
 
