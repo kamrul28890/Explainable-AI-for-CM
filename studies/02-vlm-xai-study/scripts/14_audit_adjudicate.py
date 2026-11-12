@@ -20,7 +20,11 @@ import sys
 from pathlib import Path
 
 STUDY_ROOT = Path(__file__).resolve().parents[1]
-RESULTS = STUDY_ROOT / "results"
+sys.path.insert(0, str(STUDY_ROOT / "src"))
+
+from xai_vlm import config  # noqa: E402
+
+RESULTS = config.RESULTS_DIR
 
 
 def adjudicate(first: dict, reviews: dict) -> dict:
