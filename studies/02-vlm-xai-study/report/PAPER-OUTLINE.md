@@ -420,5 +420,9 @@ throughout.
   insensitivity rather than robustness.
 - The Plan 3c spec's pre-registered DECISIONs are **not yet reviewed**.
 - Comparison models (`qwen3b-8bit`, `qwen3b-4bit`) — the size-comparison arm.
-- The §5.5 human audit of 100 cases, without which F3's caveat 3 cannot be closed.
+- The §5.5 audit of 100 cases, without which F3's caveat 3 cannot be closed. First
+  reader done (Claude Opus 5.5, blind, 2026-11-11): image-level disagreement 16.9%
+  [8.9, 25.9] reweighted to the corpus, mostly rule_4 left unmarked; all 51 annotated
+  boxes on or partly on their hazard. The owner's review of every answer is pending
+  (`report/log/`, chapter s2-6).
 - A prompt ablation for F2.

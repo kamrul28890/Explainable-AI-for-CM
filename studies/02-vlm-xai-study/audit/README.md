@@ -14,6 +14,21 @@ Published privately at https://claude.ai/artifact/By1Bw7mXqj94pQU1sJBbMg
   (yes/partly/no: does each annotated box sit on its hazard), `note`.
   Each auditor writes only their own subtree; the owner reads all.
 
+## First reader: Claude Opus 5.5 (decided 2026-11-11)
+
+With no human auditor available, Claude answered the audit blind (seeded random
+order, the dataset's rule text, a reason per image), committed those answers
+(`7b4adeb`), then judged box placement after the reveal. Answers are in
+`results/audit_answers/audit/claude-opus-5-5/` and the score in
+`results/audit_score_claude-opus-5-5.txt`.
+
+The owner then reviews every answer on a second page,
+https://claude.ai/artifact/UqngRF6adtJNJ6aQCoeSNr, built by
+`python audit/build_review.py OUT_DIR --img <Stage 12 export>/` from
+`review.tpl.html`. Each saved review is `review/<image_id>` in that page's
+database: `final` (yes/no/unsure per applicable rule), `note`, `claude` (the
+blind answers it was set against), `reviewed_at`.
+
 ## Scoring
 
 Export the answers, then score:

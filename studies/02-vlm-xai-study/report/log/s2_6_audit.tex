@@ -26,10 +26,59 @@ region, and the blind answers lock. Step two asks, per annotated box, whether it
 partly / no), with a free-text note. Each auditor's answers are stored under their own identity; the owner
 can read all of them.
 
-\section{Status}
+\textbf{Decided 2026-11-11: a frontier model is the first reader.} No human auditor was available,
+and the owner chose to have Claude (Opus~5.5) answer the audit, with the owner reviewing every answer
+afterwards. The procedure kept the page's blind-then-reveal order. The 100 images were put in a seeded
+random order (seed 2026) so that the hazard and compliant strata were not grouped. Each image was viewed at
+the same 1,024-pixel long side and answered for its applicable rules against the dataset's own rule text,
+with a one-sentence reason, before any annotation was opened. The blind answers were committed to the
+repository (\texttt{7b4adeb}) before the reveal. Only then were the annotation boxes drawn on the 50 hazard
+images and each judged for placement. Answers are stored in the format the labelling page writes
+(\texttt{results/audit\_answers/audit/claude-opus-5-5/}), so the scoring script runs on them unchanged.
+A second page, \texttt{audit/review.tpl.html}, shows each answer beside the annotation, disagreements
+first, and records the owner's final answer per rule.
 
-Built and checked empty at owner and contributor access; awaiting an auditor. The scoring script,
-\texttt{13\_audit\_score.py}, is written and tested ahead of the answers. It keeps two errors apart ---
+\section{Results (first reader; owner review pending)}
+
+\begin{table}[tbp]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{measure} & \textbf{rate [95\% CI]} & $n$ \\
+\midrule
+marked, not confirmed & 10.0\% [2.0, 18.0] & 50 \\
+unmarked, auditor sees one & 8.3\% [5.3, 11.7] & 265 \\
+can't tell & 6.5\% [3.9, 9.2] & 337 \\
+image disagrees, reweighted to the corpus & 16.9\% [8.9, 25.9] & 100 \\
+annotated box on its hazard & 47 yes, 4 partly, 0 no & 51 \\
+\bottomrule
+\end{tabular}
+\caption{Section 5.5 audit, first reader Claude Opus~5.5, question level unless stated.}
+\label{tab:s26}
+\end{table}
+
+Table~\ref{tab:s26} gives the scores. They are disagreements between one reader and the annotation, not
+yet established annotation errors.
+
+\textbf{Marked, not confirmed (5 of 50).} Each was looked at after the reveal. One is the reader's own
+miss: two workers in shorts (image 0001305), a rule\_1 violation under the dataset's rule text that the
+reader overlooked. One is a filing difference: the reader called two workers climbing a steep slope a
+fall-protection case, and the annotation called it an unguarded edge (0000991). One is a distant figure the
+reader saw as helmeted (0002260). Two are rule\_3 judgements where the reader saw a graded slope or a fence
+along the rim (0004032, 0007712).
+
+\textbf{Unmarked, auditor sees one (22 of 265).} Half are rule\_4. Eleven times the reader saw a worker
+within a few metres of an operating excavator that the annotation left unmarked. Nine of those were on
+images annotated only for another rule, usually a missing hard hat on the same worker. Next come rule\_3
+(6), rule\_2 (3) and rule\_1 (2). The annotation looks reliable for PPE and incomplete for plant
+proximity.
+
+\textbf{Box placement.} No annotated box was off its hazard. Four were partly off, all rule\_1 boxes drawn
+around a group that included helmeted workers.
+
+\section{Scoring}
+
+The scoring script, \texttt{13\_audit\_score.py}, was written and tested ahead of the answers. It keeps two errors apart ---
 \emph{marked, not confirmed} (the annotation marks a violation the auditor does not see) and \emph{unmarked,
 auditor sees one} --- reports ``can't tell'' on its own line, and scores only rules that apply to the
 image. Its corpus figure reweights the 50/50 draw to each tier's real hazard prevalence (rich info 771 of
@@ -45,7 +94,17 @@ falls below the $n=30$ reporting floor by design, so it is quoted pooled across 
 draw, decided after seeing that the random draw could not answer the question it was for. Blind-then-reveal
 in one page keeps the first answers uncontaminated while still collecting box-level judgements.
 
+\textbf{Non-standard, and stated in the paper.} The first reader is a vision-language model, not a person.
+It is a different and larger model family than the one under study, but it can share that kind of model's
+blind spots, chiefly distant, few-pixel workers (10 of its 22 ``can't tell'' answers were on such
+figures). The owner's review of every answer is what makes the audit a human one. The paper reports the
+first reader's figures, the owner's adjudicated figures, and how often the two differ.
+
 \section{Implications}
 
-Until the audit is done, every accuracy and explanation figure in Study~2 is ``agreement with the dataset's
-annotations''. The audit turns that into an estimate with a known error.
+Every accuracy and explanation figure in Study~2 is ``agreement with the dataset's annotations''. The
+first reader puts the corpus-level image disagreement at about one in six, concentrated in rule\_4. Two
+Study~2 readings depend on that. Some of the model's rule\_4 ``false alarms'' on compliant images may be
+real hazards the annotation left out. The unquantised model's higher rule\_4 sensitivity is measured
+against an incomplete rule\_4 reference. Neither changes a frozen number. Both are stated beside the
+rule\_4 results, and the owner's review fixes the size of the effect.
