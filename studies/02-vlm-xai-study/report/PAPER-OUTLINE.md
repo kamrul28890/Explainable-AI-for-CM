@@ -412,12 +412,12 @@ throughout.
 
 ## Not yet measured
 
-- Stage 6 (stability) — designed in the Plan 3c spec, implemented and
-  unit-tested, **not yet run on GPU**. (Stage 5 is complete: see F6.)
-- Stage 8 (robustness) — designed in the Plan 3c spec, **not implemented**. Its
-  design should be revisited in light of F4: if a verdict barely moves when the
-  region is removed entirely, "survives blur" may be measuring the same
-  insensitivity rather than robustness.
+- ~~Stage 6 (stability)~~ — run on the A40 for both tiers (2026-11-10/11); see
+  `report/log/`, chapters s2-1 and s2-5.
+- ~~Stage 8 (robustness)~~ — strengths approved in advance, run for both tiers
+  (2026-11-11); see `report/log/`, chapter s2-4. Mild blur flips 3 verdicts in
+  10, so the model is not simply insensitive to the image; how that sits with F4
+  (removing the region barely moves the verdict) is still to be argued in §6.
 - The Plan 3c spec's pre-registered DECISIONs are **not yet reviewed**.
 - Comparison models (`qwen3b-8bit`, `qwen3b-4bit`) — the size-comparison arm.
 - The §5.5 audit of 100 cases: **done**. First reader Claude Opus 5.5, blind
