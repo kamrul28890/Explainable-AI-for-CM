@@ -140,6 +140,40 @@ image. Its corpus figure reweights the 50/50 draw to each tier's real hazard pre
 images within each (tier, stratum) cell. Per tier, ``marked, not confirmed'' rests on about 25 images and
 falls below the $n=30$ reporting floor by design, so it is quoted pooled across tiers.
 
+\section{The Models Against the Adjudicated Labels}
+
+Sixty-one of the 100 audit images are in the study sample, carrying 112 model questions between them.
+\texttt{19\_audit\_rescore.py} scores both tiers on those questions twice: once against the annotation, once
+against the adjudicated labels. Six questions the adjudicated reader could not tell are dropped from both,
+so the two scores use the same 106 questions (\texttt{results/audit\_rescore.txt}).
+
+\begin{table}[tbp]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{4-bit} & \multicolumn{2}{c}{bf16} \\
+ & annotation & adjudicated & annotation & adjudicated \\
+\midrule
+sensitivity & 87.8\% [77.6, 95.9] & 82.1\% [71.4, 91.1] & 91.8\% [83.7, 98.0] & 92.9\% [85.7, 98.2] \\
+specificity & 43.9\% [31.6, 56.1] & 42.0\% [28.0, 56.0] & 33.3\% [21.1, 45.6] & 38.0\% [24.0, 52.0] \\
+accuracy & 64.2\% [55.7, 72.6] & 63.2\% [53.8, 72.6] & 60.4\% [50.9, 69.8] & 67.0\% [58.5, 75.5] \\
+violations & 49 & 56 & 49 & 56 \\
+\bottomrule
+\end{tabular}
+\caption{Both tiers on the 106 audit questions, scored against each reference. These are rates as drawn
+(25 hazard and 25 compliant images per quality tier), not corpus estimates.}
+\label{tab:s26rescore}
+\end{table}
+
+The two references disagree on 9 questions: 8 violations the annotation leaves unmarked (five rule\_4,
+three rule\_3) and one marked rule\_3 violation the adjudication rejects. The unquantised model sides with
+the adjudicated label on 8 of the 9. The 4-bit model sides with it on 4, and misses four of the five
+unmarked rule\_4 violations. So correcting the reference moves the two tiers apart. Against the
+annotation the 4-bit model is slightly more accurate (64.2\% against 60.4\%). Against the adjudicated
+labels the unquantised model is (67.0\% against 63.2\%). Each interval spans about 18 points, so the
+direction of the change is the finding, not its size. It agrees with the rule\_4 audit
+(Chapter~\ref{chap:s2-7}): the annotation's omissions penalise the more sensitive tier.
+
 \section{Standard vs.\ Non-Standard Choices}
 
 \textbf{Standard.} Blind relabelling of a reference standard; stratified sampling with reweighting.

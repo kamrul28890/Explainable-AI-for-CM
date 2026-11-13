@@ -1,0 +1,34 @@
+== qwen7b-4bit: 61 audit images in the sample, 112 questions, 6 dropped as can't tell
+                against annotation             against adjudicated labels
+  sensitivity   87.8% [77.6, 95.9] (n=49)      82.1% [71.4, 91.1] (n=56)
+  specificity   43.9% [31.6, 56.1] (n=57)      42.0% [28.0, 56.0] (n=50)
+  accuracy      64.2% [55.7, 72.6] (n=106)     63.2% [53.8, 72.6] (n=106)
+  violations    49                             56
+  references disagree on 9 questions; the model sides with the adjudicated label on 4
+    0001164 rule_4  annotation N  audit Y  model N
+    0001639 rule_3  annotation N  audit Y  model Y
+    0003224 rule_4  annotation N  audit Y  model N
+    0004032 rule_3  annotation Y  audit N  model Y
+    0005886 rule_4  annotation N  audit Y  model Y
+    0008902 rule_3  annotation N  audit Y  model Y
+    0011925 rule_4  annotation N  audit Y  model N
+    0013257 rule_4  annotation N  audit Y  model N
+    0013794 rule_3  annotation N  audit Y  model Y
+
+== qwen7b-bf16: 61 audit images in the sample, 112 questions, 6 dropped as can't tell
+                against annotation             against adjudicated labels
+  sensitivity   91.8% [83.7, 98.0] (n=49)      92.9% [85.7, 98.2] (n=56)
+  specificity   33.3% [21.1, 45.6] (n=57)      38.0% [24.0, 52.0] (n=50)
+  accuracy      60.4% [50.9, 69.8] (n=106)     67.0% [58.5, 75.5] (n=106)
+  violations    49                             56
+  references disagree on 9 questions; the model sides with the adjudicated label on 8
+    0001164 rule_4  annotation N  audit Y  model Y
+    0001639 rule_3  annotation N  audit Y  model Y
+    0003224 rule_4  annotation N  audit Y  model Y
+    0004032 rule_3  annotation Y  audit N  model Y
+    0005886 rule_4  annotation N  audit Y  model Y
+    0008902 rule_3  annotation N  audit Y  model Y
+    0011925 rule_4  annotation N  audit Y  model Y
+    0013257 rule_4  annotation N  audit Y  model Y
+    0013794 rule_3  annotation N  audit Y  model Y
+

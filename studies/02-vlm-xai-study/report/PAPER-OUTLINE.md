@@ -438,4 +438,10 @@ throughout.
   on or partly on their hazard. F3 caveat 3 is real but bounded (11 of 50 hazard
   images carry a second, unmarked violation); box placement does not explain low IoU
   (`report/log/`, chapter s2-6).
+  Both tiers re-scored on the 61 audit images in the sample (106 questions,
+  `results/audit_rescore.txt`). Against the adjudicated labels, accuracy is
+  4-bit 63.2% and bf16 67.0%. Against the annotation it was 64.2% and 60.4%.
+  On the 9 questions where the two references disagree, bf16 sides with the
+  adjudicated label on 8 and 4-bit on 4. Correcting the reference favours the
+  more sensitive tier.
 - A prompt ablation for F2.
