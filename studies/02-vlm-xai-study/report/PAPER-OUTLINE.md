@@ -16,10 +16,19 @@ A quantised vision-language model achieves 91% sensitivity on construction-site
 hazard detection — a figure that would pass most deployment reviews. Measuring the
 same model against seven explanation-quality metrics shows that number to be
 close to meaningless: it answers YES to 70% of everything, raises a false alarm on
-59% of hazard-free checks, is nearly blind to one of the deadliest hazard classes,
-and when it is right it can almost never point at why. The paper's contribution is
+59% of hazard-free checks, and is nearly blind to one of the deadliest hazard
+classes. When it is right, its box overlaps the annotated hazard about half the
+time, but that box moves under mild blur or a rerun. The paper's contribution is
 the measurement protocol that makes those failures visible, and the demonstration
 that each of them is invisible to conventional accuracy reporting.
+
+**Region frame (2026-11-12, chapter s2-8).** The harness read Qwen2.5-VL's boxes
+as original-image pixels, but the model states them in its resized input frame.
+Every region-based figure below was re-measured in the corrected tree
+`results/scholar-a40-rf/`. F3, F4, F6 and F7 each open with the corrected
+reading; the text beneath is the pre-fix record, kept for the paper's methods
+lesson, and is superseded wherever the two disagree. Verdict-only figures (F1,
+F2, F5) do not change.
 
 ---
 
@@ -75,7 +84,31 @@ rule_4 false-alarm rate on compliant images is 20.3% [10.8, 28.6], not 31.2%, an
 its specificity is 58.1%, not 45.1%. This qualifies F1 for rule_4: some of the
 "false alarms" are hazards the annotators missed.
 
-### F3 — The model describes hazards well and locates them badly
+### F3 — The model locates about half the hazards it gets right (corrected)
+`results/scholar-a40-rf/explanation_correctness_<tier>.csv`, 4-bit n=1,187, bf16 n=1,232
+
+```
+                            4-bit                bf16
+explanation correct        31.6% [28.9, 34.2]   33.8% [31.2, 36.5]
+  similarity >= 0.60       56.2% [53.3, 59.0]
+  hazard match             91.5% [89.9, 93.1]
+  IoU >= 0.30              54.7% [51.9, 57.5]   55.8% [53.0, 58.6]
+  median IoU               0.37                 0.39
+right answer, wrong reason 68.4% [65.8, 71.1]   66.2% [63.5, 68.8]
+poor info / rich info      43.3% / 24.2%        44.4% / 27.2%
+```
+
+The old headline (2.4% correct) was the coordinate error. The binding constraint
+is now shared between the reason (56% pass similarity) and the box (55% pass IoU).
+Open: why poor-info images score higher than rich-info ones.
+
+*Methods lesson for the paper.* The pre-fix hand check (below) passed because it
+looked only at high-IoU rows: 18 of the 25 rows with IoU >= 0.5 were images
+already within the pixel budget, where the two frames coincide (~5% of rows). A
+coordinate check must use rows drawn without regard to their score.
+
+*Pre-fix record, superseded:* "The model describes hazards well and locates them
+badly."
 `results/explanation_correctness_qwen7b-4bit.csv`, scored n=1,191
 
 ```
@@ -99,7 +132,31 @@ before being reported — high-IoU rows match the annotation to three decimals
 3. Zero IoU may mean the model found a real violation nobody annotated; 47% of the
    corpus is self-flagged "poor info".
 
-### F4 — The faithfulness probe is drowned by its own artefact
+### F4 — Masking the region clears the artefact floor for two rules only (corrected)
+`results/scholar-a40-rf/descriptive_accuracy_<tier>.csv`, 4-bit n=3,022 (2,625 YES
++ 397 controls), bf16 n=3,086
+
+```
+                     4-bit signal (YES)    4-bit floor (NO->YES)   bf16 signal / floor
+black mask           25.8% [24.2, 27.5]    24.4% [20.4, 28.7]      27.9% / 33.8%
+token ablation       15.8% [14.4, 17.2]    40.3% [35.5, 45.1]      16.1% / 45.1%
+
+black mask, by rule (4-bit / bf16)
+rule_4 excavator     65.2% [53.0, 75.8] n=66    54.6% [47.4, 61.7] n=196
+rule_2 fall prot.    45.5% [40.2, 50.8] n=358   40.8% [36.3, 45.3] n=446
+rule_1 PPE           30.6% [28.0, 33.2] n=1,231 28.7% [26.2, 31.2] n=1,233
+rule_3               9.8%  [7.9, 11.6]  n=970   15.6% [13.3, 18.0] n=974
+```
+
+Pooled, the black-mask signal and floor still overlap, so the pooled probe stays
+uninformative. By rule it separates: for rule_4 and rule_2, masking the stated
+region removes the answer well beyond the floor in both tiers. rule_1 sits at the
+floor and rule_3 below it. Token ablation's floor still exceeds its signal, so the
+token path stays uninformative. "Drowned by its own artefact" now holds for the
+pooled figure, PPE, rule_3 and the token path, not for rule_4 or rule_2.
+
+*Pre-fix record, superseded:* "The faithfulness probe is drowned by its own
+artefact."
 `results/descriptive_accuracy_qwen7b-4bit.csv`, full working set n=3,031
 (2,621 YES + 410 negative controls; 0 errors, coverage verified against the
 manifest)
@@ -164,7 +221,24 @@ the intervention neutral.
    requires no intervention at all, and therefore inherits none of this. After
    F4 it carries more weight than originally planned.
 
-### F6 — The model does look where it says it looks
+### F6 — The model does look where it says it looks (corrected: much more so)
+`results/scholar-a40-rf/sparsity_<tier>.csv`, regions n=3,022 / 3,086
+
+```
+                              4-bit                 bf16
+attention exceeds area null   97.2% [96.6, 97.7]    97.6% [97.1, 98.2]
+median mass inside region     23.8%                 23.6%
+median region area            2.4%                  2.1%
+median lift                   8.0x                  9.2x
+by rule (4-bit): rule_1 99.9%, rule_2 99.3%, rule_3 91.7%, rule_4 100.0%
+Gini median                   0.555 (unchanged: it does not use the region)
+```
+
+The F3/F6 tension below is gone: the boxes were on target, and the harness
+misplaced them. The rule_4 dissociation (looks in the right place, answers NO)
+still holds and is sharper: 100% of rule_4 regions beat the null.
+
+*Pre-fix record, superseded:*
 `results/sparsity_qwen7b-4bit.csv`, n=3,882 (coverage verified against the
 manifest: 0 missing, 0 duplicate, 0 errors; attention extracted on 3,882/3,882)
 
@@ -285,6 +359,11 @@ lift >= 2x, regions only  43.4% [41.6, 45.2]  /  42.6% [40.8, 44.3]   (median li
 The paper must say the claim is now attentional ("the model looked where it
 said"), not causal, and give the lift line beside the headline: `supported` is
 crossed by any lift above 1.0, and under half the regions are at 2x or better.
+
+**Corrected (region frame, chapter s2-8):** supported 75.7% [74.3, 77.0] (4-bit)
+and 77.6% (bf16); weak 2.2% and 1.9%; no usable explanation 22.2%; lift >= 2x
+77.5% [76.0, 79.0] and 78.7%. The "under half at 2x" caveat is gone; the claim
+stays attentional, not causal.
 
 ### F5 — Cost
 ```
@@ -428,6 +507,13 @@ throughout.
   (2026-11-11); see `report/log/`, chapter s2-4. Mild blur flips 3 verdicts in
   10, so the model is not simply insensitive to the image; how that sits with F4
   (removing the region barely moves the verdict) is still to be argued in §6.
+  Corrected for the region frame (chapter s2-8), region drift is larger: rerun
+  drift > 10% of the diagonal 56.2% / 55.4% (was 36.1 / 38.2); among surviving
+  verdicts the region moves that far under blur 61.2% / 57.4% and occlusion
+  46.3% / 46.2% (4-bit / bf16). Region instability is now a finding of its own.
+- ~~Region frame~~ — fixed and re-measured 2026-11-12 (chapter s2-8). Stage 5
+  attention grids were not saved (the cluster copy predated `--save-grids`); a
+  later region change would need Stage 5 re-run.
 - The Plan 3c spec's pre-registered DECISIONs are **not yet reviewed**.
 - Comparison models (`qwen3b-8bit`, `qwen3b-4bit`) — the size-comparison arm.
 - The §5.5 audit of 100 cases: **done**. First reader Claude Opus 5.5, blind

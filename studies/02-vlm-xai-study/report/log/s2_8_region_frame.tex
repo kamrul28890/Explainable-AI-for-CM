@@ -1,0 +1,169 @@
+\chapter{The Region Frame: Reading the Model's Boxes Where It Drew Them}
+\label{chap:s2-8}
+
+\section{Goal}
+
+Every region-based figure in Study~2 rests on reading the model's box correctly. While preparing the
+model roster, a check of Qwen2.5-VL's documentation raised a question: does the model state its box in the
+original photograph's pixels, or in the pixels of the resized image it was actually given? This chapter
+records the answer, the fix, and every figure the fix changes.
+
+\section{What Was Found}
+
+Qwen2.5-VL resizes each image to fit the pixel budget (640 blocks of $28\times28$, about 0.5 megapixels)
+before it sees it. A $1200\times900$ photograph becomes $812\times588$. The model states its box in that
+resized frame. The harness read the box as original-image pixels, so every box was shrunk toward the
+top-left corner by the resize factor, which was about 0.7 for most of the sample. Three independent checks
+agreed:
+\begin{itemize}
+\item \emph{Edges.} On $1200\times900$ images the largest right edge the model ever wrote is 839, just
+past the resized width of 812 and far short of 1200.
+\item \emph{Overlap.} Mapping the boxes back to the original frame raises mean IoU with the annotated
+boxes from 0.058 to 0.389 (4-bit) and from 0.060 to 0.398 (bf16). IoU $\geq 0.5$ goes from 2.1\% to
+40.6\% (\texttt{results/diag\_region\_frame.txt}).
+\item \emph{Processor.} Running the model's own image processor on a $1200\times900$ blank gives a
+$29\times21$ patch grid, i.e.\ $812\times588$ pixels: exactly the frame the boxes fit.
+\end{itemize}
+
+\textbf{Why the earlier check missed it.} Before F3 was reported, the highest-IoU rows were checked by
+hand against the annotation and matched to three decimals. That check was sound for the rows it looked at,
+and those rows were the problem. Eighteen of the 25 rows with IoU $\geq 0.5$ were images already within
+the pixel budget, where the resize factor is about 1 and the two frames coincide. Such images are about 5\%
+of the sample. Checking only the rows that looked right selected exactly the rows the error did not
+touch. A coordinate check needs rows chosen without regard to their score.
+
+\section{What Was Done}
+
+\textbf{The fix, behind a flag.} \texttt{xai\_vlm/frames.py} maps a box from the model-input frame to the
+original image, using the patch grid the processor reports for that image (\texttt{image\_grid\_thw},
+14-pixel patches). The backend applies it when \texttt{XAI\_REGION\_FRAME=rescaled}. The default,
+\texttt{legacy}, reads boxes as before, so every frozen file still reproduces byte-for-byte. A rescaled
+run records the flag in its stage fingerprints and must write to its own results tree. An empty value
+counts as unset; the first validation job failed on exactly that and is kept in the log.
+
+\textbf{Stages that only read regions: no GPU.} \texttt{17\_region\_frame\_fix.py} builds
+\texttt{results/scholar-a40-rf/} from the frozen A40 tree without touching it:
+\begin{itemize}
+\item Stage~2 regions are re-parsed from each stored reply in the input frame, then mapped. Nothing is
+lost or gained: 4-bit 3,022 mapped and 860 empty, bf16 3,086 and 796.
+\item Stage~6 rerun regions and Stage~8 perturbed regions are mapped; drift is recomputed.
+\item Stages~3, 7 and 10 then re-run against the new tree.
+\end{itemize}
+
+\textbf{Stages that used the regions on the GPU.} Stage~4 masks the region and Stage~5 measures attention
+inside it, so both re-ran on the A40 for both tiers under the flag, followed by Stages~9, 10 and 11.
+
+\textbf{Validation.} Before the reruns, \texttt{cluster/rf\_validate.sbatch} re-asked 40 rows with the
+backend mapping boxes itself. All 40 replies matched the frozen replies word for word, and all 40 mapped
+boxes matched the offline mapping (\texttt{RF\_VALIDATE PASS}, job 488128). Every new Stage~4 row uses
+exactly the corrected Stage~2 region, and Gini, which does not depend on the region, is unchanged
+(median 0.555 in both trees).
+
+\textbf{Two small gaps.} Stage~10 re-ran on the GPU node: two 4-bit rows and one bf16 row differ from the
+CPU build in the fourth decimal of text similarity, a numerical difference with no effect on any verdict.
+Stage~5 was meant to save its attention grids so that later region changes could be re-scored without a
+GPU. The cluster copy predated that change, so no grids were saved. The figures are unaffected.
+
+\section{Results}
+
+\begin{table}[tbp]
+\centering
+\small
+\begin{tabular}{p{6.0cm}rrrr}
+\toprule
+ & \multicolumn{2}{c}{4-bit} & \multicolumn{2}{c}{bf16} \\
+\textbf{metric} & \textbf{before} & \textbf{after} & \textbf{before} & \textbf{after} \\
+\midrule
+\multicolumn{5}{l}{\emph{Stage 10: is the explanation correct? (true YES rows)}} \\
+explanation correct & 2.4\% & 31.6\% & 2.1\% & 33.8\% \\
+IoU $\geq 0.30$ & 6.7\% & 54.7\% & 6.6\% & 55.8\% \\
+median IoU & 0.00 & 0.37 & 0.00 & 0.39 \\
+right answer, wrong reason & 97.6\% & 68.4\% & 97.9\% & 66.2\% \\
+\multicolumn{5}{l}{\emph{Stage 4: does masking the region flip the answer?}} \\
+flip, black mask (YES rows) & 6.4\% & 25.8\% & 6.8\% & 27.9\% \\
+artefact floor, black (NO$\to$YES) & 27.2\% & 24.4\% & 31.6\% & 33.8\% \\
+flip, token ablation (YES rows) & 6.1\% & 15.8\% & 5.2\% & 16.1\% \\
+artefact floor, tokens (NO$\to$YES) & 51.1\% & 40.3\% & 58.2\% & 45.1\% \\
+\multicolumn{5}{l}{\emph{Stage 5: is attention inside the region?}} \\
+attention exceeds area null & 85.4\% & 97.2\% & 85.9\% & 97.6\% \\
+median attention mass inside & 2.4\% & 23.8\% & 2.2\% & 23.6\% \\
+median region area & 1.1\% & 2.4\% & 1.0\% & 2.1\% \\
+\multicolumn{5}{l}{\emph{Stage 9: completeness, attention basis}} \\
+explanation supported & 66.5\% & 75.7\% & 68.3\% & 77.6\% \\
+lift $\geq 2\times$ (regions only) & 42.6\% & 77.5\% & 43.2\% & 78.7\% \\
+\multicolumn{5}{l}{\emph{Stages 6 and 8: does the region stay put?}} \\
+rerun drift $>10\%$ of diagonal & 36.1\% & 56.2\% & 38.2\% & 55.4\% \\
+blur: verdict holds, region moves & 47.7\% & 61.2\% & 42.6\% & 57.4\% \\
+occlusion: verdict holds, region moves & 35.1\% & 46.3\% & 34.2\% & 46.2\% \\
+\bottomrule
+\end{tabular}
+\caption{Every region-based figure, A40 tree before (\texttt{scholar-a40}) and after
+(\texttt{scholar-a40-rf}) the fix. Verdict-only figures (sensitivity, specificity, stability of the
+verdict, survival under perturbation) do not change. Intervals are in
+\texttt{results/scholar-a40-rf/report\_<tier>.txt}.}
+\label{tab:s28}
+\end{table}
+
+\textbf{The model locates hazards far better than reported.} When it correctly says Yes, its box overlaps
+the annotated box by IoU 0.3 or more 55\% of the time, and a third of its explanations are fully correct
+(right hazard, similar reason, overlapping box). F3's headline of 2.4\% was the coordinate error, not the
+model. The weak point is now split between the box and the wording: 56\% of reasons pass the similarity
+bar and 55\% of boxes pass the IoU bar. Poor-info images score higher than rich-info ones (43\% against
+24\% for 4-bit), a split that needs explaining.
+
+\textbf{Attention sits inside the box.} Median attention mass inside the stated region is ten times the
+region's share of the image (23.8\% against 2.4\%), and it beats the area null on 97\% of rows. On the
+attention basis, 78\% of explanations have a lift of $2\times$ or more, against 43\% before. The old
+tension between F3 and F6 (attention on target, boxes off target) disappears: the boxes were on target
+and the harness misplaced them.
+
+\textbf{Masking the region now moves the answer, but only some rules clear the artefact floor.} Blacking
+out the corrected region flips a quarter of Yes answers (25.8\% [24.2, 27.5] for 4-bit), four times the
+old figure. The black-mask floor is 24.4\% [20.4, 28.7], so overall the signal and the floor still
+overlap. By rule they separate:
+\begin{itemize}
+\item rule\_4: 65.2\% [53.0, 75.8] (4-bit) and 54.6\% (bf16), well above the floor;
+\item rule\_2: 45.5\% [40.2, 50.8] and 40.8\%, above it;
+\item rule\_1: 30.6\% [28.0, 33.2] and 28.7\%, at the floor;
+\item rule\_3: 9.8\% and 15.6\%, below it.
+\end{itemize}
+Token ablation still has a floor (40.3\%) far above its signal (15.8\%), so the token path remains
+uninformative.
+
+\textbf{Regions are less stable than reported.} Measured in the right frame, boxes move further. Between
+greedy and sampled reruns, 56\% drift by more than a tenth of the image diagonal (36\% before). Under mild
+blur the verdict often holds, but the box moves that far 61\% of the time.
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Standard.} Reading a model's coordinates in the frame it was given; Qwen2.5-VL's documentation
+uses absolute coordinates in the resized input.
+
+\textbf{Non-standard, and stated in the paper.}
+\begin{itemize}
+\item The fix is behind a flag and the frozen trees are kept, so every pre-fix number can still be
+reproduced and compared. The paper reports the corrected tree.
+\item The stages that only read regions were corrected offline from stored replies rather than re-run.
+That is exact for Stage~2 (the reply is kept) and was confirmed against a fresh GPU run on 40 rows.
+\end{itemize}
+
+\section{Implications}
+
+\begin{itemize}
+\item \textbf{F3 reverses.} The model does not ``describe hazards well and locate them badly''. It
+locates the annotated hazard about half the time when it is right, and its full explanation is correct
+about a third of the time. ``Right answer, wrong reason'' falls from 98\% to 68\%: still the majority,
+but no longer near-total.
+\item \textbf{F4 softens and becomes rule-specific.} The probe is not drowned everywhere. For struck-by
+(rule\_4) and fall protection (rule\_2), masking the stated region removes the answer well beyond what
+masking does to answers that had nothing to find. For PPE it does not separate, and for edge protection
+it is below the floor.
+\item \textbf{F6 strengthens, and F7's lift caveat is gone.} Attention is inside the box on 97\% of rows
+at a median lift of $8\times$ (4-bit) and $9\times$ (bf16); over three quarters of regions are at
+$2\times$ or better.
+\item \textbf{Region stability is a new weakness.} The box is right more often than reported, and less
+steady than reported.
+\item \textbf{For the model roster.} Every new model states boxes in its own convention (resized pixels,
+0--1000, 0--1, points). Each adapter will map to the original frame and be checked on rows drawn without
+regard to their score, before any metric is computed.
+\end{itemize}

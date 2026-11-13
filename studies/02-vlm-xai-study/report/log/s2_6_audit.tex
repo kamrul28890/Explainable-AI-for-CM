@@ -199,7 +199,9 @@ all of that is violations left unmarked; a marked violation is rarely wrong (1 o
 \begin{itemize}
 \item \textbf{The annotations can be trusted where they mark something.} Marked violations are confirmed 48
 of 49 times and every box is on or partly on its hazard. Low explanation IoU (F3) is therefore not a
-symptom of badly placed boxes.
+symptom of badly placed annotation boxes. It was a coordinate-frame error in reading the model's boxes
+(Chapter~\ref{chap:s2-8}), and corrected, 55\% of correct Yes answers overlap the annotated box at IoU
+0.3 or more.
 \item \textbf{They are incomplete, mostly for rule\_4.} Nine of the 17 unmarked violations are a worker near an
 operating excavator, and 11 of 50 hazard images carry a second, unmarked violation. So F3's third caveat
 (a zero-IoU region may be a real, unannotated hazard) is real but bounded. Some of the model's rule\_4
