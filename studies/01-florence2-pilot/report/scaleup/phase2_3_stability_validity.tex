@@ -1,0 +1,103 @@
+\chapter{Stability Validity: Temperature Sweep, Object Presence, and Size-Invariant Drift (Phase 2.3)}
+\label{chap:p2-3}
+
+\section{Goal}
+
+The pilot's stability metric reran each sample three times at a single, arbitrary sampling temperature
+(0.7) and reported answer agreement and top-region IoU. The plan (item 4.3) flags four validity gaps:
+the single temperature hides how stability depends on it; three reruns is too few for a smooth
+per-sample estimate; IoU penalizes small PPE boxes purely for their size; and, worst, the pilot
+returned NaN and \emph{silently dropped} any sample whose object box appeared in some reruns and
+vanished in others --- discarding exactly the most unstable cases. This phase adds a temperature sweep
+with more reruns, a size-invariant drift measure, and an object-presence-stability measure that counts
+the vanishing-box case instead of hiding it.
+
+\section{What Was Done}
+
+Two pure, unit-tested metric functions were added: \texttt{object\_presence\_rate} (the fraction of
+reruns in which the safety object was detected at all --- 1.0 if always, 0.0 if never, intermediate for
+a flickering detection) and \texttt{mean\_pairwise\_centroid\_distance} (mean box-centroid distance
+across reruns, normalized by the image diagonal --- a size-invariant companion to IoU that stays small
+when detections sit in the same place regardless of box size). Script~07 gained a sweep mode
+(\texttt{-{}-temperatures}, \texttt{-{}-n-reruns}, \texttt{-{}-limit}): with neither temperature nor
+rerun count supplied it reproduces the frozen single-point run byte-for-byte; supplied, it reruns each
+sample at every temperature, records the new columns, and writes a suffixed CSV. Eight unit tests cover
+presence (all/none/flicker/empty) and centroid distance (identical, small-jitter-where-IoU-collapses,
+single-box).
+
+\section{Results}
+
+Sweeping 40 samples at temperatures \{0.3, 0.5, 0.7, 1.0\} with 10 reruns each:
+
+\begin{center}
+\begin{tabular}{p{2.4cm}p{2.8cm}p{2.6cm}p{3.2cm}p{2.4cm}}
+\toprule
+\textbf{temperature} & \textbf{answer agreement} & \textbf{object IoU} & \textbf{centroid dist.\ (size-inv)} & \textbf{object presence} \\
+\midrule
+0.3 & 0.871 & 0.730 & 0.055 & 0.950 \\
+0.5 & 0.827 & 0.611 & 0.079 & 0.948 \\
+0.7 & 0.813 & 0.591 & 0.084 & 0.945 \\
+1.0 & 0.797 & 0.472 & 0.106 & 0.948 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Stability vs.\ sampling temperature (40-sample subset, 10 reruns each). Answer
+agreement and IoU both fall monotonically as temperature rises; the size-invariant centroid distance
+rises only slightly and stays small; object presence is flat near 0.95.}
+\label{tab:p23-sweep}
+\end{center}
+
+\subsection{The single 0.7 point was hiding a curve}
+
+Answer agreement is 0.871 at temperature 0.3 and 0.797 at 1.0 --- a smooth, monotonic decline, exactly
+as more sampling noise should produce. The pilot's lone 0.7 measurement (0.813 here) sits in the middle
+of that curve, neither best nor worst; reporting it alone gave no sense of how much of the instability
+was a choice of temperature. The sweep turns a single number into a dose-response relationship the
+paper can actually interpret.
+
+\subsection{IoU overstates region instability; the size-invariant measure corrects it}
+
+This is the phase's most consequential result. As temperature rises, object-box IoU collapses from
+0.730 to 0.472 --- which, read alone, says the explanation region becomes badly unstable. But the
+normalized centroid distance over the same reruns rises only from 0.055 to 0.106: the box centroids
+stay within 5--11\% of the image diagonal of each other at every temperature. The boxes are not moving
+to different places; they are jittering slightly in size and extent around the same location, and IoU ---
+size-biased for the small PPE boxes that dominate this dataset --- converts that small jitter into a
+large apparent overlap loss. The size-invariant measure shows the explanation is substantially more
+\emph{spatially} stable than IoU alone implies, mirroring the size-confound lesson of Phase~2.2 in a
+second metric.
+
+\subsection{The vanishing box is now counted}
+
+Object presence sits at 0.948 on average and is essentially flat across temperature --- the safety
+object is detected in about 95\% of reruns regardless of sampling noise. Crucially, \textbf{4 samples
+have a flickering object} (presence strictly between 0 and 1): the detection appears in some reruns and
+vanishes in others. These are precisely the samples the pilot's IoU returned NaN for and dropped from
+the average --- the worst instability, previously invisible. They are now a reported number, so a
+sample whose explanation cannot even reliably \emph{exist} across reruns counts against stability
+rather than silently improving it.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Subset, by design.} The sweep was run on 40 samples rather than all 163 because a dense grid
+(4 temperatures $\times$ 10 reruns) is $13\times$ the per-sample cost of the pilot's single point; 40
+samples is enough to establish the monotonic curve and the IoU-vs-centroid divergence, and the full
+163-sample sweep is a Phase~5 scale-run deliverable using the same flags.
+
+\textbf{Standard.} A temperature dose-response, more reruns for a smoother estimate, and a
+size-invariant spatial-stability measure are ordinary robustness-of-measurement practice.
+
+\textbf{Non-standard, and the contribution.} Counting the vanishing-box case as instability rather than
+dropping it to NaN is the substantive correction: the pilot's convention made its stability number
+optimistic precisely on the samples that were least stable. Reporting both IoU and centroid distance
+side by side, and showing they \emph{disagree} (IoU collapses while centroids barely move), is what
+converts ``the region is unstable'' into the more accurate ``the region jitters in size but not in
+location'' --- a qualitatively different, and more defensible, claim.
+
+\section{Implications}
+
+Stability now reports a temperature curve, a size-invariant spatial-drift measure that de-biases the
+IoU story, and an object-presence measure that no longer hides the worst cases. The IoU-vs-centroid
+divergence recorded here is the static-image analog of the temporal-stability work the plan reserves
+for the CMA video dataset (Phase~5), where frame-to-frame explanation drift will need exactly this
+size-invariant treatment. The full-resolution 163-sample sweep is left as a scale-run step, unblocked
+and parametrized.

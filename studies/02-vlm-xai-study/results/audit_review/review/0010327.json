@@ -1,0 +1,17 @@
+{
+  "claude": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "yes"
+  },
+  "final": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "unsure"
+  },
+  "image_id": "0010327",
+  "note": "i am not sure if the excavator is in operation, so cant make that call if its violating or not.",
+  "reviewed_at": "2026-11-12T04:20:50.399Z"
+}

@@ -1,0 +1,18 @@
+{
+  "image_id": "0007408",
+  "blind": {
+    "rule_1": "yes",
+    "rule_2": "no",
+    "rule_3": "no"
+  },
+  "blind_note": "r1: the paving crew wear straw hats, none a hard hat.",
+  "boxes": {
+    "rule_1": "partly"
+  },
+  "note": "One box is on the worker in orange, who appears to wear a hard hat.",
+  "auditor": "claude-opus-5-5",
+  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+  "saved_at": "2026-11-12T03:30:41+00:00",
+  "first_saved_at": "2026-11-12T03:28:36+00:00",
+  "source": "first reader, not reviewed"
+}

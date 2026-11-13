@@ -1,0 +1,17 @@
+{
+  "claude": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "yes",
+    "rule_4": "no"
+  },
+  "final": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "unsure",
+    "rule_4": "no"
+  },
+  "image_id": "0004657",
+  "note": "i can see theres a guard rail on the left side, on the right side, its more like a gradual graded (but steep) edge. so on the left side, i think, theres edge - on the right side - i dont think we need any.",
+  "reviewed_at": "2026-11-12T04:14:51.390Z"
+}

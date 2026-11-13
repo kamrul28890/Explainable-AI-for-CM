@@ -1,0 +1,17 @@
+{
+ "image_id": "0009971",
+ "blind": {
+  "rule_1": "no",
+  "rule_2": "yes",
+  "rule_3": "no"
+ },
+ "blind_note": "r2: helmeted worker sprays the steel beams from the top of a mobile scaffold several metres up, with no guardrail or harness.",
+ "boxes": {
+  "rule_2": "yes"
+ },
+ "note": "",
+ "auditor": "claude-opus-5-5",
+ "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+ "saved_at": "2026-11-12T03:30:41+00:00",
+ "first_saved_at": "2026-11-12T03:28:36+00:00"
+}

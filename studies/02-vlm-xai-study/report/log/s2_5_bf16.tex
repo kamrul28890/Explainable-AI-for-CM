@@ -1,0 +1,87 @@
+\chapter{The Unquantised Arm: Is 4-bit Compression the Cause?}
+\label{chap:s2-5}
+
+\section{Goal}
+
+Every Study~2 result used Qwen2.5-VL-7B compressed to 4 bits (nf4) to fit the 8~GB card. A reviewer can ask
+whether the poor explanation results are a property of the model or of the compression. The A40 has room
+for the unquantised model in bfloat16, so this phase runs the full battery on it.
+
+\section{What Was Done}
+
+A new tier, \texttt{qwen7b-bf16}, loads the same checkpoint folder at the same pinned revision
+(\texttt{cc594898\ldots}) with quantisation off. The chains take the model as a parameter; a non-primary tier
+gets its own state directory and model-suffixed output files in the same A40 tree, so the two tiers compare
+without machine noise. Every stage ran: 0--10, plus 8 and the attention basis of 9.
+
+\section{Results}
+
+Table~\ref{tab:s25} sets the two tiers side by side.
+
+\begin{table}[tbp]
+\centering
+\begin{tabular}{p{6.6cm}rr}
+\toprule
+\textbf{metric} & \textbf{4-bit} & \textbf{bf16} \\
+\midrule
+\multicolumn{3}{l}{\emph{what the model answers}} \\
+sensitivity                       & 90.4\% & 93.8\% \\
+specificity                       & 40.5\% & 36.0\% \\
+rule\_4 sensitivity ($n=70$) & 25.7\% [15.7, 35.7] & 81.4\% [71.4, 90.0] \\
+Stage 0 small-object ($n=9$)      & 78\%   & 89\%   \\
+\midrule
+\multicolumn{3}{l}{\emph{how good the explanation is}} \\
+Stage 10 explanation correct      & 2.4\%  & 2.1\%  \\
+Stage 5 attention exceeds area null & 85.4\% & 85.9\% \\
+Stage 9 explanation supported     & 66.5\% & 68.3\% \\
+Stage 4 flip rate (black box)     & 6.4\%  & 6.8\%  \\
+Stage 8 survives blur / occlusion & 70.4 / 80.2\% & 68.8 / 79.4\% \\
+\midrule
+\multicolumn{3}{l}{\emph{stability under sampling (Stage 6)}} \\
+verdict unanimous                 & 51.9\% & 47.0\% \\
+\quad baseline NO                 & 49.6\% & 36.8\% \\
+unreadable sampled reply          & 0.7\%  & 2.3\%  \\
+\midrule
+in-run median latency             & 2.34 s & 2.02 s \\
+\bottomrule
+\end{tabular}
+\caption{The same checkpoint, A40, same questions, with and without 4-bit compression.}
+\label{tab:s25}
+\end{table}
+
+Compression changes \emph{what} the model answers --- most of all on rule\_4 (a worker in the danger zone of heavy machinery), where the
+unquantised model finds three times as many annotated violations, with intervals that do not overlap. It
+barely changes \emph{how good the explanations are}: every explanation metric moves by two points or less.
+The unquantised model is also less steady under sampling, especially on its NO verdicts.
+
+\section{Problems and Solutions}
+
+\textbf{Stage 6 stopped on its parse-rate guard.} After 100 rows only 90\% had all five sampled replies
+readable, below the pre-registered 95\% floor. The first hypothesis --- the 128-token reply cap cutting the
+reply off before the final ANSWER line --- was wrong: a 200-call diagnostic found the longest reply was
+94 tokens. Instead, at temperature 0.7 the model sometimes replies with the single word ``NONE'' (11 of 13
+failures) or ``ANSWER: MAYBE''. Per reply that is 2.6\%; but one bad reply in five failed the whole row.
+
+\textbf{Decision (2026-11-10): grade the guard per reply, as Stage~2's is.} The guard exists to catch a
+degrading prompt, which a per-reply rate still does. An unreadable reply still counts as a disagreement in
+the agreement rate, so no 4-bit figure changed. The report gives the unreadable-reply rate on its own line.
+bf16 Stage~6 was rerun from scratch; the tripped attempt is kept in \texttt{results/scholar-a40/superseded/}.
+This is a change to a pre-registered guard after it tripped, and the paper states it as such.
+
+\textbf{One Stage 8 row short.} bf16 has 1,599 rows, not 1,600: the shared seeded sampler rounds each rule's
+proportional share, and for bf16's NO verdicts the shares round to 799. The sampler is shared with Stages
+4 and 6 and their files are frozen, so it is left as is and noted. One further blur reply out of 7,995 was
+unreadable.
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Standard.} An unquantised ablation of a quantised model.
+
+\textbf{Non-standard.} Running it through the identical battery on the same GPU, so the comparison isolates
+compression from machine, data and code.
+
+\section{Implications}
+
+The poor explanation quality reported for Study~2 is not a compression artefact: the unquantised model
+explains no better. The paper can say so with a measured comparison. Accuracy is a different matter ---
+rule\_4's sensitivity under 4-bit is a compression effect and should be reported as one.

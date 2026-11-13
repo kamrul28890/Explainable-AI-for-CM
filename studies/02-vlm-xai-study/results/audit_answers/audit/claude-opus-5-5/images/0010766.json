@@ -1,0 +1,15 @@
+{
+ "image_id": "0010766",
+ "blind": {
+  "rule_1": "no",
+  "rule_2": "unsure",
+  "rule_3": "no"
+ },
+ "blind_note": "r2: a helmeted worker crouches on top of a block wall near the open facade, around 3 m up; cannot see whether he is tied off.",
+ "boxes": {},
+ "note": "",
+ "auditor": "claude-opus-5-5",
+ "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+ "saved_at": "2026-11-12T03:28:36+00:00",
+ "first_saved_at": "2026-11-12T03:28:36+00:00"
+}

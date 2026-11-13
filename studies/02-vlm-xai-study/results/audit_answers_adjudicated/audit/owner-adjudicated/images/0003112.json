@@ -1,0 +1,16 @@
+{
+  "image_id": "0003112",
+  "blind": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "no"
+  },
+  "blind_note": "All workers on the formwork deck wear hard hats and full clothing, daytime. Deck is not a 3 m working height edge.",
+  "boxes": {},
+  "note": "",
+  "auditor": "claude-opus-5-5",
+  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+  "saved_at": "2026-11-12T03:28:36+00:00",
+  "first_saved_at": "2026-11-12T03:28:36+00:00",
+  "source": "first reader, not reviewed"
+}

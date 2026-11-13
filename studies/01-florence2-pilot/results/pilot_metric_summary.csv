@@ -1,0 +1,7 @@
+metric,direction,overall,compliant,ppe_violation,fall_hazard,struck_by_risk,n,source_csv
+descriptive_accuracy,higher_better,0.3619631901840491,0.28,0.28,0.46,0.6153846153846154,163,descriptive_accuracy.csv
+visual_sparsity_top5,higher_better,0.10804156761743476,0.0993416582811708,0.12679045771119582,0.10855915164356401,0.06685115250672755,159,visual_sparsity.csv
+stability_answer_agreement,higher_better,0.7750511247443763,0.7466666666666667,0.76,0.7866666666666666,0.8974358974358974,163,stability.csv
+robustness_level1_answer_survival,higher_better,0.8067484662576687,0.795,0.86,0.75,0.8653846153846154,652,robustness.csv
+bounded_completeness,higher_better,0.43558282208588955,0.32,0.36,0.58,0.6153846153846154,163,bounded_completeness.csv
+efficiency_total_pipeline_1000hr,lower_better,0.4973109541475418,,,,,"n/a -- aggregate runtime budget, not a per-sample classification",efficiency_summary.csv

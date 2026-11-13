@@ -1,0 +1,53 @@
+# Model weight revisions, pinned by commit SHA.
+#
+# Hugging Face repo ids are mutable: `Qwen/Qwen2.5-VL-7B-Instruct` today and the
+# same id in six months can be different weights. An unpinned "latest" silently
+# changes results and is among the most common reproducibility failures in ML
+# work, so the exact revision behind every reported number is recorded here.
+#
+# Format:  <tier>  <repo_id>  <revision_sha>
+#
+# `verified` below means the weights were downloaded and this SHA was read back
+# from the on-disk snapshot metadata, not merely queried from the Hub.
+
+# --- downloaded and verified on this machine -------------------------------
+# Study 2 primary arm. SHA confirmed against
+# models/qwen7b-4bit/.cache/huggingface/download/*.metadata after download.
+qwen7b-4bit   Qwen/Qwen2.5-VL-7B-Instruct                 cc594898137f460bfe9f0759e9844b3ce807cfb5  # verified 2026-08-17
+# Same snapshot, loaded without quantisation (models/qwen7b-4bit holds the
+# full-precision checkpoint; nf4 is applied at load time).
+qwen7b-bf16   Qwen/Qwen2.5-VL-7B-Instruct                 cc594898137f460bfe9f0759e9844b3ce807cfb5  # same files as qwen7b-4bit
+
+# --- model roster: downloaded and verified on RCAC Scholar --------------------
+# Gated (Meta licence accepted 2026-11-12). original/* (consolidated .pth) excluded;
+# 5 safetensors shards, 906 tensors, all opened after download (2026-11-13).
+llama32v-11b  meta-llama/Llama-3.2-11B-Vision-Instruct    9eb2daaa8597bf192a8b0e73f848f3a102794df5  # verified 2026-11-13, scholar
+
+# --- model roster: resolved from the Hub, not yet downloaded ------------------
+qwen3b-bf16   Qwen/Qwen2.5-VL-3B-Instruct                 66285546d2b821cf421d4f5eb2576359d3770cd3  # resolved 2026-11-13, 7.5 GB
+qwen32b-4bit  Qwen/Qwen2.5-VL-32B-Instruct                7cfb30d71a1f4f49a57592323337a4a4727301da  # resolved 2026-11-13, 68.3 GB bf16 on disk
+qwen32b-bf16  Qwen/Qwen2.5-VL-32B-Instruct                7cfb30d71a1f4f49a57592323337a4a4727301da  # same files as qwen32b-4bit (models/qwen32b)
+
+# --- resolved from the Hub, not yet downloaded here -------------------------
+# Recorded now so a later download can be pinned to the same revision this study
+# was designed against, rather than to whatever `main` points at that day.
+qwen3b-8bit   Qwen/Qwen2.5-VL-3B-Instruct                 66285546d2b821cf421d4f5eb2576359d3770cd3
+mlx-3b-4bit   mlx-community/Qwen2.5-VL-3B-Instruct-4bit   46d4cf06a06ffc1a766c214174f9cbed2f45bcab
+mlx-7b-4bit   mlx-community/Qwen2.5-VL-7B-Instruct-4bit   fdcc572e8b05ba9daeaf71be8c9e4267c826ff9b
+florence2     microsoft/Florence-2-base-ft                f6c1a25888ffc1d945ee8a1a77ac833c7303d46e
+
+# ENFORCED: scripts/download_data.py reads this file and passes `revision=` to
+# snapshot_download. A tier with no entry here still downloads, but prints a
+# warning naming the omission rather than silently taking `main`.
+
+# --- Metric 7 sentence embeddings -------------------------------------------
+# Explanation correctness compares the model's REASON with the human's. Unpinned,
+# the embedding model silently changes those scores between runs.
+#
+# Verified on this snapshot against the architecture doc's own worked pair:
+#   "The mechanic in front of the truck is not wearing a hard hat."
+#   "The man working beside the truck cab has no helmet on."      -> 0.704
+#   vs "The excavation edge on the right is not guarded."         -> 0.340
+# The pre-registered SIMILARITY_FLOOR of 0.60 separates them. Note the doc's
+# illustrative 0.88 for that pair is higher than this model actually gives.
+minilm-l6-v2  sentence-transformers/all-MiniLM-L6-v2  1110a243fdf4706b3f48f1d95db1a4f5529b4d41  # verified 2026-08-20

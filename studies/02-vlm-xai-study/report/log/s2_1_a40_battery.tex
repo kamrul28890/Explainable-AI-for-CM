@@ -1,0 +1,102 @@
+\chapter{The Full Battery on Scholar's A40, and Stage 6 for the First Time}
+\label{chap:s2-1}
+
+\section{Goal}
+
+Every Study~2 number so far came from one RTX~3070 with 8~GB of memory, where a single Stage~2 pass takes
+about ten seconds a question. Stage~6 (stability: five sampled reruns per row) was implemented and tested but
+never run, because at that speed it would have occupied the card for days. This phase moves the whole
+battery to Purdue's Scholar cluster (NVIDIA A40, 46~GB), runs every stage there including Stage~6, and
+checks that the headline figures survive the change of machine.
+
+\section{What Was Done}
+
+\textbf{Per-machine result trees.} A parity run had already shown that greedy decoding reproduces exactly on
+one GPU but not across GPUs: on identical weights, code, data and pinned libraries the A40 agreed with the
+frozen 3070 baseline on 96.9\% of verdicts and 42.7\% of replies byte-for-byte. Every model stage therefore
+records the GPU in its fingerprint and refuses to resume a file written on another device, and the Scholar
+run writes to its own tree, \texttt{results/scholar-a40/}. Comparisons between stages (Stage~6 against
+Stage~2, for instance) stay inside one tree, so machine noise is never measured as instability.
+
+\textbf{Self-continuing job chains.} Scholar caps a job at four hours and lets one user run two at once.
+Each link of a chain queues its own successor first (\texttt{afterany}), runs its stages under
+\texttt{timeout -{}-signal=INT} about 25 minutes short of the wall so a stage stops between rows rather than
+mid-write, and on success marks itself done and cancels the successor. A real failure writes a
+\texttt{FAILED} marker and stops every chain for that model --- there is no retry loop. Four chains
+(Stages 4, 5, 6 and later 8) run after the base chain (Stages 0--3, 7), and the last to finish submits the
+final chain (Stages 9--11).
+
+\section{Results}
+
+\begin{center}
+\begin{tabular}{p{6.2cm}rr}
+\toprule
+\textbf{metric} & \textbf{RTX 3070 (frozen)} & \textbf{A40} \\
+\midrule
+sensitivity                         & 90.9\% & 90.4\% \\
+specificity                         & 40.9\% & 40.5\% \\
+false-alarm rate                    & 59.1\% & 59.5\% \\
+rule\_4 sensitivity ($n=70$)        & 30.0\% & 25.7\% \\
+Stage 4 flip rate (black box)       & 6.4\%  & 6.4\%  \\
+Stage 5 attention exceeds area null & 85.7\% & 85.4\% \\
+Stage 10 explanation correct        & 2.4\%  & 2.4\%  \\
+\bottomrule
+\end{tabular}
+\captionof{table}{The same battery on two machines. Every headline agrees within about one point and well
+inside its 95\% interval; rule\_4's four-point gap is three images out of 70.}
+\label{tab:s21-parity}
+\end{center}
+
+\textbf{Stage 6, run for the first time} (799 rows: 400 baseline-YES, 399 baseline-NO; five reruns each at
+temperature 0.7):
+
+\begin{center}
+\begin{tabular}{p{7.4cm}r}
+\toprule
+\textbf{metric} & \textbf{A40, 4-bit} \\
+\midrule
+verdict unanimous across all five reruns    & 51.9\% [48.4, 55.4] \\
+\quad baseline YES / baseline NO            & 54.2\% / 49.6\% \\
+majority of reruns overturns the greedy verdict & 17.9\% [15.3, 20.7] \\
+flickering region (present in some reruns, not all) & 38.0\% [34.7, 41.4] \\
+region drift $>$ 10\% of the image diagonal ($n=612$) & 36.1\% [32.4, 40.0] \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Stage 6 stability. Stage 6's own console summary printed a median pairwise agreement of
+100\%, which reads as stable; unanimity shows half the rows disagree with themselves at least once.}
+\label{tab:s21-stability}
+\end{center}
+
+On nearly one row in five, the verdict the paper reports (greedy decoding) is the \emph{minority} answer
+under the model's own sampling distribution. The explanation is less stable still: where at least two
+reruns named a region, a third of the time those regions sit more than a tenth of the image diagonal apart.
+
+\section{Problems and Solutions}
+
+\textbf{Stage 0's small-object score dropped from 89\% to 78\%.} That is 8 of 9 images against 7 of 9 --- one
+image. The verdict becomes ``GO with limitation'' on the A40, and the paper should not read anything into a
+one-image difference beyond that.
+
+\textbf{The ``3.5$\times$ unexplained latency gap'' was the local machine.} On the 3070 the same images
+answered in 3.1~s standalone and 10--11~s inside a run, and the latency caveat in Stage~7 and the runner
+blamed the harness. On the A40 the in-run median is 2.3~s. The gap belongs to the 3070 machine; the caveat
+now quotes a standalone-to-in-run ratio only when both were measured on the same GPU.
+
+\textbf{Region drift was never computed.} Stage~6 reads its rows from Stage~2, which carries no image size,
+so the drift column stayed empty. Stage~3's regions file has the size of every (image, rule), so the report
+now joins on it and recomputes drift from the stored regions; future Stage~6 runs take the sizes in-run.
+No other figure moved.
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Standard.} Bootstrap intervals on every rate; resumable, checkpointed runs.
+
+\textbf{Non-standard.} Treating the GPU as part of the experimental configuration --- fingerprinted, never
+mixed within one tree --- is stricter than common practice, and it is what the 96.9\% parity figure demands:
+3.1\% of greedy verdicts change with the card alone.
+
+\section{Implications}
+
+The headline results are not an artefact of one machine. Stage~6 adds a new finding for the paper: the
+greedy verdict is the minority answer in 17.9\% of rows, and explanation regions are less stable than the
+verdicts they accompany.

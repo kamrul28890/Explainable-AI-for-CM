@@ -1,0 +1,26 @@
+rule_4 rows in the sample: 323; drawn 92; answered 77 yes/no, 15 unsure, 0 missing
+
+cell   size  drawn  reader-yes / answered  unsure
+  C-NN    85     12       1 / 12             0
+  C-NY    32     12       7 / 10             2
+  C-Y      8      8       3 / 7              1
+  H-NN    28     12       2 / 9              3
+  H-NY    59     12       5 / 10             2
+  H-YY    41     12       7 / 11             1
+  P-NN    12      8       7 / 7              1
+  P-NY    40      8       6 / 6              2
+  P-Y     18      8       5 / 5              3
+
+== qwen7b-4bit (rule_4, 323 rows)   annotation  ->  audit-corrected [95% CI]
+  sensitivity       25.7%  ->   28.8% [21.9%, 35.8%]
+  specificity       80.6%  ->   87.7% [80.5%, 94.7%]
+  false_alarm_C      6.4%  ->    5.0% [1.4%, 8.2%]
+  false_alarm_H     32.0%  ->   22.5% [6.4%, 38.2%]
+  violations         70.0  ->   164.7 (expected count)
+
+== qwen7b-bf16 (rule_4, 323 rows)   annotation  ->  audit-corrected [95% CI]
+  sensitivity       81.4%  ->   83.8% [75.0%, 90.9%]
+  specificity       45.1%  ->   63.3% [54.0%, 74.9%]
+  false_alarm_C     31.2%  ->   14.8% [5.7%, 23.5%]
+  false_alarm_H     78.1%  ->   67.1% [50.3%, 79.2%]
+  violations         70.0  ->   164.7 (expected count)

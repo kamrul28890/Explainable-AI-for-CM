@@ -1,0 +1,171 @@
+== chain base link 1  job 487061  successor 487062  host scholar-j003.rcac.purdue.edu
+== commit 7c4f88157292fe26b7d986de3351fa213ec345f3  model qwen7b-bf16  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40
+NVIDIA A40, 46068 MiB
+-- cpu_and_gpu_tests: start 2026-11-10T11:28:46-05:00  (budget 12900s)
+........................................................................ [ 26%]
+........................................................................ [ 52%]
+........................................................................ [ 79%]
+........................................................                 [100%]
+=============================== warnings summary ===============================
+tests/test_qwen_backend.py: 14 warnings
+  /scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+-- cpu_and_gpu_tests: rc=0  2026-11-10T11:31:48-05:00
+-- stage0: start 2026-11-10T11:31:48-05:00  (budget 12718s)
+loading qwen7b-bf16 ...
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:01<00:04,  1.23s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:02<00:03,  1.24s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:03<00:02,  1.24s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:04<00:01,  1.24s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.03it/s]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.09s/it]
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/generation/configuration_utils.py:629: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `1e-06` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+  0000161  exp=YES  got=YES  2.7s
+  0000163  exp=YES  got=NO  2.2s
+  0000328  exp=YES  got=YES  2.0s
+  0000072  exp=YES  got=YES  1.9s
+  0000005  exp=YES  got=YES  2.2s
+  0000068  exp=YES  got=YES  2.0s
+  0000039  exp=YES  got=YES  1.9s
+  0000118  exp=YES  got=YES  2.3s
+  0000095  exp=YES  got=YES  2.0s
+  0000233  exp=YES  got=YES  2.0s
+  0000102  exp=YES  got=NO  2.2s
+  0000132  exp=YES  got=YES  2.2s
+  0000229  exp=YES  got=YES  2.0s
+  0000019  exp=YES  got=YES  1.8s
+  0000059  exp=YES  got=YES  1.9s
+  0000135  exp=YES  got=YES  1.9s
+  0000009  exp=YES  got=YES  2.2s
+  0000046  exp=YES  got=YES  1.9s
+  0000007  exp=YES  got=YES  1.8s
+  0000116  exp=YES  got=YES  1.9s
+  0000001  exp=NO  got=NO  1.2s
+  0000002  exp=NO  got=NO  2.2s
+  0000010  exp=NO  got=YES  2.1s
+  0000013  exp=NO  got=YES  1.9s
+  0000014  exp=NO  got=NO  1.8s
+  0000015  exp=NO  got=YES  2.3s
+  0000017  exp=NO  got=NO  1.7s
+  0000018  exp=NO  got=YES  1.9s
+  0000022  exp=NO  got=YES  2.0s
+  0000023  exp=NO  got=NO  1.8s
+
+==================================================================
+small-object detection : 89%  (n=9)
+overall accuracy       : 77%
+  sensitivity          : 90%  (n=20)
+  specificity          : 50%  (n=10)
+  YES share of replies : 77%   <- 100% would make the
+                                        small-object number vacuous
+median latency         : 2.0s
+parse rate             : 100%
+peak VRAM              : 17.7 GB
+Qwen2_5_VLModel is using Qwen2_5_VLSdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.
+attention available    : True
+==================================================================
+VERDICT: GO.
+WARNING: peak VRAM 17.7 GB is close to the limit; lower max_pixels.
+-- stage0: rc=0  2026-11-10T11:33:09-05:00
+-- stage1_verify: start 2026-11-10T11:33:09-05:00  (budget 12637s)
+manifest sha256 af91ed280cd22bfc6cdb27cc6645f448d137bb29b4ec77fc504cddfa3ac166c9
+-- stage1_verify: rc=0  2026-11-10T11:33:09-05:00
+-- stage2: start 2026-11-10T11:33:09-05:00  (budget 12637s)
+manifest: 3882 rows, 2556 distinct images
+loading qwen7b-bf16 ...
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:01<00:05,  1.28s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:02<00:03,  1.26s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:03<00:02,  1.25s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:04<00:01,  1.24s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.02it/s]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.10s/it]
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/generation/configuration_utils.py:629: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `1e-06` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+     100 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+     200 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+     300 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+     400 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+     500 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+     600 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+     700 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+     800 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+     900 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1000 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1100 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1200 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1300 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1400 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1500 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1600 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1700 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1800 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    1900 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2000 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2100 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2200 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2300 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2400 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2500 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2600 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2700 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2800 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    2900 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    3000 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    3100 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    3200 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    3300 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    3400 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    3500 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    3600 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    3700 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+    3800 done       0 skipped     0 errors  |  parse 100.0%  median 2.0s
+
+done=3882  skipped=0  errors=0
+
+==================================================================
+NEGATIVE CONTROLS FIRST
+  false-alarm rate : 64% (1635/2555)
+  WARNING: the model answers YES to most absent hazards. Its accuracy on violations cannot be read as detection.
+
+YES share          : 74%
+sensitivity        : 94% (n=1327)
+specificity        : 36% (n=2555)
+errors             : 0
+
+parsed 3881/3882 (100.0%)
+  strict    3875
+  lenient      6
+  failed       1
+  retried      0
+        1  no ANSWER field
+==================================================================
+-- stage2: rc=0  2026-11-10T13:50:25-05:00
+-- stage3: start 2026-11-10T13:50:25-05:00  (budget 4401s)
+baseline: 3882 rows
+reading dimensions for 2556 images (headers only) ...
+  got 2556
+
+============================================================
+NO-REGION RATE : 20.5%
+  the share of cases where the system offered no explanation at all
+  among YES answers : 1.1%
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/regions_qwen7b-bf16.csv
+============================================================
+-- stage3: rc=0  2026-11-10T13:52:03-05:00
+-- stage7: start 2026-11-10T13:52:03-05:00  (budget 4303s)
+==================================================================
+median 2.0s   p90 2.4s   mean 2.0s   max 4.6s   n=3882
+  rule_1: median 2.0s  p90 2.2s  n=1503
+  rule_2: median 2.0s  p90 2.4s  n=1019
+  rule_3: median 2.1s  p90 2.4s  n=1037
+  rule_4: median 2.2s  p90 2.5s  n=323
+
+CAVEAT, reported with every efficiency figure:
+  in-run median      2.0s on NVIDIA A40   <- PRIMARY, what a batch costs
+  standalone median  3.1s on NVIDIA GeForce RTX 3070
+  different GPUs: no standalone/in-run ratio is meaningful here.
+  The gap is a property of the local machine, not of the harness: the same
+  code and data ran at 2.3s per call in-run on an A40 (results/scholar-a40,
+  2026-11-09). Compare latencies only within one machine's results tree.
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/efficiency_qwen7b-bf16.csv
+==================================================================
+-- stage7: rc=0  2026-11-10T13:52:03-05:00
+== chain base DONE
+submitted s4: 487132
+submitted s5: 487133
+submitted s6: 487134

@@ -1,0 +1,17 @@
+{
+  "image_id": "0010327",
+  "blind": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "unsure"
+  },
+  "blind_note": "r4: two helmeted workers crouch a couple of metres in front of one excavator and beside the bucket of another.",
+  "boxes": {},
+  "note": "i am not sure if the excavator is in operation, so cant make that call if its violating or not.",
+  "auditor": "claude-opus-5-5",
+  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+  "saved_at": "2026-11-12T03:28:36+00:00",
+  "first_saved_at": "2026-11-12T03:28:36+00:00",
+  "source": "owner"
+}

@@ -1,7 +1,44 @@
-# Scratch / render byproducts
-tmp/
+# ---------------------------------------------------------------------------
+# This repository is PUBLIC. Anything matched here never reaches GitHub.
+# ---------------------------------------------------------------------------
 
-# LaTeX build artifacts
+# --- Private / personal material (never publish) ---------------------------
+personal_notes.docx
+*personal*.docx
+output/
+
+# --- Legacy pre-migration path ---------------------------------------------
+# pilot/ was renamed to studies/01-florence2-pilot/. On this machine a stub
+# remains holding only .venv and the downloaded dataset, because Windows would
+# not move them while VS Code held open handles. studies/01-florence2-pilot/data
+# is a junction pointing back at it, so the small tracked files (pilot_samples.csv,
+# safety_prompts.json) are visible at the new path. Ignoring the old path stops
+# git recording the same files twice. A fresh clone never has this stub.
+/pilot/
+
+# --- Virtual environments --------------------------------------------------
+# Machine-specific and never portable: a venv built on Windows/CUDA cannot be
+# used on macOS. Always recreate from requirements on each machine.
+.venv/
+venv/
+env/
+**/.venv/
+
+# --- Datasets and model weights -------------------------------------------
+# The ConstructionSite snapshot is ~4.5 GB and model weights are several GB.
+# Both are fetched by scripts/download_data.py -- see docs/setup/SETUP.md.
+**/data/constructionsite/
+*.parquet
+models/
+*.safetensors
+*.gguf
+*.bin
+
+# --- Scratch / build byproducts -------------------------------------------
+tmp/
+scratch/
+
+# LaTeX
 *.aux
 *.log
 *.out
@@ -15,22 +52,26 @@ tmp/
 # Office lock files
 ~$*
 
-# Python
+# --- Python ----------------------------------------------------------------
 __pycache__/
 *.pyc
+*.pyo
 .ipynb_checkpoints/
 *.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Pilot project (created during the technical pilot)
-pilot/.venv/
-pilot/data/
-
-# Claude Code / superpowers internal state (not a project artifact)
+# --- Tooling state (not project artifacts) ---------------------------------
 .claude/
 .superpowers/
 
-# OS / editor cruft
+# --- OS / editor cruft -----------------------------------------------------
 .DS_Store
 Thumbs.db
-.vscode/
 .idea/
+
+# .vscode/ is ignored EXCEPT the shared settings file, which carries the
+# interpreter and notebook-font configuration every contributor needs.
+.vscode/*
+!.vscode/settings.json

@@ -1,0 +1,193 @@
+commit 89950a9  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/backend-parity
+NVIDIA A40
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+........................................................................ [ 53%]
+........................................................................ [ 70%]
+........................................................................ [ 88%]
+..............................................                           [100%]
+=============================== warnings summary ===============================
+tests/test_hf_backend_gpu.py: 14 warnings
+  /scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+qwen7b-4bit: 40 rows over 40 images, XAI_REGION_FRAME=rescaled
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:01<00:05,  1.39s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:02<00:04,  1.36s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:04<00:02,  1.35s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:05<00:01,  1.34s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.05s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.19s/it]
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+Qwen2_5_VLModel is using Qwen2_5_VLSdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.
+  QwenBackend   0007563 rule_1 YES
+  QwenBackend   0008247 rule_2 NO
+  QwenBackend   0000812 rule_1 YES
+  QwenBackend   0005283 rule_3 YES
+  QwenBackend   0009926 rule_3 YES
+  QwenBackend   0009497 rule_1 YES
+  QwenBackend   0007991 rule_3 YES
+  QwenBackend   0006180 rule_4 NO
+  QwenBackend   0009330 rule_1 YES
+  QwenBackend   0007155 rule_3 YES
+  QwenBackend   0011262 rule_1 YES
+  QwenBackend   0004471 rule_2 YES
+  QwenBackend   0009821 rule_4 NO
+  QwenBackend   0002372 rule_2 YES
+  QwenBackend   0005810 rule_3 YES
+  QwenBackend   0002395 rule_1 YES
+  QwenBackend   0001597 rule_3 YES
+  QwenBackend   0011970 rule_3 YES
+  QwenBackend   0005140 rule_3 YES
+  QwenBackend   0010318 rule_1 YES
+  QwenBackend   0013581 rule_1 YES
+  QwenBackend   0011605 rule_2 YES
+  QwenBackend   0002598 rule_3 YES
+  QwenBackend   0006342 rule_2 YES
+  QwenBackend   0001675 rule_1 YES
+  QwenBackend   0013938 rule_3 YES
+  QwenBackend   0001316 rule_1 YES
+  QwenBackend   0013105 rule_1 YES
+  QwenBackend   0006653 rule_2 YES
+  QwenBackend   0009230 rule_4 NO
+  QwenBackend   0010835 rule_1 YES
+  QwenBackend   0001706 rule_3 YES
+  QwenBackend   0007066 rule_1 YES
+  QwenBackend   0008516 rule_2 YES
+  QwenBackend   0006460 rule_1 YES
+  QwenBackend   0011807 rule_3 YES
+  QwenBackend   0012379 rule_3 YES
+  QwenBackend   0004113 rule_3 YES
+  QwenBackend   0010696 rule_1 YES
+  QwenBackend   0009341 rule_1 YES
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:01<00:05,  1.32s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:02<00:03,  1.33s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:03<00:02,  1.33s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:05<00:01,  1.33s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.05s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.17s/it]
+  HFVLMBackend  0007563 rule_1 YES
+  HFVLMBackend  0008247 rule_2 NO
+  HFVLMBackend  0000812 rule_1 YES
+  HFVLMBackend  0005283 rule_3 YES
+  HFVLMBackend  0009926 rule_3 YES
+  HFVLMBackend  0009497 rule_1 YES
+  HFVLMBackend  0007991 rule_3 YES
+  HFVLMBackend  0006180 rule_4 NO
+  HFVLMBackend  0009330 rule_1 YES
+  HFVLMBackend  0007155 rule_3 YES
+  HFVLMBackend  0011262 rule_1 YES
+  HFVLMBackend  0004471 rule_2 YES
+  HFVLMBackend  0009821 rule_4 NO
+  HFVLMBackend  0002372 rule_2 YES
+  HFVLMBackend  0005810 rule_3 YES
+  HFVLMBackend  0002395 rule_1 YES
+  HFVLMBackend  0001597 rule_3 YES
+  HFVLMBackend  0011970 rule_3 YES
+  HFVLMBackend  0005140 rule_3 YES
+  HFVLMBackend  0010318 rule_1 YES
+  HFVLMBackend  0013581 rule_1 YES
+  HFVLMBackend  0011605 rule_2 YES
+  HFVLMBackend  0002598 rule_3 YES
+  HFVLMBackend  0006342 rule_2 YES
+  HFVLMBackend  0001675 rule_1 YES
+  HFVLMBackend  0013938 rule_3 YES
+  HFVLMBackend  0001316 rule_1 YES
+  HFVLMBackend  0013105 rule_1 YES
+  HFVLMBackend  0006653 rule_2 YES
+  HFVLMBackend  0009230 rule_4 NO
+  HFVLMBackend  0010835 rule_1 YES
+  HFVLMBackend  0001706 rule_3 YES
+  HFVLMBackend  0007066 rule_1 YES
+  HFVLMBackend  0008516 rule_2 YES
+  HFVLMBackend  0006460 rule_1 YES
+  HFVLMBackend  0011807 rule_3 YES
+  HFVLMBackend  0012379 rule_3 YES
+  HFVLMBackend  0004113 rule_3 YES
+  HFVLMBackend  0010696 rule_1 YES
+  HFVLMBackend  0009341 rule_1 YES
+
+rows 40  identical: raw 40  verdict 40  region 40  black 40  tokens 40  patch_grid 40  attention 40
+attention max |diff| 0.00e+00
+BACKEND_PARITY PASS
+qwen7b-bf16: 40 rows over 39 images, XAI_REGION_FRAME=rescaled
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:03<00:14,  3.55s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:06<00:10,  3.46s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:10<00:06,  3.46s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:13<00:03,  3.47s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:14<00:00,  2.61s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:14<00:00,  3.00s/it]
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+Qwen2_5_VLModel is using Qwen2_5_VLSdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.
+  QwenBackend   0007508 rule_1 YES
+  QwenBackend   0008143 rule_1 NO
+  QwenBackend   0000737 rule_2 YES
+  QwenBackend   0005250 rule_1 YES
+  QwenBackend   0009806 rule_1 YES
+  QwenBackend   0009393 rule_1 YES
+  QwenBackend   0007871 rule_1 YES
+  QwenBackend   0006142 rule_3 YES
+  QwenBackend   0009162 rule_4 YES
+  QwenBackend   0007057 rule_2 YES
+  QwenBackend   0011080 rule_4 YES
+  QwenBackend   0004380 rule_1 YES
+  QwenBackend   0009662 rule_2 YES
+  QwenBackend   0002367 rule_1 YES
+  QwenBackend   0005732 rule_3 YES
+  QwenBackend   0002367 rule_3 YES
+  QwenBackend   0001557 rule_3 YES
+  QwenBackend   0011739 rule_3 YES
+  QwenBackend   0005102 rule_1 YES
+  QwenBackend   0010165 rule_3 YES
+  QwenBackend   0013257 rule_4 YES
+  QwenBackend   0011419 rule_1 YES
+  QwenBackend   0002588 rule_3 YES
+  QwenBackend   0006288 rule_3 YES
+  QwenBackend   0001658 rule_4 YES
+  QwenBackend   0013699 rule_1 YES
+  QwenBackend   0001275 rule_2 YES
+  QwenBackend   0012853 rule_1 YES
+  QwenBackend   0006593 rule_1 YES
+  QwenBackend   0009085 rule_1 YES
+  QwenBackend   0010642 rule_4 NO
+  QwenBackend   0001680 rule_3 YES
+  QwenBackend   0007001 rule_1 YES
+  QwenBackend   0008372 rule_1 YES
+  QwenBackend   0006421 rule_1 YES
+  QwenBackend   0011569 rule_2 YES
+  QwenBackend   0012151 rule_1 YES
+  QwenBackend   0004087 rule_1 YES
+  QwenBackend   0010515 rule_3 YES
+  QwenBackend   0009164 rule_1 YES
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:01<00:05,  1.37s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:02<00:04,  1.34s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:04<00:02,  1.33s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:05<00:01,  1.32s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.04s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:05<00:00,  1.17s/it]
+  HFVLMBackend  0007508 rule_1 YES
+  HFVLMBackend  0008143 rule_1 NO
+  HFVLMBackend  0000737 rule_2 YES
+  HFVLMBackend  0005250 rule_1 YES
+  HFVLMBackend  0009806 rule_1 YES
+  HFVLMBackend  0009393 rule_1 YES
+  HFVLMBackend  0007871 rule_1 YES
+  HFVLMBackend  0006142 rule_3 YES
+  HFVLMBackend  0009162 rule_4 YES
+  HFVLMBackend  0007057 rule_2 YES
+  HFVLMBackend  0011080 rule_4 YES
+  HFVLMBackend  0004380 rule_1 YES
+  HFVLMBackend  0009662 rule_2 YES
+  HFVLMBackend  0002367 rule_1 YES
+  HFVLMBackend  0005732 rule_3 YES
+  HFVLMBackend  0002367 rule_3 YES
+  HFVLMBackend  0001557 rule_3 YES
+  HFVLMBackend  0011739 rule_3 YES
+  HFVLMBackend  0005102 rule_1 YES
+  HFVLMBackend  0010165 rule_3 YES
+  HFVLMBackend  0013257 rule_4 YES
+  HFVLMBackend  0011419 rule_1 YES
+  HFVLMBackend  0002588 rule_3 YES
+  HFVLMBackend  0006288 rule_3 YES
+  HFVLMBackend  0001658 rule_4 YES
+  HFVLMBackend  0013699 rule_1 YES
+  HFVLMBackend  0001275 rule_2 YES
+  HFVLMBackend  0012853 rule_1 YES
+  HFVLMBackend  0006593 rule_1 YES
+  HFVLMBackend  0009085 rule_1 YES
+  HFVLMBackend  0010642 rule_4 NO
+  HFVLMBackend  0001680 rule_3 YES
+  HFVLMBackend  0007001 rule_1 YES
+  HFVLMBackend  0008372 rule_1 YES
+  HFVLMBackend  0006421 rule_1 YES
+  HFVLMBackend  0011569 rule_2 YES
+  HFVLMBackend  0012151 rule_1 YES
+  HFVLMBackend  0004087 rule_1 YES
+  HFVLMBackend  0010515 rule_3 YES
+  HFVLMBackend  0009164 rule_1 YES
+
+rows 40  identical: raw 40  verdict 40  region 40  black 40  tokens 40  patch_grid 40  attention 40
+attention max |diff| 0.00e+00
+BACKEND_PARITY PASS
+BACKEND_PARITY_ALL PASS

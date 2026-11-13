@@ -1,0 +1,8 @@
+{
+  "image_id": "0000331",
+  "rule_4": "unsure",
+  "note": "A worker is cut off at the left edge beside the counterweight, but the cab looks empty and the bucket is resting on the ground.",
+  "auditor": "claude-opus-5-5",
+  "standard": "Dataset rule 4: worker in the blind spot or operating radius of an excavator in operation or with an operator inside. Yes needs a worker on foot within the arm's reach or tail swing of an excavator that is working or manned; unsure when distance (perspective) or operation cannot be judged.",
+  "saved_at": "2026-11-12T20:07:53+00:00"
+}

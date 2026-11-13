@@ -1,0 +1,17 @@
+{
+  "claude": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "yes"
+  },
+  "final": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "yes"
+  },
+  "image_id": "0009089",
+  "note": "",
+  "reviewed_at": "2026-11-12T04:19:22.726Z"
+}

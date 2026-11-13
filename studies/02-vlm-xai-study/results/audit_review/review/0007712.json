@@ -1,0 +1,15 @@
+{
+  "claude": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "no"
+  },
+  "final": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "yes"
+  },
+  "image_id": "0007712",
+  "note": "the green guardrail fence is not for the whole length, its missing in the middle. so for that part, it violates the guardrail safety, i think.",
+  "reviewed_at": "2026-11-12T04:17:37.623Z"
+}

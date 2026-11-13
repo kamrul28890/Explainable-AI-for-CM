@@ -1,0 +1,32 @@
+commit e2d3600  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/backend-parity
+NVIDIA A40
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+........................................................................ [ 53%]
+......F................................................................. [ 70%]
+........................................................................ [ 88%]
+..............................................                           [100%]
+=================================== FAILURES ===================================
+______________________ test_stays_within_the_vram_budget _______________________
+
+backend = <xai_vlm.backends.qwen.QwenBackend object at 0x14dbaccb3400>
+photo = <PIL.Image.Image image mode=RGB size=1200x900 at 0x14DBB482AF20>
+
+    def test_stays_within_the_vram_budget(backend, photo):
+        backend.answer(photo, "rule_1")
+>       assert backend.peak_memory_gb() < 7.0, "exceeds the 8 GB card's usable budget"
+E       AssertionError: exceeds the 8 GB card's usable budget
+E       assert 7.26695424 < 7.0
+E        +  where 7.26695424 = peak_memory_gb()
+E        +    where peak_memory_gb = <xai_vlm.backends.qwen.QwenBackend object at 0x14dbaccb3400>.peak_memory_gb
+
+tests/test_qwen_backend.py:42: AssertionError
+=============================== warnings summary ===============================
+tests/test_hf_backend_gpu.py: 14 warnings
+  /scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_qwen_backend.py::test_stays_within_the_vram_budget - Assert...
+GPU tests failed

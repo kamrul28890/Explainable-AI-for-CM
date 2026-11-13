@@ -1,0 +1,19 @@
+{
+  "image_id": "0010882",
+  "blind": {
+    "rule_1": "yes",
+    "rule_2": "no",
+    "rule_3": "unsure",
+    "rule_4": "yes"
+  },
+  "blind_note": "r1: the men unloading stone in the foreground have no hard hats. r4: the excavator bucket hangs right above them. r3: workers sit on top of a retaining wall with no guardrail, height unclear.",
+  "boxes": {
+    "rule_1": "yes"
+  },
+  "note": "",
+  "auditor": "claude-opus-5-5",
+  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+  "saved_at": "2026-11-12T03:30:41+00:00",
+  "first_saved_at": "2026-11-12T03:28:36+00:00",
+  "source": "owner"
+}

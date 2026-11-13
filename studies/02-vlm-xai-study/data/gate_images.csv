@@ -1,0 +1,31 @@
+image_id,expected,reason,norm_area
+0000161,YES,The two workers at the upper left and upper right corner are not wearing hard hats.,0.0036
+0000163,YES,The worker on the right next to the blue gate is not wearing clothes that can cover the sh,0.0044
+0000328,YES,Three workers in the background are wearing straw hats but not hard hats.,0.0048
+0000072,YES,The worker in front of the white dump truck is not wearing a hard hat.,0.005
+0000005,YES,Person on the left not using PPE.,0.0055
+0000068,YES,The worker with green jacket on the right is not wearing a hard hat.,0.006
+0000039,YES,Two workers on the left of the foreground are not wearing hard hats.,0.0066
+0000118,YES,The worker with a camouflage uniform is not wearing a hard hat.,0.0084
+0000095,YES,The worker is not wearing long pants.,0.009
+0000233,YES,The worker in the middle is not wearing a hard hat.,0.014
+0000102,YES,The mechanic in front of the truck is not wearing a hard hat.,0.0168
+0000132,YES,The worker on the right of the foreground is not wearing a hard hat.,0.018
+0000229,YES,"The worker in the middle is not wearing a hard hat, he is also wearing short pants.",0.0225
+0000019,YES,Worker with a black hard hat and white shirt on the left is not wearing a hard hat.,0.0315
+0000059,YES,The worker with a brown jacket on the left is not wearing a hard hat.,0.033
+0000135,YES,The two workers are not wearing hard hats. The worker on the right with a yellow t-shirt i,0.033
+0000009,YES,Workers next to the truck on the left not wearing high visibility vests.,0.0693
+0000046,YES,None of the workers are wearing high visibility vests when working at night.,0.18
+0000007,YES,Multiple workers not wearing hard hats nor high-visibility vests.,0.4902
+0000116,YES,Two workers are not wearing hard hats.,0.5848
+0000001,NO,no violation recorded,
+0000002,NO,no violation recorded,
+0000010,NO,no violation recorded,
+0000013,NO,no violation recorded,
+0000014,NO,no violation recorded,
+0000015,NO,no violation recorded,
+0000017,NO,no violation recorded,
+0000018,NO,no violation recorded,
+0000022,NO,no violation recorded,
+0000023,NO,no violation recorded,

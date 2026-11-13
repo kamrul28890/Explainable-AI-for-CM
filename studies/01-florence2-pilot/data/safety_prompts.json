@@ -1,0 +1,20 @@
+{
+  "rule_queries": {
+    "rule_1": [
+      "hard hat",
+      "high-visibility vest"
+    ],
+    "rule_2": [
+      "safety harness",
+      "fall-protection lanyard"
+    ],
+    "rule_3": [
+      "guardrail",
+      "edge protection barrier"
+    ]
+  },
+  "rule_4_proximity_pair": [
+    "worker",
+    "excavator"
+  ]
+}

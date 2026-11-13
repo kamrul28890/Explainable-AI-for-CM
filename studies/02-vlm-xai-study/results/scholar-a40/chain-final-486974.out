@@ -1,0 +1,57 @@
+== chain final link 1  job 486974  successor 486975  host scholar-j001.rcac.purdue.edu
+== commit 44b409e877c763c47de3f41f3302395fb6ef7a4a  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40
+NVIDIA A40, 46068 MiB
+-- stage9: start 2026-11-10T02:20:16-05:00  (budget 12900s)
+======================================================================
+BOUNDED COMPLETENESS  (n=3882)
+  no_usable_explanation    22.2%
+  explanation_supported    9.4%
+  explanation_weak         68.5%
+  not_measured             0.0%
+
+  among measured rows:
+    supported : 9.4% [8.4, 10.3] (n=3882)
+    weak      : 68.5% [67.0, 69.9] (n=3882)
+
+  `explanation_weak` is the result to read hardest: the model named
+  a region, the region did not matter, and a reader shown only that
+  region would have been misled about why the system decided.
+
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/completeness_qwen7b-4bit.csv
+======================================================================
+-- stage9: rc=0  2026-11-10T02:20:21-05:00
+-- stage10: start 2026-11-10T02:20:21-05:00  (budget 12895s)
+loading annotations ...
+  2556 images
+scoring ...
+
+==================================================================
+scored 1187 of 3882   undefined 2695
+     1438  no_annotation_box
+     1162  verdict_no
+       95  no_region
+
+explanation CORRECT rate : 2.4%
+RIGHT ANSWER, WRONG REASON : 97.6% (1158/1187)
+  the model was right, and could not say why correctly
+
+signal pass rates among scored rows:
+  similarity >= 0.6 : 56.2%
+  hazard match          : 91.5%
+  IoU >= 0.3          : 6.7%
+
+split by quality_of_info:
+  poor info    2.8%  (n=457)
+  rich info    2.2%  (n=730)
+
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/explanation_correctness_qwen7b-4bit.csv
+==================================================================
+-- stage10: rc=0  2026-11-10T02:23:22-05:00
+-- stage11_text: start 2026-11-10T02:23:22-05:00  (budget 12714s)
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/report_qwen7b-4bit.txt
+-- stage11_text: rc=0  2026-11-10T02:23:32-05:00
+-- stage11_latex: start 2026-11-10T02:23:32-05:00  (budget 12704s)
+wrote /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40/report_qwen7b-4bit.tex
+-- stage11_latex: rc=0  2026-11-10T02:23:43-05:00
+== chain final DONE
+== BATTERY COMPLETE  2026-11-10T02:23:43-05:00

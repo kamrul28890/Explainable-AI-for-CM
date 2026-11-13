@@ -1,0 +1,18 @@
+{
+  "attention_impl": "sdpa",
+  "baseline_sha256": "2a10b0f478b9fa87aac83384004f255455de23b90261865df6c79c6519df7533",
+  "compute_dtype": "bfloat16",
+  "device": "NVIDIA A40",
+  "generation": {
+    "do_sample": false,
+    "max_new_tokens": 128,
+    "num_beams": 1
+  },
+  "manifest_sha256": "af91ed280cd22bfc6cdb27cc6645f448d137bb29b4ec77fc504cddfa3ac166c9",
+  "masking_methods": "black,tokens",
+  "max_pixels": 501760,
+  "model": "qwen7b-bf16",
+  "region_frame": "rescaled",
+  "regions_sha256": "69eb55b688b1de611fbbf083f4e6d1c2095225e7e417130711554927900d0b18",
+  "seed": 42
+}

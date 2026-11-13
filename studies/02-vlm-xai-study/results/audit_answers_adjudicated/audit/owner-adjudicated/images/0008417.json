@@ -1,0 +1,16 @@
+{
+  "image_id": "0008417",
+  "blind": {
+    "rule_1": "no",
+    "rule_2": "yes",
+    "rule_3": "no"
+  },
+  "blind_note": "r2: two helmeted workers sit on a plank at the open edge of a tall rebar cage far above the ground, with no harness or lanyard visible.",
+  "boxes": {},
+  "note": "",
+  "auditor": "claude-opus-5-5",
+  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+  "saved_at": "2026-11-12T03:28:36+00:00",
+  "first_saved_at": "2026-11-12T03:28:36+00:00",
+  "source": "owner"
+}

@@ -1,0 +1,34 @@
+\documentclass[11pt,letterpaper]{report}
+\input{../chapters/preamble}
+
+% Scale-up report reuses the pilot report's preamble (colors, fonts, tikz
+% styles) but runs its own running header and its own chapter numbering.
+\lhead{\footnotesize\color{mutedgray}Scale-Up Phase 1}
+\rhead{\footnotesize\color{mutedgray}Explainable VLMs for Construction Safety}
+
+\title{\bfseries\color{inkblue} Scaling the Construction-VLM XAI Evaluation:\\ Phase 1 --- Foundational Correctness Fixes}
+\author{Engineering log, prepared for research collaboration with Professor Mustafa Abdallah}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+% Each phase appends one \include line here, in phase order.
+\include{phase1_1_rule_aware_ranking}
+\include{phase1_2_multilabel}
+\include{phase1_3_context_matching}
+\include{phase1_4_worker_loss}
+\include{phase1_5_concept_split}
+\include{phase1_6_unify_decoding}
+\include{phase1_7_hardcoded_audit}
+\include{phase2_1_descriptive_validity}
+\include{phase2_2_size_invariant_sparsity}
+\include{phase2_3_stability_validity}
+\include{phase2_4_robustness_validity}
+\include{phase2_5_multihazard_completeness}
+\include{phase2_6_efficiency}
+\include{phase3_1_statistics}
+\include{phase3_2_multiseed}
+
+\end{document}
