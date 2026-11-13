@@ -150,7 +150,8 @@ class HFVLMBackend:
 
     # -------------------------------------------------------------------- API
     def answer(self, image: Image.Image, rule_id: RuleId, **kw) -> Answer:
-        inputs = self.adapter.build_inputs(image, self._prompt(rule_id))
+        inputs = self.adapter.build_inputs(self.adapter.prepare_image(image),
+                                            self._prompt(rule_id))
         gen = {**GENERATION, **kw}
         if torch.cuda.is_available():
             torch.cuda.synchronize()
@@ -188,7 +189,8 @@ class HFVLMBackend:
         teacher-forced forward pass over the produced sequence (generation itself
         never runs under the eager kernel). None where the family has no
         row-major image-token grid."""
-        inputs = self.adapter.build_inputs(image, self._prompt(rule_id))
+        inputs = self.adapter.build_inputs(self.adapter.prepare_image(image),
+                                            self._prompt(rule_id))
         positions, grid = self._token_layout(inputs)
         if grid is None or len(positions) == 0:
             return None
@@ -210,7 +212,8 @@ class HFVLMBackend:
 
     def _answer_token_ablated(self, image: Image.Image, rule_id: RuleId,
                               region: Box, **kw) -> Answer:
-        inputs = self.adapter.build_inputs(image, self._prompt(rule_id))
+        inputs = self.adapter.build_inputs(self.adapter.prepare_image(image),
+                                            self._prompt(rule_id))
         positions, grid = self._token_layout(inputs)
         if grid is None or len(positions) == 0:
             raise BackendUnavailable(f"token ablation not applicable to {self.name}: "

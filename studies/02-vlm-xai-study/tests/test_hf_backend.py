@@ -273,3 +273,29 @@ def test_qwen_adapter_grid_and_tokens_match_the_frozen_backend():
     assert new.adapter.grid(inputs) == legacy._grid_from_inputs(inputs) == (2, 3)
     assert torch.equal(new.adapter.image_token_positions(inputs),
                        legacy.image_token_positions(inputs))
+
+
+# ------------------------------------------------------- D3 and verdict-only
+def test_every_non_qwen_model_gets_the_shared_pixel_budget():
+    from xai_vlm.backends.families import fit_pixel_budget
+    out = fit_pixel_budget(Image.new("RGB", (1200, 900)))
+    assert out.size[0] * out.size[1] <= config.MAX_PIXELS
+    assert abs(out.size[0] / out.size[1] - 1200 / 900) < 0.01
+    small = Image.new("RGB", (640, 480))
+    assert fit_pixel_budget(small) is small            # never enlarged
+
+
+def test_qwen_keeps_handing_the_processor_the_original_image():
+    from xai_vlm.backends.families import Qwen25VLAdapter
+    img = Image.new("RGB", (1200, 900))
+    assert Qwen25VLAdapter(MODEL_TIERS["qwen7b-4bit"]).prepare_image(img) is img
+
+
+def test_llama_is_registered_as_verdict_only():
+    s = MODEL_TIERS["llama32v-11b"]
+    assert (s.family, s.box_convention, s.supports_attention) == ("mllama", "none", False)
+    from xai_vlm.backends.hf import HFVLMBackend
+    b = HFVLMBackend.for_testing("llama32v-11b", model=SimpleNamespace(config=None))
+    assert b.adapter.grid({}) is None                  # attention, ablation: not applicable
+    p = b._parse(_reply("(406, 294, 609, 441)"), IMG, {})
+    assert p.verdict == "YES" and p.region is None

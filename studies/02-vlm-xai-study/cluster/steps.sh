@@ -51,6 +51,18 @@ chain_base() {
     step stage3 $PY scripts/03_regions.py --model "$MODEL"                  || return $?
     step stage7 $PY scripts/07_efficiency.py --model "$MODEL"               || return $?
 }
+# Verdict-only models (roster D4, e.g. Llama 3.2 Vision): no boxes and no
+# image-token grid, so Stages 4, 5, 8 (region moves), 9 and 10 do not apply.
+# Accuracy, efficiency and verdict stability do. No follow-on chains.
+chain_vo() {
+    step cpu_and_gpu_tests env XAI_RESULTS_DIR= $PY -m pytest tests --gpu -p no:cacheprovider -q -W ignore::UserWarning || return $?
+    step stage0 $PY scripts/00_feasibility_gate.py --tier "$MODEL"         --out "$XAI_RESULTS_DIR/stage0_feasibility$SUFFIX.csv"             || return $?
+    step stage1_verify verify_manifest                                      || return $?
+    step stage2 $PY scripts/02_baseline_inference.py --model "$MODEL" --resume || return $?
+    step stage3 $PY scripts/03_regions.py --model "$MODEL"                  || return $?
+    step stage7 $PY scripts/07_efficiency.py --model "$MODEL"               || return $?
+    step stage6 $PY scripts/06_stability.py --model "$MODEL" --resume       || return $?
+}
 chain_s4() { step stage4 $PY scripts/04_descriptive_accuracy.py --model "$MODEL" --resume; }
 chain_s5() { step stage5 $PY scripts/05_sparsity.py --model "$MODEL" --resume ${S5_EXTRA:-}; }
 chain_s6() { step stage6 $PY scripts/06_stability.py --model "$MODEL" --resume; }
@@ -103,5 +115,6 @@ after_chain() {
         comp) echo "== COMPLEMENT COMPLETE  $(date -Is)"
               [[ -e $STATE/final.done ]] && report_now && echo "== report rebuilt with comp" ;;
         final) echo "== BATTERY COMPLETE  $(date -Is)" | tee "$STATE/COMPLETE" ;;
+        vo)    echo "== VERDICT-ONLY BATTERY COMPLETE  $(date -Is)" | tee "$STATE/COMPLETE" ;;
     esac
 }

@@ -32,6 +32,19 @@ def dtype_kwarg(dtype) -> dict:
     return {"torch_dtype": dtype} if major < 5 else {"dtype": dtype}
 
 
+def fit_pixel_budget(image: Image.Image, max_pixels: int = MAX_PIXELS) -> Image.Image:
+    """Shrink, keeping the aspect ratio, so width x height <= max_pixels (roster D3:
+    every model receives the same pixels). Never enlarges."""
+    w, h = image.size
+    if w * h <= max_pixels:
+        return image
+    s = (max_pixels / (w * h)) ** 0.5
+    size = (max(1, int(w * s)), max(1, int(h * s)))
+    while size[0] * size[1] > max_pixels:          # int() can still round over
+        size = (size[0] - 1, size[1])
+    return image.resize(size, Image.BICUBIC)
+
+
 class Adapter:
     """The interface. One instance per loaded backend; holds model and processor."""
 
@@ -47,6 +60,10 @@ class Adapter:
         raise NotImplementedError
 
     # -- inputs
+    def prepare_image(self, image: Image.Image) -> Image.Image:
+        """The image as handed to the processor: the shared pixel budget (D3)."""
+        return fit_pixel_budget(image)
+
     def build_inputs(self, image: Image.Image, prompt: str):
         raise NotImplementedError
 
@@ -80,6 +97,11 @@ class Qwen25VLAdapter(Adapter):
     resized input frame. Every method is the frozen QwenBackend's, moved here."""
 
     family = "qwen2_5_vl"
+
+    def prepare_image(self, image):
+        # Identity: the processor applies the same budget itself (min/max_pixels),
+        # and the frozen backend hands it the original image.
+        return image
 
     def load(self, source, *, dtype, quantization_config, attn_implementation):
         from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
@@ -168,6 +190,45 @@ class Qwen25VLAdapter(Adapter):
         return self.model.get_input_embeddings()
 
 
+class MllamaAdapter(Adapter):
+    """Llama 3.2 Vision. The image enters through cross-attention layers, not as
+    tokens in the sequence, so there is no image-token grid: attention and token
+    ablation are not applicable, and the tier is verdict-only (roster D4)."""
+
+    family = "mllama"
+
+    def load(self, source, *, dtype, quantization_config, attn_implementation):
+        from transformers import AutoProcessor, MllamaForConditionalGeneration
+        self.model = MllamaForConditionalGeneration.from_pretrained(
+            source,
+            quantization_config=quantization_config,
+            **dtype_kwarg(dtype),
+            device_map="auto",
+            attn_implementation=attn_implementation,
+        )
+        self.model.eval()
+        self.processor = AutoProcessor.from_pretrained(source)
+
+    def build_inputs(self, image, prompt):
+        messages = [{"role": "user", "content": [
+            {"type": "image"},
+            {"type": "text", "text": prompt},
+        ]}]
+        text = self.processor.apply_chat_template(messages, add_generation_prompt=True)
+        # The chat template already carries <|begin_of_text|>.
+        return self.processor(images=image, text=text, add_special_tokens=False,
+                              return_tensors="pt").to(self.model.device)
+
+    def image_token_positions(self, inputs):
+        image_token_id = getattr(self.model.config, "image_token_index", None)
+        ids = inputs["input_ids"][0]
+        return (ids == image_token_id).nonzero(as_tuple=True)[0]
+
+    def patch_grid(self, image):
+        return (0, 0)      # no image tokens in the sequence
+
+
 ADAPTERS: dict[str, type[Adapter]] = {
     Qwen25VLAdapter.family: Qwen25VLAdapter,
+    MllamaAdapter.family: MllamaAdapter,
 }

@@ -236,6 +236,15 @@ MODEL_TIERS: dict[str, ModelSpec] = {
         notes="roster 4 at full precision: ~66 GB, split over two A40s (NGPU=2)",
         weights="qwen32b",
     ),
+    "llama32v-11b": ModelSpec(
+        name="llama32v-11b",
+        repo_id="meta-llama/Llama-3.2-11B-Vision-Instruct",
+        quantization="none",
+        supports_attention=False,
+        notes="roster 15: verdict only (cross-attention, no boxes); gated licence",
+        family="mllama",
+        box_convention="none",
+    ),
 }
 
 
