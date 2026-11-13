@@ -121,10 +121,29 @@ def backend_fingerprint(tier: str) -> dict:
     """Empty for a frozen tier on the frozen class, so its fingerprints still match.
     Anything else records the class and the coordinate convention it was read in.
     A name outside MODEL_TIERS is a test double (the scripts' --model only accepts
-    real tiers) and contributes nothing."""
-    if tier not in MODEL_TIERS or uses_legacy_backend(tier):
-        return {}
-    return {"backend": "hf", "box_convention": resolve_tier(tier).box_convention}
+    real tiers) and contributes nothing.
+
+    The transformers version is recorded whenever it is not environment A's, so
+    rows from the two environments (roster D5) can never resume into one file."""
+    fp: dict = {}
+    if tier in MODEL_TIERS and not uses_legacy_backend(tier):
+        fp = {"backend": "hf", "box_convention": resolve_tier(tier).box_convention}
+    v = transformers_version()
+    if v != FROZEN_TRANSFORMERS:
+        fp["transformers"] = v
+    return fp
+
+
+# Environment A, in which every frozen result was produced.
+FROZEN_TRANSFORMERS = "4.49.0"
+
+
+def transformers_version() -> str:
+    from importlib.metadata import PackageNotFoundError, version
+    try:
+        return version("transformers")
+    except PackageNotFoundError:
+        return ""
 
 
 COMPUTE_DTYPE = "bfloat16"

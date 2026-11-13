@@ -25,6 +25,13 @@ from PIL import Image
 from xai_vlm.config import MAX_PIXELS, MIN_PIXELS, ModelSpec
 
 
+def dtype_kwarg(dtype) -> dict:
+    """from_pretrained's dtype argument: torch_dtype in transformers 4, dtype in 5."""
+    from xai_vlm.config import transformers_version
+    major = int((transformers_version() or "4").split(".")[0])
+    return {"torch_dtype": dtype} if major < 5 else {"dtype": dtype}
+
+
 class Adapter:
     """The interface. One instance per loaded backend; holds model and processor."""
 
@@ -79,7 +86,7 @@ class Qwen25VLAdapter(Adapter):
         self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             source,
             quantization_config=quantization_config,
-            torch_dtype=dtype,
+            **dtype_kwarg(dtype),
             device_map="auto",
             attn_implementation=attn_implementation,
         )
@@ -139,8 +146,8 @@ class Qwen25VLAdapter(Adapter):
         # replaced by the vision features, under inference mode (memory).
         import torch
         with torch.inference_mode():
-            embeds = self.model.model.embed_tokens(inputs["input_ids"])
-            image_embeds = self.model.visual(
+            embeds = self._embed()(inputs["input_ids"])
+            image_embeds = self._visual()(
                 inputs["pixel_values"], grid_thw=inputs["image_grid_thw"]
             ).to(embeds.device, embeds.dtype)
             image_token_id = getattr(self.model.config, "image_token_id")
@@ -149,6 +156,16 @@ class Qwen25VLAdapter(Adapter):
 
     def mask_block(self):
         return self._patch() * self._merge()
+
+    # transformers 4.49 keeps the vision tower at model.visual; 5.x moves it to
+    # model.model.visual. get_input_embeddings() is model.model.embed_tokens in
+    # 4.49 -- the same module the frozen backend calls -- and the right one in 5.x.
+    def _visual(self):
+        v = getattr(self.model, "visual", None)
+        return v if v is not None else self.model.model.visual
+
+    def _embed(self):
+        return self.model.get_input_embeddings()
 
 
 ADAPTERS: dict[str, type[Adapter]] = {

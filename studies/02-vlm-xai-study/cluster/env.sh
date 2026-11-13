@@ -35,7 +35,10 @@ COMPLEMENT_SHA=cccec48c0643fe9dd07cba20c0c3be10f71fa0b68fc0a64352d3b8a758ffebc2
 
 module load conda/2025.09
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "$X/env"
+# XAI_ENV selects the Python environment: A ($X/env, transformers 4.49, every
+# frozen result) by default, or B ($X/envB, cluster/setup_envB.sh) for models
+# that need a current transformers (roster D5).
+conda activate "${XAI_ENV:-$X/env}"
 export HF_HOME=$X/.hf-home HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONUNBUFFERED=1
 PY=python
 mkdir -p "$XAI_RESULTS_DIR"

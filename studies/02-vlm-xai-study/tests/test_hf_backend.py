@@ -143,6 +143,28 @@ def test_backend_fingerprint_is_empty_only_for_the_frozen_path(monkeypatch):
     assert config.backend_fingerprint("qwen7b-4bit")["backend"] == "hf"
 
 
+def test_a_library_other_than_environment_As_is_fingerprinted(monkeypatch):
+    monkeypatch.setattr(config, "BACKEND", "legacy")
+    monkeypatch.setattr(config, "transformers_version", lambda: config.FROZEN_TRANSFORMERS)
+    assert config.backend_fingerprint("qwen7b-bf16") == {}
+    monkeypatch.setattr(config, "transformers_version", lambda: "5.20.2")
+    assert config.backend_fingerprint("qwen7b-bf16") == {"transformers": "5.20.2"}
+    assert config.backend_fingerprint("qwen3b-bf16")["transformers"] == "5.20.2"
+
+
+def test_qwen_adapter_finds_its_modules_in_either_library_layout():
+    from xai_vlm.backends.families import Qwen25VLAdapter
+    from xai_vlm.config import MODEL_TIERS
+    emb, vis = object(), object()
+    a = Qwen25VLAdapter(MODEL_TIERS["qwen7b-bf16"])
+    # transformers 4.49: model.visual, model.model.embed_tokens
+    a.model = SimpleNamespace(visual=vis, get_input_embeddings=lambda: emb)
+    assert a._visual() is vis and a._embed() is emb
+    # transformers 5: the vision tower under model.model
+    a.model = SimpleNamespace(model=SimpleNamespace(visual=vis), get_input_embeddings=lambda: emb)
+    assert a._visual() is vis
+
+
 def test_a_bad_backend_flag_is_refused(monkeypatch):
     monkeypatch.setenv("XAI_BACKEND", "nonsense")
     import importlib
