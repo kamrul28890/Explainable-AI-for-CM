@@ -57,7 +57,46 @@ records the class and convention whenever it is not the frozen path.
 
 \section{Results}
 
-PARITY-RESULTS
+\textbf{The check.} \texttt{scripts/20\_backend\_parity.py} runs the same rows through both backends,
+one after the other, in one process on one GPU. Rows are drawn at random (seed 0) from those with a stated
+region, without regard to their score, as Chapter~\ref{chap:s2-8} requires. For each row it records:
+\begin{itemize}
+\item the reply to the clean image, its verdict and its region;
+\item the reply with the region blacked out (Stage~4);
+\item the reply with the region's image tokens removed (Stage~4);
+\item the attention grid (Stage~5) and the patch grid.
+\end{itemize}
+Replies are compared as text, so ``identical'' means byte for byte.
+
+\begin{table}[tbp]
+\centering
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+\textbf{tier} & \textbf{rows} & \textbf{reply} & \textbf{region} & \textbf{black} & \textbf{tokens} &
+\textbf{attention} & \textbf{max $|\Delta|$} \\
+\midrule
+qwen7b-4bit & 40 & 40 & 40 & 40 & 40 & 40 & 0 \\
+qwen7b-bf16 & 40 & 40 & 40 & 40 & 40 & 40 & 0 \\
+\bottomrule
+\end{tabular}
+\caption{The shared backend against the frozen one on the A40 (job 488517, commit \texttt{89950a9},
+\texttt{XAI\_REGION\_FRAME=rescaled}). Counts are rows identical in each field; max $|\Delta|$ is the
+largest difference between the two attention grids. Rows cover all four rules (4-bit: 16, 7, 14, 3;
+bf16: 20, 5, 10, 5), both verdicts, and about a third of rows whose black-masked reply differs from the
+clean one, so the intervention paths were exercised, not only the clean one.
+Files: \texttt{results/backend-parity/}.}
+\label{tab:s29}
+\end{table}
+
+\textbf{Every field matched on every row, for both tiers} (Table~\ref{tab:s29}). The attention grids are
+equal to the last bit. A smoke run of eight 4-bit rows on the RTX~3070 gave the same result before the
+cluster run.
+
+\textbf{One false start.} The first cluster job (488516) stopped at its GPU-test gate. The new GPU tests
+for the shared backend run before the frozen backend's 8~GB budget test, and that test reads the
+process-wide peak memory. It was measuring the previous test's model. The shared-backend tests now free
+their model and reset the peak counter when they finish. No backend code changed between the two jobs.
 
 \section{Standard vs.\ Non-Standard Choices}
 
@@ -79,6 +118,7 @@ and the rest of the format are identical.
 \item The coordinate error of Chapter~\ref{chap:s2-8} cannot recur silently: every tier states its
 convention, every convention has a round-trip test, and every new adapter is checked on rows drawn without
 regard to their score before its first metric.
-\item Next: environment B on Scholar and the parity run of \texttt{qwen7b-bf16} under the new library
-release (roster D5), then Stage~0 for each new model, cheapest first.
+\item Next, queued on Scholar behind this check: the full battery for \texttt{qwen3b-bf16}; Stage~0 sizing
+for \texttt{qwen32b-bf16} (two A40s) and \texttt{qwen32b-4bit}; the verdict-only battery for Llama~3.2
+Vision; and the parity run of \texttt{qwen7b-bf16} in environment B (transformers 5.20.2, roster D5).
 \end{itemize}
