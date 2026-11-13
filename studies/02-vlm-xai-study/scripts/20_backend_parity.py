@@ -13,7 +13,8 @@ regard to their score -- the lesson of the region-frame check (chapter s2-8).
 Replies are compared as text, so "identical" means byte for byte; attention is
 compared by its largest absolute difference.
 
-    python scripts/20_backend_parity.py --tier qwen7b-4bit --n 24
+    python scripts/20_backend_parity.py --tier qwen7b-4bit --n 40 \
+        --baseline results/scholar-a40-rf/baseline_qwen7b-4bit.csv
 """
 import argparse
 import ast
@@ -91,8 +92,8 @@ def compare(old: dict, new: dict) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--tier", default="qwen7b-4bit")
-    ap.add_argument("--baseline", default=None,
-                    help="rows to draw from (default: the region-frame tree's Stage 2)")
+    ap.add_argument("--baseline", required=True,
+                    help="Stage 2 CSV to draw rows from, e.g. the region-frame tree's")
     ap.add_argument("--n", type=int, default=24)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default=None)
@@ -104,8 +105,7 @@ def main(argv=None) -> int:
     from xai_vlm.backends.hf import HFVLMBackend
     from xai_vlm.backends.qwen import QwenBackend
 
-    base = Path(a.baseline or STUDY_ROOT / "results" / "scholar-a40-rf"
-                / f"baseline_{a.tier}.csv")
+    base = Path(a.baseline)
     rows = pick_rows(list(csv.DictReader(base.open(newline="", encoding="utf-8"))),
                      a.n, a.seed)
     wanted = {r["image_id"] for r in rows}
