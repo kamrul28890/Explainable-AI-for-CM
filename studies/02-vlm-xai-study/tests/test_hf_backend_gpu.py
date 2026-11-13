@@ -15,12 +15,17 @@ def backend():
     from xai_vlm.backends.hf import HFVLMBackend
     b = HFVLMBackend(tier="qwen7b-4bit")
     yield b
+    # Free the weights AND reset the peak counter. This module sorts before
+    # test_qwen_backend.py, whose VRAM-budget test reads max_memory_allocated();
+    # without both, it measures this model's peak, not its own (job 488516).
     import gc
 
     import torch
+    b.adapter.model = b.adapter.processor = None
     del b
     gc.collect()
     torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
 
 
 @pytest.fixture
