@@ -33,7 +33,7 @@ def main() -> int:
     args = ap.parse_args()
 
     from xai_pilot.data import load_construction_site
-    from xai_vlm.backends.qwen import QwenBackend
+    from xai_vlm.backends.load import load_backend
 
     gate = list(csv.DictReader(
         (STUDY_ROOT / "data" / "gate_images.csv").open(encoding="utf-8")))
@@ -46,7 +46,7 @@ def main() -> int:
             break
 
     print(f"loading {args.tier} ...")
-    backend = QwenBackend(tier=args.tier)
+    backend = load_backend(args.tier)
 
     rows, latencies = [], []
     for g in gate:

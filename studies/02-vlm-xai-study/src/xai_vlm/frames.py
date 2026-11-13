@@ -46,6 +46,53 @@ def region_from_reply(raw: str, image_size: tuple[int, int],
     return to_original(parsed.region, image_size, input_size)
 
 
+# The units a backend's REGION can come in (roster design D1). Every one is mapped
+# to ORIGINAL-image pixels before any metric sees it.
+#   input_px  pixels of the resized image the model was fed (Qwen2.5-VL)
+#   norm1000  0-1000 over the whole image (Qwen2-VL, Qwen3-VL, InternVL, GLM)
+#   norm1     0-1 over the whole image (LLaVA family)
+#   none      verdict-only model: the region is not scored, so it is dropped
+CONVENTIONS = ("input_px", "norm1000", "norm1", "none")
+
+
+def parse_in_convention(raw: str, convention: str, image_size: tuple[int, int],
+                        input_size: Optional[tuple[int, int]] = None):
+    """Parse one reply and return its REGION in original-image pixels.
+
+    `input_size` is the model-input frame, required for input_px only. The input_px
+    branch is exactly the rescaled Qwen2.5-VL path (region_from_reply)."""
+    if convention not in CONVENTIONS:
+        raise ValueError(f"unknown box convention {convention!r}; choose from {CONVENTIONS}")
+    if convention == "input_px":
+        if input_size is None:
+            raise ValueError("input_px needs the model-input frame (input_size)")
+        parsed = parse_response(raw, input_size)
+        if parsed.region is not None:
+            parsed.region = to_original(parsed.region, image_size, input_size)
+        return parsed
+    if convention == "none":
+        parsed = parse_response(raw, image_size)
+        parsed.region = None
+        return parsed
+    if convention == "norm1000":
+        frame = (1000, 1000)
+        parsed = parse_response(raw, frame)
+    else:
+        # Not parse_response(raw, (1, 1)): its 0-1 heuristic would mark every
+        # reply lenient. Parse unclamped, then clamp to the unit square here.
+        frame = (1, 1)
+        parsed = parse_response(raw, None)
+        if parsed.region is not None:
+            x0, y0, x1, y1 = parsed.region
+            c = (max(0.0, x0), max(0.0, y0), min(1.0, x1), min(1.0, y1))
+            if c != parsed.region:
+                parsed.strict = False
+            parsed.region = c if c[2] > c[0] and c[3] > c[1] else None
+    if parsed.region is not None:
+        parsed.region = to_original(parsed.region, image_size, frame)
+    return parsed
+
+
 def _fmt(box: Optional[Box]) -> str:
     return "" if box is None else str(tuple(round(float(v), 1) for v in box))
 

@@ -103,6 +103,30 @@ def region_frame_fingerprint() -> dict:
     return {} if REGION_FRAME == "legacy" else {"region_frame": REGION_FRAME}
 
 
+# WHICH BACKEND CLASS RUNS A TIER (roster step 2, 2026-11-13). "legacy" keeps the
+# frozen QwenBackend for the tiers that have frozen results, so they reproduce
+# byte-for-byte. "hf" runs them through the shared HFVLMBackend instead -- used to
+# prove the two agree, see scripts/20_backend_parity.py. Tiers with no frozen
+# results always take the shared backend.
+BACKEND = os.environ.get("XAI_BACKEND") or "legacy"  # empty means unset
+if BACKEND not in ("legacy", "hf"):
+    raise ValueError(f"XAI_BACKEND must be 'legacy' or 'hf', not {BACKEND!r}")
+
+
+def uses_legacy_backend(tier: str) -> bool:
+    return BACKEND == "legacy" and resolve_tier(tier).legacy_region_frame
+
+
+def backend_fingerprint(tier: str) -> dict:
+    """Empty for a frozen tier on the frozen class, so its fingerprints still match.
+    Anything else records the class and the coordinate convention it was read in.
+    A name outside MODEL_TIERS is a test double (the scripts' --model only accepts
+    real tiers) and contributes nothing."""
+    if tier not in MODEL_TIERS or uses_legacy_backend(tier):
+        return {}
+    return {"backend": "hf", "box_convention": resolve_tier(tier).box_convention}
+
+
 COMPUTE_DTYPE = "bfloat16"
 ATTENTION_IMPL = "sdpa"          # generation path
 ATTENTION_IMPL_FOR_READING = "eager"   # single forward pass only, never generation
@@ -120,6 +144,17 @@ class ModelSpec:
     # Folder under MODEL_DIR holding the weights; empty means the tier's own name.
     # Quantisation is applied at load time, so tiers of one checkpoint share it.
     weights: str = ""
+    # Which adapter in backends.families builds inputs, reads the token grid and
+    # merges vision features for this model.
+    family: str = "qwen2_5_vl"
+    # The unit the model states REGION in (frames.CONVENTIONS). It sets both the
+    # REGION line of the prompt and how the reply is mapped to original pixels.
+    box_convention: str = "input_px"
+    # "A" is the frozen transformers 4.49 environment, "B" the current release.
+    env: str = "A"
+    # True only for the tiers whose frozen results were read in the original
+    # frame; they follow XAI_REGION_FRAME. Every other tier is always mapped.
+    legacy_region_frame: bool = False
 
     @property
     def weights_dir(self) -> str:
@@ -133,6 +168,7 @@ MODEL_TIERS: dict[str, ModelSpec] = {
         quantization="4bit",
         supports_attention=True,
         notes="primary; largest that fits 8 GB",
+        legacy_region_frame=True,
     ),
     "qwen7b-bf16": ModelSpec(
         name="qwen7b-bf16",
@@ -141,6 +177,7 @@ MODEL_TIERS: dict[str, ModelSpec] = {
         supports_attention=True,
         notes="unquantised comparison arm, A40 only (~16 GB); what nf4 costs",
         weights="qwen7b-4bit",
+        legacy_region_frame=True,
     ),
     "qwen3b-8bit": ModelSpec(
         name="qwen3b-8bit",
@@ -155,6 +192,21 @@ MODEL_TIERS: dict[str, ModelSpec] = {
         quantization="4bit",
         supports_attention=True,
         notes="smoke tests when VRAM is tight",
+    ),
+    # --- model roster (docs/superpowers/specs/2026-11-12-study2-model-roster-design.md)
+    "qwen3b-bf16": ModelSpec(
+        name="qwen3b-bf16",
+        repo_id="Qwen/Qwen2.5-VL-3B-Instruct",
+        quantization="none",
+        supports_attention=True,
+        notes="roster 3: size, down",
+    ),
+    "qwen32b-4bit": ModelSpec(
+        name="qwen32b-4bit",
+        repo_id="Qwen/Qwen2.5-VL-32B-Instruct",
+        quantization="4bit",
+        supports_attention=True,
+        notes="roster 4: size, up; nf4 (~20 GB) on an A40",
     ),
 }
 

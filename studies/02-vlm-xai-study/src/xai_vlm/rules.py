@@ -122,9 +122,37 @@ RULES: dict[RuleId, Rule] = {
 }
 
 
-def prompt_for(rule_id: RuleId) -> str:
+# The REGION line per coordinate convention (roster design D2). Every model gets
+# the same question and the same REASON / REGION / ANSWER format; only the unit
+# REGION is asked in changes, to the one the model was trained to state boxes in.
+# Asking a 0-1000 model for pixels would measure format compliance, not
+# localisation. "input_px" is the frozen line, unchanged; "none" (verdict-only
+# models) keeps it too, and the region is then discarded by
+# frames.parse_in_convention.
+_PIXEL_REGION_LINE = ("REGION: (x0, y0, x1, y1) pixel coordinates of the single most "
+                      "relevant area, or NONE")
+REGION_LINES = {
+    "input_px": _PIXEL_REGION_LINE,
+    "none": _PIXEL_REGION_LINE,
+    "norm1000": ("REGION: (x0, y0, x1, y1) coordinates of the single most relevant area "
+                 "on a 0 to 1000 scale, (0, 0) top-left and (1000, 1000) bottom-right, "
+                 "or NONE"),
+    "norm1": ("REGION: (x0, y0, x1, y1) coordinates of the single most relevant area "
+              "as fractions from 0 to 1, (0, 0) top-left and (1, 1) bottom-right, or NONE"),
+}
+assert _PIXEL_REGION_LINE in RESPONSE_FORMAT
+
+
+def response_format(convention: str = "input_px") -> str:
+    if convention not in REGION_LINES:
+        raise ValueError(f"no REGION line for convention {convention!r}; "
+                         f"choose from {sorted(REGION_LINES)}")
+    return RESPONSE_FORMAT.replace(_PIXEL_REGION_LINE, REGION_LINES[convention])
+
+
+def prompt_for(rule_id: RuleId, convention: str = "input_px") -> str:
     """The complete text sent to the model for one rule."""
-    return f"{RULES[rule_id].question}\n\n{RESPONSE_FORMAT}"
+    return f"{RULES[rule_id].question}\n\n{response_format(convention)}"
 
 
 def violated_rules(row: dict) -> list[RuleId]:

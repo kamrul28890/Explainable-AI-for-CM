@@ -68,6 +68,7 @@ def build_fingerprint(manifest_path: Path, model: str, seed: int, *, device: str
         "generation": config.GENERATION,
         "seed": seed,
         **config.region_frame_fingerprint(),
+        **config.backend_fingerprint(model),
     }
 
 
@@ -250,7 +251,7 @@ def main() -> int:
     out_csv, state_json = output_paths(config.RESULTS_DIR, args.model, args.out_tag)
 
     from xai_pilot.data import load_construction_site
-    from xai_vlm.backends.qwen import QwenBackend
+    from xai_vlm.backends.load import load_backend
 
     with manifest.open(newline="", encoding="utf-8") as fh:
         manifest_rows = list(csv.DictReader(fh))
@@ -260,7 +261,7 @@ def main() -> int:
           f"{len({r['image_id'] for r in manifest_rows})} distinct images")
 
     print(f"loading {args.model} ...")
-    backend = QwenBackend(tier=args.model)
+    backend = load_backend(args.model)
 
     # One image resident at a time. Stage 0 held every gate image in a dict, which
     # was fine for 39 images and is not for thousands.

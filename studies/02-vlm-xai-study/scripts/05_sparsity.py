@@ -222,6 +222,7 @@ def build_fingerprint(manifest_path, baseline_path, regions_path, model, seed, *
         "max_pixels": config.MAX_PIXELS,
         "seed": seed,
         **config.region_frame_fingerprint(),
+        **config.backend_fingerprint(model),
     }
 
 
@@ -255,10 +256,10 @@ def main() -> int:
     out_csv = res / f"sparsity_{args.model}.csv"
     state_json = res / f"sparsity_{args.model}.state.json"
     from xai_pilot.data import load_construction_site
-    from xai_vlm.backends.qwen import QwenBackend
+    from xai_vlm.backends.load import load_backend
 
     print(f"loading {args.model} ...")
-    backend = QwenBackend(tier=args.model)
+    backend = load_backend(args.model)
     fingerprint = build_fingerprint(manifest, baseline, regions, args.model, args.seed,
                                     device=backend_device(backend))
 
