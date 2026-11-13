@@ -35,6 +35,17 @@ def test_work_fn_makes_n_reruns_all_sampled():
     assert all(c[2].get("temperature") == stage6.STABILITY_TEMPERATURE for c in calls)
 
 
+def test_sampling_truncation_is_pinned_not_left_to_each_model():
+    """Llama 3.2 Vision ships top_p=0.9; the Qwen checkpoints ship none (so
+    transformers' 1.0 / 50). Left to each model's generation_config, Llama's
+    reruns would be drawn from a truncated distribution and look more stable.
+    The values pinned are the ones the frozen Qwen runs already used."""
+    backend = FakeBackend()
+    stage6.make_work_fn(backend, _images, n_reruns=2)(_row())
+    calls = [c for c in backend.calls if c[0] == "answer"]
+    assert all(c[2].get("top_p") == 1.0 and c[2].get("top_k") == 50 for c in calls)
+
+
 def test_work_fn_computes_agreement_and_presence():
     backend = FakeBackend(script={
         "rule_1": [

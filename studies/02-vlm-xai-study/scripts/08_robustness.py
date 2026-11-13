@@ -101,9 +101,16 @@ def make_work_fn(backend, image_source, boxes_source):
     return work
 
 
-def row_ok(out_row: dict) -> bool:
-    """Every perturbed call answered. Not `verdict`, which is Stage 2's column."""
-    return all((out_row.get(f"verdict_{p}") or "").strip() for p in P.PERTURBATIONS)
+def reply_parse_share(out_row: dict) -> float:
+    """Share of this row's perturbed replies that produced a verdict. Not
+    `verdict`, which is Stage 2's column.
+
+    Per reply, not per row, as Stage 2 and Stage 6 (2026-11-13). The row-level
+    reading -- one unreadable reply fails all five -- tripped qwen3b-bf16 at 94.4%
+    of rows from 1.4% of replies (18 of the 35 under occlusion). An unparsed
+    verdict still counts as not surviving its perturbation."""
+    parts = [(out_row.get(f"verdict_{p}") or "").strip() for p in P.PERTURBATIONS]
+    return sum(1 for v in parts if v) / len(parts)
 
 
 def _progress(summary: dict) -> None:
@@ -180,7 +187,7 @@ def run(*, work_rows, backend, image_source, boxes_source, out_csv, state_json,
         Path(out_csv), Path(state_json), RESULT_FIELDS, fingerprint,
         resume=resume, force_resume=force_resume,
         checkpoint_every=checkpoint_every, progress_fn=_progress, guards=Guards(),
-        ok_fn=row_ok,
+        ok_fn=reply_parse_share,
     )
 
 

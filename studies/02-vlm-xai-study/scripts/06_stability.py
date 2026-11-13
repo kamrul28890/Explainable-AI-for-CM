@@ -40,6 +40,11 @@ RESULT_FIELDS = [
 
 N_RERUNS = 5
 STABILITY_TEMPERATURE = 0.7
+# Pinned, not left to each checkpoint's generation_config (2026-11-13). Llama 3.2
+# Vision ships top_p=0.9; the Qwen checkpoints ship neither, so their frozen runs
+# already sampled with transformers' defaults, 1.0 and 50 -- pinning them changes
+# no Qwen row. Unpinned, a model with a truncating default looks more stable.
+SAMPLING_TRUNCATION = {"top_p": 1.0, "top_k": 50}
 
 # Same scheme as Stage 4: guarantee every rule its floor before filling
 # proportionally, so rule_4 (an order of magnitude scarcer than rule_1) is not
@@ -85,8 +90,8 @@ def make_work_fn(backend, image_source, n_reruns: int = N_RERUNS,
 
         verdicts, regions = [], []
         for _ in range(n_reruns):
-            ans = backend.answer(image, row["rule_id"],
-                                 do_sample=True, temperature=temperature)
+            ans = backend.answer(image, row["rule_id"], do_sample=True,
+                                 temperature=temperature, **SAMPLING_TRUNCATION)
             verdicts.append(ans.verdict or "")
             regions.append("" if ans.region is None else str(tuple(ans.region)))
 

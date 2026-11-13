@@ -83,10 +83,15 @@ def test_a_missing_image_is_recorded_not_crashed():
     assert out["error"] == "image not found"
 
 
-def test_row_ok_needs_every_perturbed_verdict():
+def test_parse_guard_reads_the_share_of_perturbed_replies_per_row():
+    """Per reply, as Stage 2 and Stage 6 (decided 2026-11-10 for Stage 6): one
+    unreadable reply must not fail the other four. qwen3b-bf16 tripped the
+    row-level guard at 94.4% of rows from 1.4% of replies, mostly occlusion."""
     good = {f"verdict_{p}": "YES" for p in P.PERTURBATIONS}
-    assert stage8.row_ok(good)
-    assert not stage8.row_ok({**good, "verdict_blur": ""})
+    n = len(P.PERTURBATIONS)
+    assert stage8.reply_parse_share(good) == 1.0
+    assert stage8.reply_parse_share({**good, "verdict_blur": ""}) == (n - 1) / n
+    assert stage8.reply_parse_share({f"verdict_{p}": "" for p in P.PERTURBATIONS}) == 0.0
 
 
 def test_fingerprint_pins_the_approved_strengths(tmp_path):
