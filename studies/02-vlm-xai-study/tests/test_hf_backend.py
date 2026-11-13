@@ -111,7 +111,8 @@ def test_frozen_tiers_keep_their_old_defaults():
 
 
 @pytest.mark.parametrize("tier,repo", [("qwen3b-bf16", "Qwen/Qwen2.5-VL-3B-Instruct"),
-                                       ("qwen32b-4bit", "Qwen/Qwen2.5-VL-32B-Instruct")])
+                                       ("qwen32b-4bit", "Qwen/Qwen2.5-VL-32B-Instruct"),
+                                       ("qwen32b-bf16", "Qwen/Qwen2.5-VL-32B-Instruct")])
 def test_new_size_arms_are_registered_and_pinned(tier, repo):
     s = MODEL_TIERS[tier]
     assert s.repo_id == repo and not s.legacy_region_frame

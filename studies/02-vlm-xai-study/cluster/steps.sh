@@ -84,7 +84,7 @@ chain_comp() {
 }
 
 submit() {
-    sbatch --parsable --job-name="$1$SUFFIX" --export=ALL,XAI_CLUSTER_DIR="$HERE" \
+    sbatch --parsable --job-name="$1$SUFFIX" --gres=gpu:"$NGPU" --export=ALL,XAI_CLUSTER_DIR="$HERE" \
         "$HERE/chain.sbatch" "$1"
 }
 

@@ -17,6 +17,10 @@ export XAI_RESULTS_DIR=$STUDY/results/$RUN_NAME
 export MODEL=${MODEL:-qwen7b-4bit}
 if [[ $MODEL == qwen7b-4bit ]]; then SUFFIX=""; else SUFFIX="_$MODEL"; fi
 STATE=$XAI_RESULTS_DIR/.chain-state$SUFFIX
+# GPUs per job. A model too large for one A40 (qwen32b-bf16) runs with NGPU=2;
+# device_map="auto" splits it. Scholar's QOS caps a user at 2 GPUs in total, so
+# an NGPU=2 job runs alone.
+export NGPU=${NGPU:-1}
 
 # Stop each link ~25 min before the 4 h wall so the stage exits via SIGINT
 # between rows, never by SIGKILL mid-write. 12 links cap any runaway chain.

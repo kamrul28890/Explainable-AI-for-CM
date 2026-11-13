@@ -41,7 +41,7 @@ if (( n > MAX_LINKS )); then
     echo "chain $CHAIN exceeded $MAX_LINKS links" | tee "$STATE/FAILED"; exit 1
 fi
 
-NEXT=$(sbatch --parsable --job-name="$CHAIN${SUFFIX}" --dependency=afterany:"$SLURM_JOB_ID" \
+NEXT=$(sbatch --parsable --job-name="$CHAIN${SUFFIX}" --gres=gpu:"$NGPU" --dependency=afterany:"$SLURM_JOB_ID" \
        --export=ALL,XAI_CLUSTER_DIR="$HERE" "$HERE/chain.sbatch" "$CHAIN")
 echo "== chain $CHAIN link $n  job $SLURM_JOB_ID  successor $NEXT  host $(hostname)"
 echo "== commit $(cat "$REPO/COMMIT")  model $MODEL  results $XAI_RESULTS_DIR"

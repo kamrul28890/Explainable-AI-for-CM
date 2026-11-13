@@ -206,7 +206,16 @@ MODEL_TIERS: dict[str, ModelSpec] = {
         repo_id="Qwen/Qwen2.5-VL-32B-Instruct",
         quantization="4bit",
         supports_attention=True,
-        notes="roster 4: size, up; nf4 (~20 GB) on an A40",
+        notes="roster 4: size, up; nf4 (~20 GB) on one A40",
+        weights="qwen32b",
+    ),
+    "qwen32b-bf16": ModelSpec(
+        name="qwen32b-bf16",
+        repo_id="Qwen/Qwen2.5-VL-32B-Instruct",
+        quantization="none",
+        supports_attention=True,
+        notes="roster 4 at full precision: ~66 GB, split over two A40s (NGPU=2)",
+        weights="qwen32b",
     ),
 }
 
