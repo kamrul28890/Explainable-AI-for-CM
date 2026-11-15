@@ -179,6 +179,15 @@ def _summarise(out_csv: Path) -> None:
     print("=" * 70)
 
 
+def reply_latency_s(out_row: dict) -> float:
+    """Seconds per perturbed call, as Stage 6: the runner's 25 s ceiling is per
+    single call, and a row here is one call per perturbation. Guard only."""
+    ms = out_row.get("latency_ms")
+    if ms in (None, ""):
+        return 0.0
+    return float(ms) / 1000.0 / len(P.PERTURBATIONS)
+
+
 def run(*, work_rows, backend, image_source, boxes_source, out_csv, state_json,
         fingerprint, resume, force_resume, checkpoint_every, rows=None) -> dict:
     return run_stage(
@@ -187,7 +196,7 @@ def run(*, work_rows, backend, image_source, boxes_source, out_csv, state_json,
         Path(out_csv), Path(state_json), RESULT_FIELDS, fingerprint,
         resume=resume, force_resume=force_resume,
         checkpoint_every=checkpoint_every, progress_fn=_progress, guards=Guards(),
-        ok_fn=reply_parse_share,
+        ok_fn=reply_parse_share, latency_fn=reply_latency_s,
     )
 
 

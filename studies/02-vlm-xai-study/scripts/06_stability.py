@@ -203,6 +203,18 @@ def reply_parse_share(out_row: dict) -> float:
     return sum(1 for p in parts if p.strip()) / len(parts)
 
 
+def reply_latency_s(out_row: dict) -> float:
+    """Seconds per model call. The runner's ceiling (25 s) was calibrated on
+    single Stage 2 calls, and a row here is five of them, so the row time is
+    divided by the replies, as the parse guard is per reply. Per row, a healthy
+    7.3 s/call model (qwen32b-bf16, 36.5 s per row) tripped it (2026-11-15).
+    Guard only: no recorded number reads this."""
+    ms = out_row.get("latency_ms")
+    if ms in (None, ""):
+        return 0.0
+    return float(ms) / 1000.0 / len((out_row.get("verdicts") or "").split("|"))
+
+
 def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
         resume, force_resume, checkpoint_every, rows=None) -> dict:
     return run_stage(
@@ -211,7 +223,7 @@ def run(*, work_rows, backend, image_source, out_csv, state_json, fingerprint,
         Path(out_csv), Path(state_json), RESULT_FIELDS, fingerprint,
         resume=resume, force_resume=force_resume,
         checkpoint_every=checkpoint_every, progress_fn=_progress, guards=Guards(),
-        ok_fn=reply_parse_share,
+        ok_fn=reply_parse_share, latency_fn=reply_latency_s,
     )
 
 

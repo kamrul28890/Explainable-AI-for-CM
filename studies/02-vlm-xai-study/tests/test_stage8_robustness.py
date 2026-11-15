@@ -110,3 +110,11 @@ def test_subset_is_1600_split_evenly_by_baseline_verdict():
     sub = stage8.build_subset(rows, seed=42)
     assert len(sub) == 1600
     assert sum(r["verdict"] == "YES" for r in sub) == 800
+
+
+def test_latency_guard_reads_time_per_perturbed_call():
+    """Five model calls per row, as Stage 6: the per-call ceiling must see the
+    per-call time, or a healthy 7 s/call model (qwen32b-bf16) trips at 35 s."""
+    n = len(P.PERTURBATIONS)
+    assert stage8.reply_latency_s({"latency_ms": 7000.0 * n}) == 7.0
+    assert stage8.reply_latency_s({"latency_ms": ""}) == 0.0

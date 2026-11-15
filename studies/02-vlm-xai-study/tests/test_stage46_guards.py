@@ -102,3 +102,24 @@ def test_stage6_takes_image_sizes_from_stage3_so_drift_can_be_computed():
     got = stage6.attach_sizes(work, regions)
     assert (got[0]["image_w"], got[0]["image_h"]) == ("1000", "800")
     assert "image_w" not in got[1]
+
+
+def test_stage6_guards_latency_per_call_not_per_row():
+    """The 25 s ceiling was calibrated on single Stage 2 calls. A Stage 6 row is
+    five calls, so its row time must be divided by them. qwen32b-bf16 tripped at
+    36.5 s per row = 7.3 s per call, its healthy rate (job 489229, 2026-11-14)."""
+    from xai_vlm.runner import GUARD_MIN_ROWS, GuardTripped, Guards
+    import pytest
+    row = {"latency_ms": 36500.0, "verdicts": "YES|NO|YES|YES|NO"}
+    assert stage6.reply_latency_s(row) == pytest.approx(7.3)
+    assert stage6.reply_latency_s({"latency_ms": "", "verdicts": ""}) == 0.0
+    g = Guards()
+    for _ in range(GUARD_MIN_ROWS):
+        g.record(parsed_ok=1.0, latency_s=stage6.reply_latency_s(row))
+    g.check()
+    g = Guards()                                   # a real spill: 34 s per call
+    for _ in range(GUARD_MIN_ROWS):
+        g.record(parsed_ok=1.0, latency_s=stage6.reply_latency_s(
+            {"latency_ms": 170000.0, "verdicts": "YES|NO|YES|YES|NO"}))
+    with pytest.raises(GuardTripped):
+        g.check()
