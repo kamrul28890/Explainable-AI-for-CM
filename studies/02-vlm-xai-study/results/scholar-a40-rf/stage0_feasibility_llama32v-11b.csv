@@ -1,0 +1,90 @@
+image_id,expected,predicted,correct,norm_area,latency_s,has_region,parse_strict,rationale,raw
+0000161,YES,NO,False,0.0036,2.61,False,True,There are no workers in this image.,"REASON: There are no workers in this image.
+REGION: NONE
+ANSWER: NO"
+0000163,YES,YES,True,0.0044,2.65,False,False,The worker on the right side of the image is not wearing a hard hat.,"REASON: The worker on the right side of the image is not wearing a hard hat.
+REGION: (0, 0, 0, 0)
+ANSWER: YES"
+0000328,YES,YES,True,0.0048,3.41,False,True,The worker in the center of the image is not wearing a high-visibility vest.,"REASON: The worker in the center of the image is not wearing a high-visibility vest.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000072,YES,NO,False,0.005,1.66,False,True,There are no workers visible in this image.,"REASON: There are no workers visible in this image.
+REGION: NONE
+ANSWER: NO"
+0000005,YES,YES,True,0.0055,3.12,False,False,The worker in the background appears to be missing a hard hat.,"REASON: The worker in the background appears to be missing a hard hat.
+REGION: (0.05, 0.55, 0.15, 0.65) pixel coordinates
+ANSWER: YES"
+0000068,YES,YES,True,0.006,3.29,False,True,The worker in the middle of the image is not wearing a hard hat.,"REASON: The worker in the middle of the image is not wearing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000039,YES,YES,True,0.0066,3.58,False,True,The worker in the red shirt on the left side of the image is not wearing a hard hat.,"REASON: The worker in the red shirt on the left side of the image is not wearing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000118,YES,YES,True,0.0084,3.0,False,True,The workers are not wearing high-visibility clothing.,"REASON: The workers are not wearing high-visibility clothing.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000095,YES,YES,True,0.009,3.11,False,True,The worker on the left is not wearing a hard hat.,"REASON: The worker on the left is not wearing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000233,YES,YES,True,0.014,3.47,False,True,The worker on the left side of the image is not wearing a high-visibility vest.,"REASON: The worker on the left side of the image is not wearing a high-visibility vest.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000102,YES,YES,True,0.0168,3.35,False,True,The worker on the left side of the image is not wearing a hard hat.,"REASON: The worker on the left side of the image is not wearing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000132,YES,YES,True,0.018,4.52,False,True,"The worker in the red hard hat is standing near the pile of dirt on the left side of the image, but there is no visible ","REASON: The worker in the red hard hat is standing near the pile of dirt on the left side of the image, but there is no visible high-visibility clothing or adequate body covering.
+REGION: (0, 0, 0, 0)"
+0000229,YES,YES,True,0.0225,3.47,False,True,"The workers in the image are operating heavy machinery on a construction site, but none of them are wearing hard hats or","REASON: The workers in the image are operating heavy machinery on a construction site, but none of them are wearing hard hats or high-visibility clothing.
+REGION: (0, 0, 0, 0) NONE
+ANSWER: YES"
+0000019,YES,YES,True,0.0315,3.64,False,True,"The worker in the back, wearing a white shirt and dark pants, is not wearing a hard hat.","REASON: The worker in the back, wearing a white shirt and dark pants, is not wearing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000059,YES,YES,True,0.033,3.76,False,True,The worker in the blue shirt and black pants on the left side of the image is not wearing a hard hat.,"REASON: The worker in the blue shirt and black pants on the left side of the image is not wearing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: Y"
+0000135,YES,YES,True,0.033,3.24,False,True,The two workers in the image are not wearing high-visibility clothing.,"REASON: The two workers in the image are not wearing high-visibility clothing.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000009,YES,YES,True,0.0693,3.47,False,True,The worker on the left side of the image is not wearing a high-visibility vest.,"REASON: The worker on the left side of the image is not wearing a high-visibility vest.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000046,YES,YES,True,0.18,3.29,False,True,The worker in the top right corner is not wearing high-visibility clothing.,"REASON: The worker in the top right corner is not wearing high-visibility clothing.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000007,YES,YES,True,0.4902,3.47,False,True,The worker in the blue shirt and yellow hard hat is not wearing high-visibility clothing.,"REASON: The worker in the blue shirt and yellow hard hat is not wearing high-visibility clothing.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000116,YES,YES,True,0.5848,3.29,False,True,The worker in the center of the image is not wearing a hard hat.,"REASON: The worker in the center of the image is not wearing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000001,NO,NO,True,,1.6,False,True,There are no workers in this image.,"REASON: There are no workers in this image.
+REGION: NONE
+ANSWER: NO"
+0000002,NO,YES,False,,3.41,False,True,The workers on the left side of the image are not wearing high-visibility clothing.,"REASON: The workers on the left side of the image are not wearing high-visibility clothing.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000010,NO,NO,True,,1.67,False,True,There are no workers visible in this image.,"REASON: There are no workers visible in this image.
+REGION: NONE
+ANSWER: NO"
+0000013,NO,YES,False,,3.47,False,True,"The workers are not wearing high-visibility clothing, which is a requirement for their safety.","REASON: The workers are not wearing high-visibility clothing, which is a requirement for their safety.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000014,NO,NO,True,,1.66,False,True,There are no workers visible in the image.,"REASON: There are no workers visible in the image.
+REGION: NONE
+ANSWER: NO"
+0000015,NO,YES,False,,3.41,False,True,The worker on the left side of the image is not wearing high-visibility clothing.,"REASON: The worker on the left side of the image is not wearing high-visibility clothing.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000017,NO,NO,True,,1.66,False,True,There are no workers visible in this image.,"REASON: There are no workers visible in this image.
+REGION: NONE
+ANSWER: NO"
+0000018,NO,YES,False,,3.3,False,True,The worker in the center of the image is not wearing a hard hat.,"REASON: The worker in the center of the image is not wearing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000022,NO,YES,False,,3.18,False,False,The worker in the top-left corner of the image is missing a hard hat.,"REASON: The worker in the top-left corner of the image is missing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area
+ANSWER: YES"
+0000023,NO,YES,False,,3.35,False,True,The worker on the left side of the image is not wearing a hard hat.,"REASON: The worker on the left side of the image is not wearing a hard hat.
+REGION: (0, 0, 0, 0) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"

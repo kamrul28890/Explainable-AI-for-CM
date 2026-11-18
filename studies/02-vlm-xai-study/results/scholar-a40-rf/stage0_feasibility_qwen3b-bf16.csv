@@ -1,0 +1,138 @@
+image_id,expected,predicted,correct,norm_area,latency_s,has_region,parse_strict,rationale,raw
+0000161,YES,YES,True,0.0036,2.92,True,True,The worker on the right side of the image is missing a hard hat.,"REASON: The worker on the right side of the image is missing a hard hat.
+
+REGION: (658, 82, 673, 114) pixel coordinates of the single most relevant area
+
+ANSWER: YES"
+0000163,YES,YES,True,0.0044,2.22,False,True,The worker near the blue fence is missing a hard hat.,"REASON: The worker near the blue fence is missing a hard hat.
+
+REGION: (569, 189, 584, 232) pixel coordinates of the single most relevant area, or NONE
+
+ANSWER: YES"
+0000328,YES,YES,True,0.0048,2.12,True,True,The worker in the center of the image is not wearing a hard hat.,"REASON: The worker in the center of the image is not wearing a hard hat.
+
+REGION: (325, 216, 370, 284) pixel coordinates of the worker
+
+ANSWER: YES"
+0000072,YES,YES,True,0.005,2.25,False,True,The worker near the excavator is not wearing a hard hat.,"REASON: The worker near the excavator is not wearing a hard hat.
+
+REGION: (345, 496, 392, 548) pixel coordinates of the single most relevant area, or NONE
+
+ANSWER: YES"
+0000005,YES,NO,False,0.0055,2.22,False,True,The worker in the background is not wearing a hard hat.,"REASON: The worker in the background is not wearing a hard hat.
+
+REGION: (234, 356, 259, 407) pixel coordinates of the single most relevant area, or NONE
+
+ANSWER: NO"
+0000068,YES,YES,True,0.006,1.9,True,True,The worker in the middle of the image is missing a hard hat.,"REASON: The worker in the middle of the image is missing a hard hat.
+
+REGION: (489, 352, 510, 412)
+ANSWER: YES"
+0000039,YES,YES,True,0.0066,2.13,True,True,The worker near the excavator is not wearing a hard hat.,"REASON: The worker near the excavator is not wearing a hard hat.
+
+REGION: (283, 325, 302, 372) pixel coordinates of the single most relevant area
+
+ANSWER: YES"
+0000118,YES,NO,False,0.0084,2.57,True,True,"The worker in the image is wearing a green shirt but not a hard hat, high-visibility clothing, or adequate body covering","REASON: The worker in the image is wearing a green shirt but not a hard hat, high-visibility clothing, or adequate body covering.
+
+REGION: (372, 119, 396, 194) pixel coordinates of the single most rel"
+0000095,YES,YES,True,0.009,2.17,True,True,The worker on the left side of the image is missing a hard hat.,"REASON: The worker on the left side of the image is missing a hard hat.
+
+REGION: (162, 73, 184, 145) pixel coordinates of the single most relevant area
+
+ANSWER: YES"
+0000233,YES,YES,True,0.014,2.28,False,True,The worker on the left side of the image is missing a hard hat.,"REASON: The worker on the left side of the image is missing a hard hat.
+
+REGION: (82, 264, 103, 310) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000102,YES,YES,True,0.0168,2.15,True,True,The worker near the dump truck is not wearing a hard hat.,"REASON: The worker near the dump truck is not wearing a hard hat.
+
+REGION: (137, 369, 184, 459) pixel coordinates of the single most relevant area
+
+ANSWER: YES"
+0000132,YES,YES,True,0.018,2.18,False,True,The worker in the foreground is missing a hard hat.,"REASON: The worker in the foreground is missing a hard hat.
+
+REGION: (524, 376, 572, 480) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000229,YES,YES,True,0.0225,2.29,False,True,The worker in the white shirt and blue jeans is missing a hard hat.,"REASON: The worker in the white shirt and blue jeans is missing a hard hat.
+
+REGION: (428, 200, 469, 301) pixel coordinates of the single most relevant area, or NONE
+
+ANSWER: YES"
+0000019,YES,YES,True,0.0315,2.08,True,True,The worker on the right is missing a hard hat.,"REASON: The worker on the right is missing a hard hat.
+
+REGION: (467, 352, 543, 625) pixel coordinates of the worker on the right
+
+ANSWER: YES"
+0000059,YES,YES,True,0.033,2.28,False,True,The worker in the center of the image is missing a hard hat.,"REASON: The worker in the center of the image is missing a hard hat.
+
+REGION: (325, 196, 378, 294) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000135,YES,NO,False,0.033,2.12,True,True,The worker on the left is not wearing a hard hat.,"REASON: The worker on the left is not wearing a hard hat.
+
+REGION: (228, 310, 281, 465) pixel coordinates of the worker on the left
+
+ANSWER: NO"
+0000009,YES,YES,True,0.0693,2.21,False,True,The worker in the orange jacket is missing a hard hat.,"REASON: The worker in the orange jacket is missing a hard hat.
+
+REGION: (234, 285, 264, 319) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000046,YES,NO,False,0.18,2.31,False,True,The worker on the right side of the image is missing a hard hat.,"REASON: The worker on the right side of the image is missing a hard hat.
+
+REGION: (758, 132, 806, 214) pixel coordinates of the single most relevant area, or NONE
+
+ANSWER: NO"
+0000007,YES,YES,True,0.4902,2.31,False,True,The worker in the blue shirt and yellow hard hat is missing a hard hat.,"REASON: The worker in the blue shirt and yellow hard hat is missing a hard hat.
+
+REGION: (387, 86, 590, 542) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000116,YES,NO,False,0.5848,2.12,True,True,The worker on the right is not wearing a hard hat.,"REASON: The worker on the right is not wearing a hard hat.
+
+REGION: (278, 396, 542, 724) pixel coordinates of the worker on the right
+
+ANSWER: NO"
+0000001,NO,UNPARSED,False,,1.1,False,False,,"REASON: The image does not show any workers.
+
+REGION: NONE
+
+ANSWER: NONE"
+0000002,NO,YES,False,,2.24,False,True,The worker in the foreground appears to be missing a hard hat.,"REASON: The worker in the foreground appears to be missing a hard hat.
+
+REGION: (256, 489, 263, 507) pixel coordinates of the single most relevant area, or NONE
+
+ANSWER: YES"
+0000010,NO,YES,False,,2.24,False,True,The worker in the background appears to be missing a hard hat.,"REASON: The worker in the background appears to be missing a hard hat.
+
+REGION: (583, 316, 592, 334) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000013,NO,YES,False,,2.34,False,True,The worker near the center of the image appears to be missing a hard hat.,"REASON: The worker near the center of the image appears to be missing a hard hat.
+
+REGION: (347, 338, 356, 347) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000014,NO,UNPARSED,False,,2.05,False,False,,"REASON: The excavator operator is not visible in the image.
+
+REGION: (256, 287, 439, 405) pixel coordinates of the excavator operator
+
+ANSWER: NONE"
+0000015,NO,NO,True,,2.11,True,True,The worker in the foreground is not wearing a hard hat.,"REASON: The worker in the foreground is not wearing a hard hat.
+
+REGION: (117, 239, 164, 341) pixel coordinates of the single most relevant area
+
+ANSWER: NO"
+0000017,NO,YES,False,,2.24,False,True,The worker in the background appears to be missing a hard hat.,"REASON: The worker in the background appears to be missing a hard hat.
+
+REGION: (412, 165, 427, 193) pixel coordinates of the single most relevant area, or NONE
+
+ANSWER: YES"
+0000018,NO,YES,False,,1.92,True,True,The worker on the right side of the image is missing a hard hat.,"REASON: The worker on the right side of the image is missing a hard hat.
+
+REGION: (623, 243, 679, 389)
+ANSWER: YES"
+0000022,NO,YES,False,,2.25,False,True,The worker on the left side of the image is missing a hard hat.,"REASON: The worker on the left side of the image is missing a hard hat.
+REGION: (25, 189, 64, 257) pixel coordinates of the single most relevant area, or NONE
+ANSWER: YES"
+0000023,NO,NO,True,,1.99,True,True,The excavator operator is missing a hard hat.,"REASON: The excavator operator is missing a hard hat.
+
+REGION: (394, 195, 456, 281) pixel coordinates of the excavator
+
+ANSWER: NO"

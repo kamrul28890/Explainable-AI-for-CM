@@ -16,6 +16,19 @@ Stage 2 - sensitivity by rule
   rule_3                           98.3% [95.9, 100.0] (n=172)
   rule_4                           81.4% [71.4, 90.0] (n=70)
 
+Stage 2 - every compliant image
+-------------------------------
+  specificity, matched (C)         42.6% [39.9, 45.3] (n=1278)
+  specificity, unsampled (R)       40.5% [39.3, 41.6] (n=7457)
+  specificity, all compliant       40.8% [39.7, 41.8] (n=8735)
+
+Stage 2 - false-alarm rate by rule, all compliant
+-------------------------------------------------
+  rule_1                           57.9% [56.1, 59.7] (n=2670)
+  rule_2                           40.3% [38.4, 42.2] (n=2713)
+  rule_3                           90.0% [88.8, 91.1] (n=2599)
+  rule_4                           25.9% [22.8, 29.1] (n=753)
+
 Stage 3 - regions
 -----------------
   no-region rate (all)             20.5% [19.2, 21.8] (n=3882)

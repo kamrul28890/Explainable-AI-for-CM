@@ -1,0 +1,127 @@
+image_id,expected,predicted,correct,norm_area,latency_s,has_region,parse_strict,rationale,raw
+0000161,YES,YES,True,0.0036,5.38,True,True,The worker on the left side of the image is not wearing a hard hat or high-visibility clothing.,"REASON: The worker on the left side of the image is not wearing a hard hat or high-visibility clothing.
+
+REGION: (0, 132, 25, 174)
+
+ANSWER: YES"
+0000163,YES,YES,True,0.0044,4.57,True,True,The worker near the blue structure is not wearing high-visibility clothing.,"REASON: The worker near the blue structure is not wearing high-visibility clothing.
+
+REGION: (568, 217, 584, 253)
+
+ANSWER: YES"
+0000328,YES,YES,True,0.0048,4.49,True,True,The worker on the far right is not wearing a hard hat.,"REASON: The worker on the far right is not wearing a hard hat.
+REGION: (562, 234, 607, 290)
+ANSWER: YES"
+0000072,YES,YES,True,0.005,4.89,True,True,The worker near the truck appears to be missing a hard hat and high-visibility clothing.,"REASON: The worker near the truck appears to be missing a hard hat and high-visibility clothing.
+
+REGION: (365, 497, 387, 532)
+
+ANSWER: YES"
+0000005,YES,YES,True,0.0055,4.89,True,True,The worker in the background appears to be missing a hard hat and high-visibility clothing.,"REASON: The worker in the background appears to be missing a hard hat and high-visibility clothing.
+
+REGION: (126, 357, 145, 408)
+
+ANSWER: YES"
+0000068,YES,YES,True,0.006,4.49,True,True,The worker on the far right is not wearing a hard hat.,"REASON: The worker on the far right is not wearing a hard hat.
+REGION: (562, 354, 582, 411)
+ANSWER: YES"
+0000039,YES,YES,True,0.0066,5.02,True,True,The worker near the center of the image is not wearing a hard hat or high-visibility clothing.,"REASON: The worker near the center of the image is not wearing a hard hat or high-visibility clothing.
+
+REGION: (283, 325, 296, 370)
+
+ANSWER: YES"
+0000118,YES,YES,True,0.0084,5.13,True,True,"The worker near the excavator is not wearing a hard hat, which is a required personal protective equipment.","REASON: The worker near the excavator is not wearing a hard hat, which is a required personal protective equipment.
+
+REGION: (372, 121, 394, 191)
+
+ANSWER: YES"
+0000095,YES,YES,True,0.009,5.11,True,True,The worker standing on the left side of the image is not wearing a hard hat or high-visibility clothing.,"REASON: The worker standing on the left side of the image is not wearing a hard hat or high-visibility clothing.
+
+REGION: (158, 72, 183, 146)
+
+ANSWER: YES"
+0000233,YES,YES,True,0.014,4.8,True,True,The worker on the left side of the image is not wearing a high-visibility vest.,"REASON: The worker on the left side of the image is not wearing a high-visibility vest.
+REGION: (78, 263, 104, 309)
+ANSWER: YES"
+0000102,YES,YES,True,0.0168,4.96,True,True,The worker near the truck's cab is not wearing a hard hat or high-visibility clothing.,"REASON: The worker near the truck's cab is not wearing a hard hat or high-visibility clothing.
+
+REGION: (137, 368, 175, 452)
+
+ANSWER: YES"
+0000132,YES,YES,True,0.018,4.8,True,True,The worker near the excavator on the right side is not wearing a hard hat.,"REASON: The worker near the excavator on the right side is not wearing a hard hat.
+REGION: (526, 378, 574, 479)
+ANSWER: YES"
+0000229,YES,YES,True,0.0225,5.42,True,True,"The worker in the center of the image is not wearing a hard hat, high-visibility clothing, or adequate body covering.","REASON: The worker in the center of the image is not wearing a hard hat, high-visibility clothing, or adequate body covering.
+
+REGION: (426, 200, 468, 300)
+
+ANSWER: YES"
+0000019,YES,YES,True,0.0315,4.4,True,True,The worker on the left is not wearing a hard hat.,"REASON: The worker on the left is not wearing a hard hat.
+REGION: (172, 394, 230, 546)
+ANSWER: YES"
+0000059,YES,YES,True,0.033,4.49,True,True,The worker on the left side of the image is not wearing a hard hat.,"REASON: The worker on the left side of the image is not wearing a hard hat.
+REGION: (0, 178, 79, 546)
+ANSWER: YES"
+0000135,YES,YES,True,0.033,5.31,True,True,"The worker on the right is not wearing a hard hat, which is a required personal protective equipment for construction si","REASON: The worker on the right is not wearing a hard hat, which is a required personal protective equipment for construction sites.
+
+REGION: (256, 317, 304, 484)
+
+ANSWER: YES"
+0000009,YES,YES,True,0.0693,4.5,True,True,The worker near the concrete mixer is not wearing a hard hat.,"REASON: The worker near the concrete mixer is not wearing a hard hat.
+REGION: (234, 285, 263, 327)
+ANSWER: YES"
+0000046,YES,YES,True,0.18,4.5,True,True,The worker on the far right is not wearing a hard hat.,"REASON: The worker on the far right is not wearing a hard hat.
+REGION: (758, 134, 806, 210)
+ANSWER: YES"
+0000007,YES,YES,True,0.4902,4.34,True,True,The worker on the left is not wearing a hard hat.,"REASON: The worker on the left is not wearing a hard hat.
+REGION: (126, 95, 378, 588)
+ANSWER: YES"
+0000116,YES,YES,True,0.5848,4.99,True,True,"The workers are not wearing hard hats, which is a required personal protective equipment for construction sites.","REASON: The workers are not wearing hard hats, which is a required personal protective equipment for construction sites.
+
+REGION: (278, 396, 542, 723)
+
+ANSWER: YES"
+0000001,NO,NO,True,,3.11,False,True,No workers are visible in the image to assess for personal protective equipment.,"REASON: No workers are visible in the image to assess for personal protective equipment.
+REGION: NONE
+ANSWER: NO"
+0000002,NO,YES,False,,5.23,True,True,The worker near the center-left of the image appears to be missing a hard hat and high-visibility clothing.,"REASON: The worker near the center-left of the image appears to be missing a hard hat and high-visibility clothing.
+
+REGION: (238, 495, 260, 527)
+
+ANSWER: YES"
+0000010,NO,YES,False,,5.23,True,True,The worker near the excavator lacks visible personal protective equipment such as a hard hat or high-visibility clothing,"REASON: The worker near the excavator lacks visible personal protective equipment such as a hard hat or high-visibility clothing.
+
+REGION: (582, 316, 592, 334)
+
+ANSWER: YES"
+0000013,NO,YES,False,,5.31,True,True,The workers in the image appear to be lacking visible personal protective equipment such as hard hats or high-visibility,"REASON: The workers in the image appear to be lacking visible personal protective equipment such as hard hats or high-visibility clothing.
+
+REGION: (293, 317, 624, 350)
+
+ANSWER: YES"
+0000014,NO,NO,True,,3.94,False,True,"The worker inside the excavator is not visible, so it cannot be determined if they are wearing required personal protect","REASON: The worker inside the excavator is not visible, so it cannot be determined if they are wearing required personal protective equipment.
+
+REGION: NONE
+
+ANSWER: NO"
+0000015,NO,YES,False,,4.74,True,True,The worker near the center-right of the image is not wearing a hard hat.,"REASON: The worker near the center-right of the image is not wearing a hard hat.
+REGION: (608, 254, 630, 297)
+ANSWER: YES"
+0000017,NO,YES,False,,5.15,True,True,The worker near the excavator in the foreground is not wearing a hard hat or high-visibility clothing.,"REASON: The worker near the excavator in the foreground is not wearing a hard hat or high-visibility clothing.
+
+REGION: (398, 297, 465, 340)
+
+ANSWER: YES"
+0000018,NO,YES,False,,4.66,True,True,The worker in the center appears to be missing a high-visibility vest.,"REASON: The worker in the center appears to be missing a high-visibility vest.
+REGION: (359, 280, 407, 326)
+ANSWER: YES"
+0000022,NO,YES,False,,4.76,True,True,The worker near the center-right of the image is not wearing a hard hat.,"REASON: The worker near the center-right of the image is not wearing a hard hat.
+
+REGION: (328, 179, 364, 250)
+
+ANSWER: YES"
+0000023,NO,YES,False,,5.08,True,True,The worker near the left side of the image is not wearing a hard hat or high-visibility clothing.,"REASON: The worker near the left side of the image is not wearing a hard hat or high-visibility clothing.
+
+REGION: (52, 394, 100, 426)
+
+ANSWER: YES"

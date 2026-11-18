@@ -23,6 +23,29 @@ rule\_4 & 81.4\% & [71.4, 90.0] & 70 \\
 \bottomrule
 \end{tabular}
 
+% Stage 2 - every compliant image
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+specificity, matched (C) & 42.6\% & [39.9, 45.3] & 1278 \\
+specificity, unsampled (R) & 40.5\% & [39.3, 41.6] & 7457 \\
+specificity, all compliant & 40.8\% & [39.7, 41.8] & 8735 \\
+\bottomrule
+\end{tabular}
+
+% Stage 2 - false-alarm rate by rule, all compliant
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+rule\_1 & 57.9\% & [56.1, 59.7] & 2670 \\
+rule\_2 & 40.3\% & [38.4, 42.2] & 2713 \\
+rule\_3 & 90.0\% & [88.8, 91.1] & 2599 \\
+rule\_4 & 25.9\% & [22.8, 29.1] & 753 \\
+\bottomrule
+\end{tabular}
+
 % Stage 3 - regions
 \begin{tabular}{lrrr}
 \toprule
