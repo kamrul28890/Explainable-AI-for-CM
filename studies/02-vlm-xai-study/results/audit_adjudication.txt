@@ -1,0 +1,15 @@
+reviewed images: 40 of 100
+question-level agreement on reviewed images: 127 of 139 (91.4%)
+rules changed by the owner: 12 on 10 images
+  0000991 rule_1: unsure -> no  | as its a slope, graded one - they are standing without any harness as its not considered dangerous. check osha's regulation if necessary because its not a direct slope.
+  0000991 rule_2: yes -> no  | as its a slope, graded one - they are standing without any harness as its not considered dangerous. check osha's regulation if necessary because its not a direct slope.
+  0000991 rule_3: no -> unsure  | as its a slope, graded one - they are standing without any harness as its not considered dangerous. check osha's regulation if necessary because its not a direct slope.
+  0001305 rule_1: no -> yes
+  0002260 rule_1: no -> yes  | the person on the left is seems to be wearing a cap, but not a hard hat. ami 80% confirm about that. but its hard to tell.
+  0004657 rule_3: yes -> unsure  | i can see theres a guard rail on the left side, on the right side, its more like a gradual graded (but steep) edge. so on the left side, i think, theres edge - on the right side - i dont think we need any.
+  0007712 rule_3: no -> yes  | the green guardrail fence is not for the whole length, its missing in the middle. so for that part, it violates the guardrail safety, i think.
+  0009735 rule_3: unsure -> no
+  0010327 rule_4: yes -> unsure  | i am not sure if the excavator is in operation, so cant make that call if its violating or not.
+  0010538 rule_4: yes -> no  | even if it looks like the person is in the radius, i think he's not. its because of the perspective, it looks like that. i think he is outside of the radius.
+  0011292 rule_1: unsure -> no
+  0011925 rule_3: yes -> no  | the fall doesnt look like sharp deep, its more like gradual, high steep, so fall risk is low.

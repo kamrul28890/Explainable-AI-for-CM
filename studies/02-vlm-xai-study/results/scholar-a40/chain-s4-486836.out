@@ -1,0 +1,40 @@
+== chain s4 link 2  job 486836  successor 486956  host scholar-j001.rcac.purdue.edu
+== commit 44b409e877c763c47de3f41f3302395fb6ef7a4a  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40
+NVIDIA A40, 46068 MiB
+-- stage4: start 2026-11-10T00:04:46-05:00  (budget 12900s)
+maskable rows: 3022  (2625 YES, 397 NO controls)
+calls: 6044
+loading qwen7b-4bit ...
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:04<00:16,  4.21s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:08<00:12,  4.03s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:12<00:08,  4.06s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:16<00:03,  3.99s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:17<00:00,  3.03s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:17<00:00,  3.49s/it]
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/generation/configuration_utils.py:629: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `1e-06` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+     100 done    2584 skipped     0 errors  |  median 4.2s
+     200 done    2584 skipped     0 errors  |  median 4.2s
+     300 done    2584 skipped     0 errors  |  median 4.2s
+     400 done    2584 skipped     0 errors  |  median 4.3s
+
+done=438  skipped=2584  errors=0
+peak VRAM: 7.06 GB
+
+======================================================================
+ARTEFACT FLOOR FIRST
+  black   NO->YES : 27.2%
+  tokens  NO->YES : 51.1%
+  Masking only removes information, so a NO cannot rationally become a
+  YES. A YES-flip rate that fails to clear this is not faithfulness.
+
+FLIP RATE (YES answers whose verdict changed when the region was removed)
+  black   : 6.4%
+  tokens  : 6.1%  <- PRIMARY, artefact-free
+
+  black - tokens gap : +0.3%
+  how much the black-rectangle artefact inflates the apparent rate
+
+methods disagree : 372/3022 (12.3%)
+  flagged, never averaged -- disagreement between an artefact-free and
+  an artefact-prone intervention diagnoses residual artefact
+errors           : 0
+======================================================================
+-- stage4: rc=0  2026-11-10T00:43:16-05:00
+== chain s4 DONE

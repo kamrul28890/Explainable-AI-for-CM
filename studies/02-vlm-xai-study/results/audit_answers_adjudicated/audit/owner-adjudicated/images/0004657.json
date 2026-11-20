@@ -1,0 +1,17 @@
+{
+  "image_id": "0004657",
+  "blind": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "unsure",
+    "rule_4": "no"
+  },
+  "blind_note": "r3: a deep cut with steep walls; workers stand at the unfenced top edge on the right. Workers on the floor are helmeted; the excavator is far from them.",
+  "boxes": {},
+  "note": "i can see theres a guard rail on the left side, on the right side, its more like a gradual graded (but steep) edge. so on the left side, i think, theres edge - on the right side - i dont think we need any.",
+  "auditor": "claude-opus-5-5",
+  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+  "saved_at": "2026-11-12T03:28:36+00:00",
+  "first_saved_at": "2026-11-12T03:28:36+00:00",
+  "source": "owner"
+}

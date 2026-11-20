@@ -1,0 +1,15 @@
+{
+  "attention_impl": "sdpa",
+  "compute_dtype": "bfloat16",
+  "device": "NVIDIA A40",
+  "generation": {
+    "do_sample": false,
+    "max_new_tokens": 128,
+    "num_beams": 1
+  },
+  "manifest_sha256": "af91ed280cd22bfc6cdb27cc6645f448d137bb29b4ec77fc504cddfa3ac166c9",
+  "max_pixels": 501760,
+  "model": "qwen7b-4bit",
+  "revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
+  "seed": 42
+}

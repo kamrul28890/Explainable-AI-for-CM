@@ -1,0 +1,280 @@
+<title>ConstructionSite Annotation Audit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a site inspector's clipboard. Sticky progress strip; image left,
+   checklist right; stacks on phones. Amber is the one accent, as on site signage. */
+:root {
+  --bg: #eeece7; --panel: #fbfaf7; --ink: #1f2124; --muted: #5d6066; --line: #d6d2c8;
+  --accent: #d98e04; --accent-ink: #1f2124; --accent-soft: #f6e3b4;
+  --yes: #b3261e; --yes-soft: #f7dcd8; --no: #2c6e49; --no-soft: #d6eadc;
+  --unsure: #5b5f97; --unsure-soft: #e1e2f2; --ann: #d98e04; --model: #2a78c2;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17181a; --panel: #212226; --ink: #ecebe6; --muted: #a3a49f; --line: #393a3f;
+  --accent: #f2a91c; --accent-ink: #17181a; --accent-soft: #3d3218;
+  --yes: #ef7d73; --yes-soft: #42221f; --no: #74c495; --no-soft: #1d3527;
+  --unsure: #a6a9e0; --unsure-soft: #2b2c45; --ann: #f2a91c; --model: #6fb1ef; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #17181a; --panel: #212226; --ink: #ecebe6; --muted: #a3a49f; --line: #393a3f;
+  --accent: #f2a91c; --accent-ink: #17181a; --accent-soft: #3d3218;
+  --yes: #ef7d73; --yes-soft: #42221f; --no: #74c495; --no-soft: #1d3527;
+  --unsure: #a6a9e0; --unsure-soft: #2b2c45; --ann: #f2a91c; --model: #6fb1ef; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel) }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line) }
+header .wrap { padding-block: 12px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; max-width: 1280px; margin: 0 auto }
+h1 { font: 800 1.15rem/1.2 var(--display); letter-spacing: .01em; margin: 0; text-wrap: balance }
+h1 small { display: block; font: 500 .72rem/1.3 var(--body); color: var(--muted); letter-spacing: .06em; text-transform: uppercase }
+.progress { flex: 1 1 220px; min-width: 0; display: grid; gap: 4px }
+.bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; display: flex }
+.bar i { display: block; height: 100% } .bar .done { background: var(--accent) }
+.progress span { font: 500 .8rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.filters { display: flex; gap: 6px; flex-wrap: wrap }
+.chip { font: 500 .8rem var(--body); border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 4px 10px; border-radius: 999px; cursor: pointer }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink) }
+main.wrap { max-width: 1280px; margin: 0 auto; padding-block: 20px 48px; display: grid; gap: 20px; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start }
+@media (max-width: 860px) { main.wrap { grid-template-columns: minmax(0, 1fr) } }
+.status { grid-column: 1 / -1; font-size: .88rem; color: var(--muted); padding: 10px 14px; border: 1px dashed var(--line); border-radius: 6px }
+.status[data-kind="warn"] { color: var(--yes); border-color: var(--yes) }
+.figure { position: relative; background: #000; border-radius: 6px; overflow: hidden; max-width: 100% }
+.figure img { display: block; width: 100%; height: auto }
+.figure svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+.figure .ph { aspect-ratio: 4 / 3; display: grid; place-items: center; color: #bbb; font: 500 .85rem var(--mono) }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font: .8rem var(--mono); color: var(--muted) }
+.meta b { color: var(--ink); font-weight: 500 }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: .8rem; color: var(--muted) }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 3px solid var(--ann); vertical-align: middle; margin-right: 6px }
+.legend i.m { border-top: 3px dashed var(--model) }
+.nav { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap }
+button.btn { font: 600 .9rem var(--body); padding: 9px 16px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer }
+button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent) }
+button.btn:disabled { opacity: .45; cursor: not-allowed }
+button:focus-visible, .seg input:focus-visible + span, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: grid; gap: 16px; min-width: 0 }
+.phase { font: 700 .72rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.phase b { color: var(--accent); }
+.rule { display: grid; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--line) }
+.rule:last-of-type { border-bottom: 0; padding-bottom: 0 }
+.rule h3 { margin: 0; font: 700 .95rem/1.3 var(--display) }
+.rule h3 code { font: 500 .75rem var(--mono); color: var(--muted); margin-right: 6px }
+.rule p { margin: 0; font-size: .88rem; color: var(--muted); max-width: 65ch }
+.seg { display: flex; gap: 6px; flex-wrap: wrap }
+.seg label { cursor: pointer }
+.seg input { position: absolute; opacity: 0; pointer-events: none }
+.seg span { display: inline-block; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); font: 600 .85rem var(--body) }
+.seg input:checked + span[data-v="yes"] { background: var(--yes-soft); border-color: var(--yes); color: var(--yes) }
+.seg input:checked + span[data-v="no"] { background: var(--no-soft); border-color: var(--no); color: var(--no) }
+.seg input:checked + span[data-v="unsure"], .seg input:checked + span[data-v="partly"] { background: var(--unsure-soft); border-color: var(--unsure); color: var(--unsure) }
+.seg input:disabled + span { cursor: default; opacity: .8 }
+.reveal { display: grid; gap: 6px; font-size: .86rem; background: var(--bg); border-radius: 6px; padding: 10px 12px }
+.reveal .k { font: 600 .7rem var(--body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+.reveal .ann { border-left: 3px solid var(--ann); padding-left: 8px }
+.reveal .mdl { border-left: 3px dashed var(--model); padding-left: 8px }
+.verdict { font: 500 .75rem var(--mono); padding: 1px 6px; border-radius: 4px; background: var(--line) }
+textarea { width: 100%; min-height: 64px; font: .9rem var(--body); padding: 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); resize: vertical }
+.saved { font: .8rem var(--mono); color: var(--muted) }
+.strip { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px }
+.strip button { font: 500 .7rem var(--mono); padding: 6px 4px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums }
+.strip button[data-done="1"] { background: var(--accent-soft); border-color: var(--accent) }
+.strip button[aria-current="true"] { outline: 2px solid var(--ink); outline-offset: 1px }
+.howto { grid-column: 1 / -1; font-size: .86rem; color: var(--muted); max-width: 90ch; margin: 0 }
+@media (prefers-reduced-motion: no-preference) { .bar .done { transition: width .3s ease } }
+</style>
+
+<header><div class="wrap">
+  <h1><small>§5.5 reference-standard audit · 100 images</small>ConstructionSite Annotation Audit</h1>
+  <div class="progress" aria-live="polite"><div class="bar"><i class="done" id="bar" style="width:0%"></i></div><span id="count">0 / 100 labelled</span></div>
+  <div class="filters" role="group" aria-label="Quality tier">
+    <button class="chip" id="f-all" aria-pressed="true" data-f="all">All</button>
+    <button class="chip" id="f-rich" aria-pressed="false" data-f="rich info">Rich info</button>
+    <button class="chip" id="f-poor" aria-pressed="false" data-f="poor info">Poor info</button>
+    <button class="chip" id="f-todo" aria-pressed="false" data-f="todo">Not done</button>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <p class="howto">For each image, answer the four questions from the photo alone, then save. The dataset's annotation and the model's answer appear only after that, and your first answers are locked so they stay blind. Then say whether each annotated box sits on the hazard. Use "Can't tell" when the photo does not show enough.</p>
+  <div class="status" id="status" hidden></div>
+  <section>
+    <div class="figure" id="figure"><div class="ph">loading image…</div></div>
+    <div class="meta" id="meta"></div>
+    <div class="legend" id="legend" hidden><span><i></i>dataset annotation</span><span><i class="m"></i>model's region</span></div>
+    <div class="nav">
+      <button class="btn" id="prev">← Previous</button>
+      <button class="btn" id="next">Next →</button>
+      <button class="btn" id="nexttodo">Next not done</button>
+    </div>
+  </section>
+  <section class="card" id="card" aria-live="polite"></section>
+  <div class="strip" id="strip" aria-label="All images"></div>
+</main>
+
+<script>
+const ITEMS = __ITEMS__;
+const IMG = __IMG__;
+const RULES = {
+  rule_1: ["PPE", "Is any worker missing required personal protective equipment: a hard hat, high-visibility clothing, or adequate body covering?"],
+  rule_2: ["Fall protection", "Is any worker working at height without fall protection such as a safety harness or lanyard?"],
+  rule_3: ["Edge protection", "Is there an unprotected edge, excavation, trench, or floor opening that a worker could fall into, lacking guardrails or barriers?"],
+  rule_4: ["Plant proximity", "Is any worker inside the danger zone or blind spot of operating heavy machinery, such as an excavator?"],
+};
+const RIDS = Object.keys(RULES);
+const state = { i: 0, filter: "all", labels: {}, db: null, uid: null, canWrite: true, draft: {} };
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); for (const k of kids) n.append(k); return n; };
+
+function visible() {
+  return ITEMS.map((it, i) => ({ it, i })).filter(({ it }) =>
+    state.filter === "all" ? true : state.filter === "todo" ? !state.labels[it.image_id] : it.quality_of_info === state.filter);
+}
+function status(text, kind) { const s = $("status"); s.hidden = !text; s.textContent = text || ""; s.dataset.kind = kind || ""; }
+
+function boxesSvg(it, show) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 1 1"); svg.setAttribute("preserveAspectRatio", "none");
+  if (!show) return svg;
+  const rect = (b, stroke, dash) => {
+    const r = document.createElementNS(svg.namespaceURI, "rect");
+    r.setAttribute("x", b[0]); r.setAttribute("y", b[1]);
+    r.setAttribute("width", Math.max(0, b[2] - b[0])); r.setAttribute("height", Math.max(0, b[3] - b[1]));
+    r.setAttribute("fill", "none"); r.setAttribute("stroke", stroke); r.setAttribute("stroke-width", "3");
+    r.setAttribute("vector-effect", "non-scaling-stroke"); if (dash) r.setAttribute("stroke-dasharray", "8 5");
+    svg.append(r);
+  };
+  const css = getComputedStyle(document.documentElement);
+  for (const a of Object.values(it.annotations)) for (const b of a.boxes) rect(b, css.getPropertyValue("--ann").trim());
+  for (const m of Object.values(it.model)) if (m.verdict === "YES" && m.region) rect(m.region, css.getPropertyValue("--model").trim(), true);
+  return svg;
+}
+
+function seg(name, options, value, disabled, onchange) {
+  const g = el("div", { className: "seg", role: "radiogroup" });
+  for (const [v, label] of options) {
+    const id = `${name}-${v}`;
+    const input = el("input", { type: "radio", name, id, value: v, checked: value === v, disabled });
+    input.addEventListener("change", () => onchange(v));
+    const span = el("span", { textContent: label }); span.dataset.v = v;
+    g.append(el("label", { htmlFor: id }, input, span));
+  }
+  return g;
+}
+
+function render() {
+  const it = ITEMS[state.i];
+  const saved = state.labels[it.image_id];
+  const revealed = !!saved;
+  const d = state.draft[it.image_id] ||= { blind: {}, boxes: {}, note: "" };
+  if (saved) { d.blind = { ...saved.blind }; if (!d.touched) { d.boxes = { ...(saved.boxes || {}) }; d.note = saved.note || ""; } }
+
+  // image
+  const fig = $("figure"); fig.replaceChildren();
+  if (IMG[it.image_id]) {
+    const img = el("img", { src: IMG[it.image_id], alt: `Construction site photo ${it.image_id}` });
+    fig.append(img, boxesSvg(it, revealed));
+  } else fig.append(el("div", { className: "ph", textContent: "image not uploaded yet" }));
+  $("legend").hidden = !revealed;
+  $("meta").replaceChildren(
+    el("span", {}, "image ", el("b", { textContent: it.image_id })),
+    el("span", {}, "tier ", el("b", { textContent: it.quality_of_info })),
+    el("span", {}, "lighting ", el("b", { textContent: it.illumination || "—" })),
+    el("span", {}, el("b", { textContent: `${state.i + 1}` }), ` of ${ITEMS.length}`));
+
+  // checklist
+  const card = $("card"); card.replaceChildren();
+  card.append(el("div", { className: "phase" }, revealed ? el("b", { textContent: "Step 2 · " }) : el("b", { textContent: "Step 1 · " }),
+    revealed ? "compare with the annotation" : "answer from the photo alone"));
+  const answered = () => RIDS.every((r) => d.blind[r]);
+  for (const r of RIDS) {
+    const [name, q] = RULES[r];
+    const box = el("div", { className: "rule" },
+      el("h3", {}, el("code", { textContent: r }), name),
+      el("p", { textContent: q + (it.applicable[r] ? "" : " (No machinery is annotated in this scene.)") }),
+      seg(`${it.image_id}-${r}`, [["yes", "Yes, violation"], ["no", "No"], ["unsure", "Can't tell"]], d.blind[r], revealed,
+        (v) => { d.blind[r] = v; saveBtn.disabled = !answered() || !state.canWrite; }));
+    if (revealed) {
+      const a = it.annotations[r], m = it.model[r];
+      const rv = el("div", { className: "reveal" });
+      rv.append(el("div", { className: "ann" }, el("div", { className: "k", textContent: "Dataset annotation" }),
+        a ? el("span", { textContent: `Violation: ${a.reason || "(no reason given)"}` }) : el("span", { textContent: "Not marked as a violation." })));
+      if (m) rv.append(el("div", { className: "mdl" }, el("div", { className: "k", textContent: "Model (Stage 2)" }),
+        el("span", {}, el("span", { className: "verdict", textContent: m.verdict || "—" }), " ", m.rationale || "")));
+      box.append(rv);
+      if (a && a.boxes.length) box.append(el("p", { textContent: "Does the annotated box sit on this hazard?" }),
+        seg(`${it.image_id}-${r}-box`, [["yes", "Yes"], ["partly", "Partly"], ["no", "No"]], d.boxes[r], !state.canWrite,
+          (v) => { d.boxes[r] = v; d.touched = true; saveBtn.disabled = !state.canWrite; }));
+    }
+    card.append(box);
+  }
+  const note = el("textarea", { id: `note-${it.image_id}`, placeholder: "Notes (optional): what the annotation missed, why you couldn't tell…", value: d.note });
+  note.addEventListener("input", () => { d.note = note.value; d.touched = true; if (revealed) saveBtn.disabled = !state.canWrite; });
+  card.append(note);
+  const saveBtn = el("button", { className: "btn primary", id: "save", textContent: revealed ? "Save comparison" : "Save and show annotation" });
+  saveBtn.disabled = !state.canWrite || (revealed ? !d.touched : !answered());
+  saveBtn.addEventListener("click", () => save(it, d, saveBtn));
+  const savedNote = el("span", { className: "saved", textContent: saved ? `saved ${new Date(saved.saved_at).toLocaleString()}` : "" });
+  card.append(el("div", { className: "nav" }, saveBtn, savedNote));
+
+  // strip + progress
+  const done = ITEMS.filter((x) => state.labels[x.image_id]).length;
+  $("count").textContent = `${done} / ${ITEMS.length} labelled`;
+  $("bar").style.width = `${(100 * done) / ITEMS.length}%`;
+  const strip = $("strip"); strip.replaceChildren();
+  for (const { it: x, i } of visible()) {
+    const b = el("button", { textContent: x.image_id, title: x.quality_of_info });
+    b.dataset.done = state.labels[x.image_id] ? "1" : "0";
+    if (i === state.i) b.setAttribute("aria-current", "true");
+    b.addEventListener("click", () => go(i)); strip.append(b);
+  }
+}
+
+async function save(it, d, btn) {
+  if (!state.db || !state.uid) { status("Answers can't be saved in this view: open the page signed in to claude.ai.", "warn"); return; }
+  btn.disabled = true; btn.textContent = "Saving…";
+  const prev = state.labels[it.image_id];
+  const body = { image_id: it.image_id, quality_of_info: it.quality_of_info, blind: d.blind,
+    boxes: d.boxes, note: d.note, saved_at: new Date().toISOString(), first_saved_at: prev?.first_saved_at || new Date().toISOString() };
+  try {
+    await state.db.doc(`audit/${state.uid}/images/${it.image_id}`).set(body);
+    if (!prev) await state.db.doc(`audit/${state.uid}`).set({ last_image: it.image_id, updated_at: body.saved_at });
+    state.labels[it.image_id] = body; d.touched = false; status(""); render();
+  } catch (e) {
+    const msg = e && e.code === "invalid_argument" ? "You don't have permission to save answers here. Ask the owner for Contributor access." : "Couldn't save. Check your connection and press Save again.";
+    status(msg, "warn"); btn.disabled = false; btn.textContent = "Save";
+  }
+}
+
+function go(i) { state.i = Math.max(0, Math.min(ITEMS.length - 1, i)); try { localStorage.setItem("audit-i", String(state.i)); } catch {} render(); window.scrollTo({ top: 0 }); }
+$("prev").onclick = () => go(state.i - 1);
+$("next").onclick = () => go(state.i + 1);
+$("nexttodo").onclick = () => { const n = ITEMS.findIndex((x, j) => j > state.i && !state.labels[x.image_id]); const m = n >= 0 ? n : ITEMS.findIndex((x) => !state.labels[x.image_id]); if (m >= 0) go(m); };
+for (const c of document.querySelectorAll(".chip")) c.onclick = () => {
+  state.filter = c.dataset.f; for (const o of document.querySelectorAll(".chip")) o.setAttribute("aria-pressed", String(o === c));
+  const v = visible(); if (v.length && !v.some(({ i }) => i === state.i)) state.i = v[0].i; render();
+};
+document.addEventListener("keydown", (e) => { if (e.target.closest("textarea")) return; if (e.key === "ArrowRight") go(state.i + 1); if (e.key === "ArrowLeft") go(state.i - 1); });
+
+try { const s = parseInt(localStorage.getItem("audit-i"), 10); if (s >= 0 && s < ITEMS.length) state.i = s; } catch {}
+render();
+status("Connecting to the answer store…");
+
+(async () => {
+  const [db, user] = await Promise.all([window.claude?.use?.("db") ?? null, window.claude?.use?.("user") ?? null]);
+  const uid = user ? await user.id() : null;
+  if (!db || !uid) { state.canWrite = false; status("Answers can be saved only when the page is opened signed in to claude.ai. You can still look through the images.", "warn"); render(); return; }
+  const w = user ? await user.can("data.write") : null;
+  state.db = db; state.uid = uid;
+  const timer = setTimeout(() => status("The answer store isn't answering yet. Earlier answers may be missing until it does.", "warn"), 10000);
+  db.collection(`audit/${uid}/images`).onSnapshot((snap) => {
+    if (!snap.metadata.fromCache) { clearTimeout(timer); status(""); }
+    const next = {}; for (const doc of snap.docs) next[doc.id] = doc.data(); state.labels = next; render();
+  }, (e) => { clearTimeout(timer); status("Lost the connection to the answer store. Reload the page to reconnect.", "warn"); });
+  if (w === false) status("You can view this audit but not save answers. Ask the owner for Contributor access.", "warn");
+})();
+</script>

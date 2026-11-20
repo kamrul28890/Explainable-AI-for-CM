@@ -1,0 +1,69 @@
+== chain s8 link 1  job 487259  successor 487271  host scholar-j003.rcac.purdue.edu
+== commit 9eae23513ca0a5c9be7ecd18b24854bb71f85624  model qwen7b-bf16  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40
+NVIDIA A40, 46068 MiB
+-- stage8: start 2026-11-10T21:21:29-05:00  (budget 12900s)
+robustness subset: 1599 rows (800 YES, 799 NO), seed 42
+calls: 7995  strengths: {'blur_sigma_frac_long_side': 0.01, 'low_light_ev': -2.0, 'occlusion_frac_w': 0.5, 'occlusion_frac_h': 0.5, 'contrast_factor': 0.4, 'desaturate': 'ITU-R 601-2 luma'}
+loading qwen7b-bf16 ...
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:03<00:14,  3.56s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:06<00:10,  3.46s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:10<00:06,  3.39s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:13<00:03,  3.37s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:14<00:00,  2.57s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:14<00:00,  2.95s/it]
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/generation/configuration_utils.py:629: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `1e-06` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+     100 done       0 skipped     0 errors  |  median 10.2s
+     200 done       0 skipped     0 errors  |  median 10.2s
+     300 done       0 skipped     0 errors  |  median 10.2s
+     400 done       0 skipped     0 errors  |  median 10.2s
+     500 done       0 skipped     0 errors  |  median 10.2s
+     600 done       0 skipped     0 errors  |  median 10.2s
+     700 done       0 skipped     0 errors  |  median 10.3s
+     800 done       0 skipped     0 errors  |  median 10.2s
+     900 done       0 skipped     0 errors  |  median 10.2s
+    1000 done       0 skipped     0 errors  |  median 10.2s
+    1100 done       0 skipped     0 errors  |  median 10.2s
+    1200 done       0 skipped     0 errors  |  median 10.2s
+Traceback (most recent call last):
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/scripts/08_robustness.py", line 285, in <module>
+    sys.exit(main())
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/scripts/08_robustness.py", line 265, in main
+    summary = run(
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/scripts/08_robustness.py", line 176, in run
+    return run_stage(
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/src/xai_vlm/runner.py", line 301, in run_stage
+    result = work_fn(row)
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/scripts/08_robustness.py", line 86, in work
+    ans = backend.answer(P.apply(p, image), row["rule_id"])
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/src/xai_vlm/backends/qwen.py", line 117, in answer
+    out = self.model.generate(**inputs, **gen)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/generation/utils.py", line 2223, in generate
+    result = self._sample(
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/generation/utils.py", line 3214, in _sample
+    outputs = model_forward(**model_inputs, return_dict=True)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 1863, in forward
+    outputs = self.model(
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 1208, in forward
+    layer_outputs = decoder_layer(
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 1070, in forward
+    hidden_states, self_attn_weights, present_key_value = self.self_attn(
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 991, in forward
+    attn_output = torch.nn.functional.scaled_dot_product_attention(
+KeyboardInterrupt
+-- stage8: rc=124  2026-11-11T00:56:30-05:00
+== chain s8 out of time; successor 487271 resumes

@@ -1,0 +1,15 @@
+{
+  "claude": {
+    "rule_1": "unsure",
+    "rule_2": "yes",
+    "rule_3": "no"
+  },
+  "final": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "unsure"
+  },
+  "image_id": "0000991",
+  "note": "as its a slope, graded one - they are standing without any harness as its not considered dangerous. check osha's regulation if necessary because its not a direct slope.",
+  "reviewed_at": "2026-11-12T04:24:26.238Z"
+}

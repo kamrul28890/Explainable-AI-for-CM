@@ -1,0 +1,58 @@
+\chapter{Stage 9 Completeness, Redefined on Attention (F7)}
+\label{chap:s2-3}
+
+\section{Goal}
+
+Stage~9 (bounded completeness) asks whether an explanation was offered and whether it held up. As designed,
+``held up'' meant the answer flips when Stage~4's token ablation removes the named region. Finding F4 showed
+that ablation fails its own negative control --- a 51.7\% artefact floor against a 5.9\% signal --- so the
+designed metric correctly computed a quantity with no discriminative power, and was marked not reportable
+(F7). This phase replaces the broken half.
+
+\section{What Was Done}
+
+The decision (2026-11-10) was to redefine ``held up'' on attention, which Stage~5 already measures without
+any intervention and which survived its own null (F6). \texttt{09\_completeness.py -{}-basis attention}
+classifies each row:
+
+\begin{itemize}
+\item \textbf{no usable explanation} --- no region was named;
+\item \textbf{supported} --- the share of attention mass inside the named region exceeds the share of the
+image the region covers (lift $>1$);
+\item \textbf{weak} --- a region was named but attention inside it is at or below its area share.
+\end{itemize}
+
+It writes \texttt{completeness\_attention\_\{model\}.csv}. The ablation basis stays the default so the frozen
+file reproduces, and its numbers are never reported. The report heads the section ``attentional, not
+causal'' and prints the share of regions at a lift of 2$\times$ or more beside the headline.
+
+\section{Results}
+
+\begin{center}
+\begin{tabular}{p{5.8cm}rr}
+\toprule
+\textbf{class} & \textbf{RTX 3070} & \textbf{A40} \\
+\midrule
+explanation supported       & 67.0\% & 66.5\% \\
+explanation weak            & 11.1\% & 11.4\% \\
+no usable explanation       & 21.9\% & 22.2\% \\
+lift $\geq 2\times$ (regions only) & 43.4\% & 42.6\% \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Stage 9 on the attention basis, $n=3{,}882$ (regions only: 3,031 / 3,022). Median lift
+1.74 / 1.73.}
+\label{tab:s23}
+\end{center}
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Non-standard, and it must be argued in the paper.} The claim changes from causal (``removing the
+region changes the answer'') to attentional (``the model looked where it said''). That is a weaker claim,
+and the paper states it as one. ``Supported'' is crossed by any lift above 1.0, which is why the 2$\times$
+line is reported beside it: under half the named regions draw twice their area's share of attention.
+
+\section{Implications}
+
+Completeness is reportable again, on a basis that has passed a null test. A metric defined over another
+metric inherits that metric's validity; this one now inherits Stage~5's, which was checked, rather than
+Stage~4's, which failed.

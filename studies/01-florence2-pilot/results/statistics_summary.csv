@@ -1,0 +1,9 @@
+metric,group,point,lo,hi,n,ci,meets_min_n,p_value
+descriptive_accuracy_top1,overall,0.3619631901840491,0.2883435582822086,0.43558282208588955,163,0.95,,
+descriptive_accuracy_top1,compliant,0.28,0.16,0.4,50,0.95,True,
+descriptive_accuracy_top1,fall_hazard,0.46,0.32,0.6,50,0.95,True,
+descriptive_accuracy_top1,ppe_violation,0.28,0.16,0.4,50,0.95,True,
+descriptive_accuracy_top1,struck_by_risk,0.6153846153846154,0.38461538461538464,0.8461538461538461,13,0.95,False,
+multihazard_complete,overall,0.2727272727272727,0.09090909090909091,0.45454545454545453,22,0.95,,
+wilcoxon_targeted_vs_random_drift,paired,0.05651797722407051,,,144,,,0.0011021658778481375
+wilcoxon_stability_temp,paired,0.07333333333333336,,,40,,,0.017540364087401825

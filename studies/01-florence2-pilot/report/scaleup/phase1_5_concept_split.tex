@@ -1,0 +1,129 @@
+\chapter{Prompt Dictionary Concept Split (Phase 1.5)}
+\label{chap:p1-5}
+
+\section{Goal}
+
+Florence-2 has no free-form VQA token, so every safety rule is answered by grounding a short noun
+phrase. The pilot stored two phrases per rule in \texttt{RULE\_QUERIES} and used index~0 for the
+answer and index~1 for the Day-9 ``rewording-robustness'' test, which reruns the rule with the second
+phrasing and checks whether the answer or grounded box changes. The premise of that test is that
+index~0 and index~1 are \emph{synonyms} --- two ways of saying the same thing --- so any change
+measures sensitivity to \emph{wording}.
+
+That premise is false for two of the three presence rules. For rule\_1 the two phrases are ``hard
+hat'' and ``high-visibility vest''; for rule\_2 they are ``safety harness'' and ``fall-protection
+lanyard.'' These are not synonyms --- they are \emph{distinct physical objects}. Only rule\_3's pair,
+``guardrail'' and ``edge protection barrier,'' are genuine synonyms of one object. So the pilot's
+rewording test, for rules 1 and 2, was silently measuring how the answer changes when you ask about a
+\emph{different object}, and calling that ``robustness to rewording.'' The plan (item 3.5) prescribes
+restructuring the query dictionary so each distinct object is its own concept with its own synonym
+list, and so the rewording test only ever swaps validated synonyms within a concept.
+
+\section{What Was Done}
+
+\subsection{A concept/synonym structure}
+
+A new \texttt{RULE\_CONCEPTS} maps each rule to \{concept: [synonyms]\}, disentangling the two things
+the flat \texttt{RULE\_QUERIES} conflated:
+
+\begin{center}
+\begin{tabular}{p{2.0cm}p{5.5cm}p{5.0cm}}
+\toprule
+\textbf{rule} & \textbf{concepts (distinct objects)} & \textbf{synonyms per concept} \\
+\midrule
+rule\_1 & hard hat; high-visibility vest & \{hard hat, safety helmet\}; \{hi-vis vest, \ldots\} \\
+rule\_2 & safety harness; fall-protection lanyard & \{safety harness, fall-arrest harness\}; \ldots \\
+rule\_3 & guardrail (one concept) & \{guardrail, edge protection barrier\} \\
+\bottomrule
+\end{tabular}
+\captionof{table}{The reviewed concept structure. rule\_1 and rule\_2 have two distinct concepts each;
+rule\_3 has one concept with two genuine synonyms -- the only rule whose Day-9 ``rewording'' was
+actually a rewording.}
+\label{tab:p15-concepts}
+\end{center}
+
+A companion \texttt{RULE\_SATISFACTION} records whether a rule needs \emph{all} its concepts present or
+\emph{any} one (rule\_1 ``all'': both hard hat and vest are expected PPE; rule\_2/rule\_3 ``any''),
+with an explicit note that the pilot proxy approximated rule\_1 using only the hard-hat concept, so its
+operative semantics were narrower than the recorded ``all'' intent. Helper functions expose the
+structure (\texttt{concepts\_for}, \texttt{synonyms\_for}, \texttt{is\_synonym}), and
+\texttt{reworded\_query} returns a validated same-concept synonym for the corrected rewording test ---
+never a different concept.
+
+\subsection{Frozen queries preserved}
+
+\texttt{RULE\_QUERIES} is kept byte-for-byte (its index~0/index~1 phrases are unchanged), so every
+existing script and the frozen Day-9 results reproduce exactly. The concept structure is additive: it
+sits beside the frozen dictionary and is consumed only by code that opts into it. Ten unit tests,
+written test-first, pin the disentanglement (rule\_3 synonyms group; rule\_1/rule\_2 objects
+separate), the frozen-query preservation, and that \texttt{reworded\_query} only ever returns a
+same-concept synonym.
+
+\section{Results}
+
+The structural claim --- that index~1 is a different \emph{object} for rules 1--2 --- is not just a
+naming argument; it is measurable in where Florence-2 puts the box. Grounding the primary phrase versus
+(a) a proposed same-concept synonym and (b) the frozen cross-concept phrase on 20 samples per rule, and
+measuring agreement with the primary term's box (IoU; a missing or non-overlapping box scores 0):
+
+\begin{center}
+\begin{tabular}{p{2.0cm}p{4.6cm}p{3.0cm}p{2.8cm}}
+\toprule
+\textbf{rule} & \textbf{compared phrase} & \textbf{box agreement} & \textbf{grounded} \\
+\midrule
+rule\_1 & \emph{synonym} safety helmet          & \textbf{0.281} & 20/20 \\
+rule\_1 & \emph{cross} high-visibility vest      & \textbf{0.000} & 18/20 \\
+\midrule
+rule\_2 & \emph{synonym} fall-arrest harness     & \textbf{0.426} & 13/20 \\
+rule\_2 & \emph{cross} fall-protection lanyard   & \textbf{0.000} & 13/20 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Grounding agreement with the primary concept phrase. The cross-concept phrases DO
+ground a box (18/20, 13/20) --- but at a systematically different location: agreement is exactly 0.000.
+True synonyms ground the same region (non-zero agreement).}
+\label{tab:p15-iou}
+\end{center}
+
+The result is unusually clean. The cross-concept phrases are not failing to detect anything --- ``high-
+visibility vest'' finds a box in 18 of 20 rule\_1 images, ``fall-protection lanyard'' in 13 of 20
+rule\_2 images. But those boxes sit on a \emph{different object}, so their overlap with the hard-hat /
+harness box is exactly zero. Swapping index~0 for index~1, as the pilot's rewording test did, therefore
+relocated the grounding to a different object every time it grounded at all --- which is why any
+answer or box change it produced cannot be attributed to wording. The true synonyms, by contrast, land
+on the same object (agreement 0.281 and 0.426): imperfect box overlap, as expected from Florence-2's
+phrasing-dependent box jitter, but unambiguously the \emph{same region}, not a different one.
+
+\section{An Honest Note on Synonym Strength}
+
+The same-concept agreements (0.281, 0.426) are modest, not near-unity, and that is worth stating
+plainly rather than dressing up. Two effects are mixed in: Florence-2 genuinely returns somewhat
+different box extents for different phrasings of the same object, and the proposed synonyms (``safety
+helmet,'' ``fall-arrest harness'') are candidates, not yet blessed. The principled definition the
+structure adopts is exactly this measurement: a proposed synonym is \emph{validated} when it grounds
+substantially the same region as the primary phrase. By that definition ``safety helmet'' and ``fall-
+arrest harness'' are weakly validated --- clearly the same object (non-zero, versus the cross term's
+exact zero), but with enough box jitter that a scale run should either confirm them on more samples or
+prefer tighter synonyms. The structure makes that a checkable property rather than an assumption; the
+full study will run this check across the whole set before committing a synonym list.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard.} Separating a controlled variable (wording) from a confound (object identity) is
+basic experimental design; a robustness-to-rewording test that swaps objects is simply mis-specified.
+
+\textbf{Non-standard, and the contribution.} Two choices. First, ``validated synonym'' is given an
+operational, falsifiable definition --- same-region grounding, measured --- rather than left to
+intuition, so the query dictionary can be audited empirically instead of argued about. Second, the
+frozen queries and the entire pilot result set are preserved untouched beside the new structure, so the
+mis-specified Day-9 rule\_1/rule\_2 numbers remain reproducible as exactly what they were, and the
+corrected rewording test is a new, opt-in path rather than a silent redefinition of the old one.
+
+\section{Implications}
+
+The rewording-robustness test can now be run as a genuine phrasing-sensitivity measurement, swapping
+only validated same-concept synonyms, with the corrected result reported separately from the frozen
+(mis-specified) one. The concept structure also feeds two later needs: rule\_1's two-concept, ``all''-
+satisfaction semantics is the hook for multi-object PPE checking (does a worker have both hard hat and
+vest?), and the per-concept synonym lists give the native-VQA models a clean vocabulary to be prompted
+with. The immediate carry-forward is a full-set synonym-validation pass to promote the weakly-validated
+candidates or replace them.

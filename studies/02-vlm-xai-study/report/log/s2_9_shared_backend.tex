@@ -1,0 +1,124 @@
+\chapter{One Backend for Every Model}
+\label{chap:s2-9}
+
+\section{Goal}
+
+The model roster (fifteen models, approved 2026-11-12) is only a comparison if every model is measured
+by the same instrument. Until now the harness had one backend, written for Qwen2.5-VL. This step splits
+it in two: a shared backend that holds every piece of measuring logic once, and a small adapter per model
+family that holds only what genuinely differs. The test of the step is that the shared backend, given the
+Qwen2.5-VL adapter, reproduces the frozen backend exactly.
+
+\section{What Was Done}
+
+\textbf{The split.} \texttt{backends/hf.py} (\texttt{HFVLMBackend}) holds generation and timing, reply
+parsing, black masking, token ablation and the attention read-out. \texttt{backends/families.py} holds
+one adapter per family, with five duties:
+\begin{itemize}
+\item loading the model and its processor;
+\item turning one image and one prompt into model inputs;
+\item stating the frame a pixel box is given in (for models that answer in pixels);
+\item locating the image tokens and the grid they form;
+\item merging vision features into the token embeddings, for token ablation.
+\end{itemize}
+A family whose image tokens do not form one grid over the whole image (tiled encoders, or Llama~3.2's
+cross-attention) reports no grid. Attention and token ablation are then marked not applicable for that
+model rather than computed on a guessed layout, as the roster design requires (D4).
+
+\textbf{The logic was moved, not rewritten.} The token-cell test and the attention average were lifted out
+of the frozen backend into two functions, \texttt{cells\_to\_keep} and \texttt{aggregate\_attention}. CPU
+tests check both against verbatim copies of the frozen loops: 200 random regions on three grid shapes for
+the first, synthetic attention tensors for the second (exact equality).
+
+\textbf{Coordinate conventions.} \texttt{frames.parse\_in\_convention} reads a reply's REGION in one of
+four units and returns it in original-image pixels:
+\begin{itemize}
+\item \texttt{input\_px}: pixels of the resized input (Qwen2.5-VL); exactly the corrected path of
+Chapter~\ref{chap:s2-8};
+\item \texttt{norm1000}: 0--1000 over the image (Qwen2-VL, Qwen3-VL, InternVL, GLM);
+\item \texttt{norm1}: 0--1 over the image (the LLaVA family);
+\item \texttt{none}: verdict-only models; the region is dropped.
+\end{itemize}
+Each has a round-trip test on one known box. The prompt follows the convention (roster D2): only the
+REGION line changes, and a test checks that the default prompt is byte-identical to the frozen one for
+every rule.
+
+\textbf{Behind a flag.} \texttt{XAI\_BACKEND} selects the class for the two frozen tiers. The default,
+\texttt{legacy}, keeps the frozen \texttt{QwenBackend}, so nothing already reported can move;
+\texttt{hf} routes them through the shared backend. New tiers have no frozen results and always take the
+shared backend, and they are always read in their own convention whatever \texttt{XAI\_REGION\_FRAME} says.
+Every model stage now gets its backend from one factory (\texttt{backends/load.py}), and its fingerprint
+records the class and convention whenever it is not the frozen path.
+
+\textbf{Registry.} Each tier now names its family, its box convention and its environment (A, the frozen
+\texttt{transformers} 4.49; B, the current release). Two Qwen2.5-VL size arms are registered and pinned:
+\texttt{qwen3b-bf16} and \texttt{qwen32b-4bit}. Llama~3.2-11B-Vision is downloaded (Meta approved access on
+2026-11-13) and pinned; it gets its adapter at its own Stage~0.
+
+\section{Results}
+
+\textbf{The check.} \texttt{scripts/20\_backend\_parity.py} runs the same rows through both backends,
+one after the other, in one process on one GPU. Rows are drawn at random (seed 0) from those with a stated
+region, without regard to their score, as Chapter~\ref{chap:s2-8} requires. For each row it records:
+\begin{itemize}
+\item the reply to the clean image, its verdict and its region;
+\item the reply with the region blacked out (Stage~4);
+\item the reply with the region's image tokens removed (Stage~4);
+\item the attention grid (Stage~5) and the patch grid.
+\end{itemize}
+Replies are compared as text, so ``identical'' means byte for byte.
+
+\begin{table}[tbp]
+\centering
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+\textbf{tier} & \textbf{rows} & \textbf{reply} & \textbf{region} & \textbf{black} & \textbf{tokens} &
+\textbf{attention} & \textbf{max $|\Delta|$} \\
+\midrule
+qwen7b-4bit & 40 & 40 & 40 & 40 & 40 & 40 & 0 \\
+qwen7b-bf16 & 40 & 40 & 40 & 40 & 40 & 40 & 0 \\
+\bottomrule
+\end{tabular}
+\caption{The shared backend against the frozen one on the A40 (job 488517, commit \texttt{89950a9},
+\texttt{XAI\_REGION\_FRAME=rescaled}). Counts are rows identical in each field; max $|\Delta|$ is the
+largest difference between the two attention grids. Rows cover all four rules (4-bit: 16, 7, 14, 3;
+bf16: 20, 5, 10, 5), both verdicts, and about a third of rows whose black-masked reply differs from the
+clean one, so the intervention paths were exercised, not only the clean one.
+Files: \texttt{results/backend-parity/}.}
+\label{tab:s29}
+\end{table}
+
+\textbf{Every field matched on every row, for both tiers} (Table~\ref{tab:s29}). The attention grids are
+equal to the last bit. A smoke run of eight 4-bit rows on the RTX~3070 gave the same result before the
+cluster run.
+
+\textbf{One false start.} The first cluster job (488516) stopped at its GPU-test gate. The new GPU tests
+for the shared backend run before the frozen backend's 8~GB budget test, and that test reads the
+process-wide peak memory. It was measuring the previous test's model. The shared-backend tests now free
+their model and reset the peak counter when they finish. No backend code changed between the two jobs.
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Standard.} A model-agnostic harness with per-model adapters is how evaluation suites such as
+VLMEvalKit and lmms-eval are built.
+
+\textbf{Non-standard, and stated in the paper.}
+\begin{itemize}
+\item The frozen backend is kept beside the shared one instead of being replaced, so the frozen results
+are reproducible from the code that made them. The parity check is the evidence that the two agree.
+\item Each model is asked for REGION in its own trained convention, not in one common unit. The question
+and the rest of the format are identical.
+\end{itemize}
+
+\section{Implications}
+
+\begin{itemize}
+\item Adding a model is now writing one adapter of five duties. Nothing that computes a metric is touched.
+\item The coordinate error of Chapter~\ref{chap:s2-8} cannot recur silently: every tier states its
+convention, every convention has a round-trip test, and every new adapter is checked on rows drawn without
+regard to their score before its first metric.
+\item Next, queued on Scholar behind this check: the full battery for \texttt{qwen3b-bf16}; Stage~0 sizing
+for \texttt{qwen32b-bf16} (two A40s) and \texttt{qwen32b-4bit}; the verdict-only battery for Llama~3.2
+Vision; and the parity run of \texttt{qwen7b-bf16} in environment B (transformers 5.20.2, roster D5).
+\end{itemize}

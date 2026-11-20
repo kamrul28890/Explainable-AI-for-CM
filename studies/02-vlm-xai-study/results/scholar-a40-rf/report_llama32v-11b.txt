@@ -1,0 +1,34 @@
+Study 2 headline figures -- llama32v-11b
+bootstrap 95% CI, 10000 resamples, reporting floor n=30
+
+Stage 2 - baseline
+------------------
+  sensitivity                      86.1% [84.3, 87.9] (n=1327)
+  specificity                      23.2% [21.5, 24.8] (n=2555)
+  false-alarm rate                 76.8% [75.1, 78.4] (n=2555)
+  YES share                        80.0% [78.7, 81.2] (n=3882)
+  parse rate                       99.5% [99.2, 99.7] (n=3882)
+
+Stage 2 - sensitivity by rule
+-----------------------------
+  rule_1                           83.9% [81.6, 86.2] (n=1001)
+  rule_2                           100.0% [100.0, 100.0] (n=84)
+  rule_3                           93.6% [89.5, 97.1] (n=172)
+  rule_4                           82.9% [72.9, 91.4] (n=70)
+
+Stage 3 - regions
+-----------------
+  no-region rate (all)             100.0% [100.0, 100.0] (n=3882)
+  no-region rate (YES only)        100.0% [100.0, 100.0] (n=3105)
+
+Stage 6 - stability
+-------------------
+  verdict unanimous (all reruns)   40.6% [37.2, 43.9] (n=799)
+  flickering region                0.0% [0.0, 0.0] (n=799)
+  unreadable reply                 4.0% [3.4, 4.6] (n=3995)
+  majority overturns baseline      27.3% [24.2, 30.4] (n=799)
+
+Stage 6 - unanimity by baseline verdict
+---------------------------------------
+  baseline YES                     50.6% [45.6, 55.6] (n=399)
+  baseline NO                      30.5% [26.0, 35.2] (n=400)

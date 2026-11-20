@@ -1,0 +1,16 @@
+{
+ "image_id": "0009089",
+ "blind": {
+  "rule_1": "no",
+  "rule_2": "no",
+  "rule_3": "no",
+  "rule_4": "yes"
+ },
+ "blind_note": "r4: two helmeted men stand beside the bucket of a small excavator digging with its operator in the cab.",
+ "boxes": {},
+ "note": "",
+ "auditor": "claude-opus-5-5",
+ "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+ "saved_at": "2026-11-12T03:28:36+00:00",
+ "first_saved_at": "2026-11-12T03:28:36+00:00"
+}

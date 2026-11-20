@@ -1,0 +1,137 @@
+\chapter{Compliant-Sample Context Matching (Phase 1.3)}
+\label{chap:p1-3}
+
+\section{Goal}
+
+Compliant images carry no violated rule, so the pilot assigned each one a rule to be tested against by
+plain round-robin: the first compliant image was tested on rule\_1, the next on rule\_2, and so on,
+cycling through all four rules regardless of what the image actually contained. This produces a
+balanced ``model correctly says compliant'' coverage across rules, but it also produces \emph{vacuous}
+tests. A compliant image of flat ground with no excavator anywhere in frame, round-robined to rule\_4
+(worker-in-excavator-swing-radius), tests nothing: there is no hazard context for the model to
+correctly clear. Worse, the vacuous pass counts as a correct ``compliant'' answer and silently
+inflates baseline compliant accuracy.
+
+The scale-up plan (item 3.3) prescribes the fix: when assigning a rule to a compliant image, prefer a
+rule whose \emph{context is present} in the scene, using dataset metadata where available and marking
+the assignment \texttt{context\_absent} where no contextual match can be confirmed, so those cases are
+reported separately rather than folded into the accuracy number.
+
+\section{What Was Done}
+
+\subsection{The one reliable metadata context signal}
+
+The ConstructionSite parquet carries per-image metadata columns beyond the rule labels:
+\texttt{illumination}, \texttt{camera\_distance}, \texttt{view}, \texttt{quality\_of\_info}, and three
+object-box columns --- \texttt{excavator}, \texttt{rebar}, and \texttt{worker\_with\_white\_hard\_hat}.
+Inspecting their values across the test split establishes what can and cannot be trusted as a rule
+context signal:
+
+\begin{itemize}
+  \item \texttt{excavator} is a list of bounding boxes, non-empty in exactly the images that contain an
+  excavator. This is a high-precision, direct signal for rule\_4's struck-by context.
+  \item \texttt{view} is ``elevation view'' (2{,}895) vs ``plan view'' (109) --- a weak, necessary-not-
+  sufficient hint at height, not a reliable rule\_2/rule\_3 context signal.
+  \item \texttt{worker\_with\_white\_hard\_hat} only marks workers wearing a \emph{white} hard hat, so
+  its emptiness does not imply ``no worker''; it is not a trustworthy rule\_1 (PPE) context signal.
+  \item \texttt{illumination}, \texttt{camera\_distance}, \texttt{quality\_of\_info} describe capture
+  conditions, not rule context.
+\end{itemize}
+
+The honest conclusion drives the design: \texttt{excavator} is the only rule-context signal reliably
+derivable from metadata alone. Confirming PPE (rule\_1), height (rule\_2), or edge (rule\_3) context
+requires actually looking at the image --- a lightweight grounding pre-check --- which is GPU work
+deferred to a later phase.
+
+\subsection{The context-matched assignment policy}
+
+\texttt{assign\_compliant\_rule(has\_excavator, index, mode)} returns
+\texttt{(rule\_id, context\_absent)}:
+
+\begin{itemize}
+  \item \texttt{"round\_robin"} (default, frozen): cycle all four rules; \texttt{context\_absent} is
+  always False because context is not assessed. Byte-for-byte identical to the pilot.
+  \item \texttt{"context\_matched"} (Phase 1.3): if the scene has an excavator, assign rule\_4 --- its
+  struck-by context is confirmed present. If it does not, \emph{never} assign the vacuous rule\_4;
+  round-robin over rules 1--3 instead and flag the assignment \texttt{context\_absent=True}, recording
+  honestly that metadata cannot confirm that rule's context and a grounding pre-check would be needed.
+\end{itemize}
+
+A \texttt{context\_absent} field was added to \texttt{PilotSample}, and
+\texttt{config.COMPLIANT\_ASSIGNMENT} holds the default policy. Both the priority and multi-label
+samplers were refactored to share one assignment routine, capturing excavator presence during the
+streaming pass only when context matching actually needs it, so the frozen round-robin path does no
+extra per-row work and reproduces exactly.
+
+\section{Results}
+
+Applied to all 2{,}592 compliant images in the test split (of which 915, or 35.3\%, contain an
+excavator):
+
+\begin{center}
+\begin{tabular}{p{6.6cm}p{3.0cm}p{3.0cm}}
+\toprule
+\textbf{} & \textbf{round-robin} & \textbf{context-matched} \\
+\midrule
+rule\_4 (struck-by) assignments        & 648 & 915 \\
+\ \ of which vacuous (no excavator)    & \textbf{413 (63.7\%)} & \textbf{0} \\
+excavator scenes not tested for struck-by & \textbf{680} & \textbf{0} \\
+assignments flagged \texttt{context\_absent} & 0 (not assessed) & 1{,}677 (64.7\%) \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Compliant-image rule assignment on the full test split. Round-robin assigns rule\_4
+to images without any excavator (a vacuous struck-by test) and, conversely, fails to test most
+excavator scenes for struck-by risk at all. Context matching eliminates both.}
+\label{tab:p13-vacuous}
+\end{center}
+
+Under round-robin, of the 648 compliant images assigned the struck-by rule, 413 (63.7\%) had no
+excavator in frame --- the test could only ever return ``compliant'' for lack of any hazard, and those
+413 passes were quietly padding the compliant accuracy. Simultaneously, 680 images that \emph{did}
+contain an excavator were round-robined onto some other rule, so their genuine struck-by context went
+untested. Context matching drives both failure modes to zero: every one of the 915 excavator scenes is
+now tested for struck-by risk, and not one excavator-free scene is. The 1{,}677 remaining compliant
+images (64.7\%) are flagged \texttt{context\_absent} rather than silently trusted --- an explicit
+statement that their rule\_1/2/3 context is unconfirmed by metadata and awaits the grounding pre-check.
+
+The full unit suite is green at 83 tests (76 after Phase~1.2 plus 7 new context-matching tests written
+test-first), covering the excavator signal, both assignment modes, the no-vacuous-rule\_4 guarantee,
+and end-to-end sampling under context matching.
+
+\section{A Limitation, Stated Honestly}
+
+Context matching only confidently confirms rule\_4 context, because \texttt{excavator} is the only
+trustworthy context signal in the metadata. Rule\_1 (is a worker present?), rule\_2 (is anyone working
+at height?), and rule\_3 (is there an unguarded edge?) cannot be confirmed from metadata, so
+excavator-free compliant images are flagged \texttt{context\_absent} rather than context-matched. This
+is not a gap papered over --- it is surfaced as an explicit count (64.7\% of compliant images) and
+routed to a named future step: a lightweight grounding pre-check that detects worker/edge/height cues
+before assigning rules 1--3. That pre-check is GPU work coupled to the attribution and scale phases,
+and was deliberately not built here to keep Phase~1 free of new model calls. The value already
+delivered stands on its own: the single most clearly vacuous case, struck-by tests on excavator-free
+scenes, is eliminated, and the most clearly missed case, excavator scenes never tested for struck-by,
+is recovered.
+
+\section{Standard vs. Non-Standard Choices}
+
+\textbf{Standard.} Conditioning a test on whether its precondition is present in the input is ordinary
+experimental hygiene; a test with no stimulus measures nothing.
+
+\textbf{Non-standard, and the actual discipline.} Two choices matter. First, refusing to over-claim:
+rather than inventing weak proxies for worker/height/edge context and pretending they are reliable, the
+policy confirms only what the metadata actually supports (excavator) and marks everything else
+\texttt{context\_absent} for separate reporting. A vacuous test mislabeled as context-present would be
+worse than an honestly-flagged one. Second, and consistent with the whole of Phase~1, the fix sits
+behind a default-valued flag that leaves the frozen round-robin path bit-identical, so the pilot's
+baseline compliant accuracy --- inflated as it was by the 413 vacuous passes --- remains reproducible
+as the baseline the corrected number is measured against.
+
+\section{Implications}
+
+Baseline compliant accuracy can now be reported two ways: the raw round-robin number (with its 413
+vacuous struck-by passes) and a context-matched number that tests each compliant image only on rules
+whose context is present. The struck-by class, already recovered on the violation side by Phase~1.2,
+now also gets its compliant counterpart tested wherever an excavator actually appears --- 915 scenes
+instead of an accidental 235. The carry-forward is the grounding pre-check for rules 1--3, which will
+convert the 64.7\% \texttt{context\_absent} compliant pool from ``unconfirmed'' into
+``context-matched or genuinely absent,'' completing what metadata alone cannot finish.

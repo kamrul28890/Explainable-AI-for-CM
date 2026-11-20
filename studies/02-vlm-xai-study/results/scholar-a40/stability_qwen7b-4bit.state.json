@@ -1,0 +1,14 @@
+{
+  "attention_impl": "sdpa",
+  "baseline_sha256": "6233da8b8f0659fb00f6e0d0ead274d7ae872b5649149d619a5910808b6bf5da",
+  "compute_dtype": "bfloat16",
+  "device": "NVIDIA A40",
+  "manifest_sha256": "af91ed280cd22bfc6cdb27cc6645f448d137bb29b4ec77fc504cddfa3ac166c9",
+  "max_pixels": 501760,
+  "model": "qwen7b-4bit",
+  "n_reruns": 5,
+  "per_rule_floor": 40,
+  "seed": 42,
+  "stability_temperature": 0.7,
+  "subset_size": 800
+}

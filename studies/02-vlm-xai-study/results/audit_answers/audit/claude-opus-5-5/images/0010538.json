@@ -1,0 +1,18 @@
+{
+ "image_id": "0010538",
+ "blind": {
+  "rule_1": "yes",
+  "rule_2": "no",
+  "rule_3": "no",
+  "rule_4": "yes"
+ },
+ "blind_note": "r1: man in coat on the left slope has no hard hat. r4: group of five stands a few metres in front of the right excavator, bucket raised, cab occupied.",
+ "boxes": {
+  "rule_1": "partly"
+ },
+ "note": "Coat man on the slope is right; the box in the group sits across a helmeted man and the head box is ambiguous.",
+ "auditor": "claude-opus-5-5",
+ "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+ "saved_at": "2026-11-12T03:30:41+00:00",
+ "first_saved_at": "2026-11-12T03:28:36+00:00"
+}

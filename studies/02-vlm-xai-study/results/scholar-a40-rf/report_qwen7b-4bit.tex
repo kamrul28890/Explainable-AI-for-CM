@@ -1,0 +1,219 @@
+% Stage 2 - baseline
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+sensitivity & 90.4\% & [88.8, 92.0] & 1327 \\
+specificity & 40.5\% & [38.6, 42.5] & 2555 \\
+false-alarm rate & 59.5\% & [57.5, 61.4] & 2555 \\
+YES share & 70.1\% & [68.6, 71.5] & 3882 \\
+parse rate & 100.0\% & [100.0, 100.0] & 3882 \\
+\bottomrule
+\end{tabular}
+
+% Stage 2 - sensitivity by rule
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+rule\_1 & 92.9\% & [91.3, 94.4] & 1001 \\
+rule\_2 & 97.6\% & [94.0, 100.0] & 84 \\
+rule\_3 & 98.8\% & [97.1, 100.0] & 172 \\
+rule\_4 & 25.7\% & [15.7, 35.7] & 70 \\
+\bottomrule
+\end{tabular}
+
+% Stage 2 - every compliant image
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+specificity, matched (C) & 45.1\% & [42.5, 47.9] & 1278 \\
+specificity, unsampled (R) & 42.6\% & [41.5, 43.7] & 7457 \\
+specificity, all compliant & 43.0\% & [41.9, 44.0] & 8735 \\
+\bottomrule
+\end{tabular}
+
+% Stage 2 - false-alarm rate by rule, all compliant
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+rule\_1 & 57.5\% & [55.7, 59.4] & 2670 \\
+rule\_2 & 35.4\% & [33.6, 37.2] & 2713 \\
+rule\_3 & 93.2\% & [92.2, 94.1] & 2599 \\
+rule\_4 & 8.5\% & [6.5, 10.6] & 753 \\
+\bottomrule
+\end{tabular}
+
+% Stage 3 - regions
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+no-region rate (all) & 22.2\% & [20.8, 23.5] & 3882 \\
+no-region rate (YES only) & 3.5\% & [2.8, 4.2] & 2720 \\
+\bottomrule
+\end{tabular}
+
+% Stage 10 - explanation correctness
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+explanation correct & 31.6\% & [28.9, 34.2] & 1187 \\
+similarity $\geq$ 0.60 & 56.2\% & [53.3, 59.0] & 1187 \\
+hazard match & 91.5\% & [89.9, 93.1] & 1187 \\
+IoU $\geq$ 0.30 & 54.7\% & [51.9, 57.5] & 1187 \\
+right answer, wrong reason & 68.4\% & [65.8, 71.1] & 1187 \\
+\bottomrule
+\end{tabular}
+
+% Stage 10 - by quality_of_info
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+poor info & 43.3\% & [38.9, 47.9] & 457 \\
+rich info & 24.2\% & [21.2, 27.4] & 730 \\
+\bottomrule
+\end{tabular}
+
+% Stage 4 - descriptive accuracy
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+flip rate (black) & 25.8\% & [24.2, 27.5] & 2625 \\
+flip rate (tokens) & 15.8\% & [14.4, 17.2] & 2625 \\
+\bottomrule
+\end{tabular}
+
+% Stage 4 - flip rate by rule (black)
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+rule\_1 & 30.6\% & [28.0, 33.2] & 1231 \\
+rule\_2 & 45.5\% & [40.2, 50.8] & 358 \\
+rule\_3 & 9.8\% & [7.9, 11.6] & 970 \\
+rule\_4 & 65.2\% & [53.0, 75.8] & 66 \\
+\bottomrule
+\end{tabular}
+
+% Stage 4 - flip rate by rule (tokens)
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+rule\_1 & 18.4\% & [16.3, 20.6] & 1231 \\
+rule\_2 & 33.5\% & [28.8, 38.5] & 358 \\
+rule\_3 & 3.2\% & [2.2, 4.3] & 970 \\
+rule\_4 & 56.1\% & [43.9, 68.2] & 66 \\
+\bottomrule
+\end{tabular}
+
+% Stage 4 - artefact floor
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+NO->YES (black) & 24.4\% & [20.4, 28.7] & 397 \\
+NO->YES (tokens) & 40.3\% & [35.5, 45.1] & 397 \\
+methods disagree & 18.5\% & [17.1, 19.9] & 3022 \\
+\bottomrule
+\end{tabular}
+
+% Stage 5 - sparsity
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+attention exceeds area null & 97.2\% & [96.6, 97.7] & 3022 \\
+\bottomrule
+\end{tabular}
+
+% Stage 5 - attention vs area null by rule
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+rule\_1 & 99.9\% & [99.8, 100.0] & 1338 \\
+rule\_2 & 99.3\% & [98.5, 100.0] & 461 \\
+rule\_3 & 91.7\% & [90.0, 93.5] & 981 \\
+rule\_4 & 100.0\% & [100.0, 100.0] & 242 \\
+\bottomrule
+\end{tabular}
+
+% Stage 9 - completeness (attentional, not causal)
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+explanation supported & 75.7\% & [74.3, 77.0] & 3882 \\
+explanation weak & 2.2\% & [1.8, 2.7] & 3882 \\
+no usable explanation & 22.2\% & [20.8, 23.5] & 3882 \\
+lift $\geq$ 2x (regions only) & 77.5\% & [76.0, 79.0] & 3022 \\
+\bottomrule
+\end{tabular}
+
+% Stage 8 - verdict survives the perturbation
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+blur & 70.4\% & [68.2, 72.6] & 1600 \\
+low\_light & 90.7\% & [89.2, 92.1] & 1600 \\
+occlusion & 80.2\% & [78.2, 82.1] & 1600 \\
+contrast & 90.4\% & [88.9, 91.8] & 1600 \\
+desaturate & 86.6\% & [84.9, 88.2] & 1600 \\
+\bottomrule
+\end{tabular}
+
+% Stage 8 - occlusion survival by hazard hidden
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+hazard $\geq$ 10% hidden & 67.9\% & [62.8, 73.1] & 290 \\
+hazard < 10% hidden & 85.1\% & [79.4, 90.8] & 141 \\
+\bottomrule
+\end{tabular}
+
+% Stage 8 - survived, but region moved > 10% of diagonal
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+blur & 61.2\% & [56.6, 65.6] & 459 \\
+low\_light & 20.4\% & [17.9, 23.1] & 884 \\
+occlusion & 46.3\% & [42.5, 50.1] & 643 \\
+contrast & 22.0\% & [19.2, 24.7] & 865 \\
+desaturate & 29.9\% & [26.7, 33.1] & 789 \\
+\bottomrule
+\end{tabular}
+
+% Stage 6 - stability
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+verdict unanimous (all reruns) & 51.9\% & [48.4, 55.4] & 799 \\
+flickering region & 38.0\% & [34.7, 41.4] & 799 \\
+region drift > 10% of diagonal & 56.2\% & [52.3, 60.1] & 612 \\
+unreadable reply & 0.7\% & [0.5, 1.0] & 3995 \\
+majority overturns baseline & 17.9\% & [15.3, 20.7] & 799 \\
+\bottomrule
+\end{tabular}
+
+% Stage 6 - unanimity by baseline verdict
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+baseline YES & 54.2\% & [49.5, 59.0] & 400 \\
+baseline NO & 49.6\% & [44.6, 54.4] & 399 \\
+\bottomrule
+\end{tabular}
+
+% $\dagger$ below the reporting floor of n=30; illustrative only

@@ -1,0 +1,289 @@
+image_id,rule_id,stratum,is_negative_control,expected,verdict,region,rationale,confidence,raw_text,latency_ms,parse_strict,parse_error,error
+0000068,rule_2,H,True,NO,NO,,The image does not provide enough detail to determine if there are workers at height without fall protection.,nan,"REASON: The image does not provide enough detail to determine if there are workers at height without fall protection.
+REGION: NONE
+ANSWER: NO",2996.332888957113,True,,
+0000120,rule_4,H,False,YES,YES,"(0.0, 495.91836734693874, 51.724137931034484, 583.1632653061224)","A worker is near the excavator, which could be considered a danger zone for heavy machinery operation.",nan,"REASON: A worker is near the excavator, which could be considered a danger zone for heavy machinery operation.
+REGION: (0, 324, 35, 381)
+ANSWER: YES",1642.0948400627822,True,,
+0000149,rule_2,H,False,YES,YES,"(687.8888888888889, 446.6459627329193, 793.3492063492063, 650.9627329192547)",The worker appears to be working at height without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker appears to be working at height without visible fall protection such as a safety harness or lanyard.
+REGION: (574, 376, 662, 548)
+ANSWER: YES",1791.1149938590825,True,,
+0000325,rule_1,C,True,NO,NO,"(1134.9753694581282, 727.0408163265306, 1200.0, 898.469387755102)",The worker on the right side of the image is wearing a hard hat but not high-visibility clothing or adequate body covering.,nan,"REASON: The worker on the right side of the image is wearing a hard hat but not high-visibility clothing or adequate body covering.
+REGION: (768, 475, 812, 587)
+ANSWER: NO",1884.9382130429149,True,,
+0000421,rule_4,H,False,YES,YES,"(607.3469387755102, 88.27586206896552, 649.795918367347, 220.6896551724138)","A worker is located near the excavator's blind spot, posing a risk of injury from potential debris or equipment movement.",nan,"REASON: A worker is located near the excavator's blind spot, posing a risk of injury from potential debris or equipment movement.
+REGION: (372, 56, 398, 140) pixel coordinates of the worker
+ANSWER: YES",2006.1526480130851,True,,
+0000468,rule_1,H,True,NO,YES,"(461.0837438423645, 691.8367346938775, 514.2857142857142, 821.9387755102041)",The worker in the foreground on the left appears to be missing a hard hat.,nan,"REASON: The worker in the foreground on the left appears to be missing a hard hat.
+REGION: (312, 452, 348, 537)
+ANSWER: YES",1612.8631471656263,True,,
+0000569,rule_1,C,True,NO,NO,"(673.2467532467532, 180.67669172932332, 947.5324675324674, 751.1278195488723)",The worker is wearing a hard hat but not high-visibility clothing or adequate body covering.,nan,"REASON: The worker is wearing a hard hat but not high-visibility clothing or adequate body covering.
+REGION: (324, 89, 456, 370)
+ANSWER: NO",1644.1812079865485,True,,
+0000925,rule_1,H,True,NO,YES,"(127.0935960591133, 443.87755102040813, 166.99507389162562, 528.0612244897959)",The worker on the left side of the image is not wearing a hard hat.,nan,"REASON: The worker on the left side of the image is not wearing a hard hat.
+REGION: (86, 290, 113, 345)
+ANSWER: YES",1581.1633148696274,True,,
+0001059,rule_4,C,True,NO,YES,"(481.7733990147783, 511.2244897959183, 509.85221674876846, 547.9591836734694)","A worker is near the excavator, which could be considered a danger zone for heavy machinery operation.",nan,"REASON: A worker is near the excavator, which could be considered a danger zone for heavy machinery operation.
+REGION: (326, 334, 345, 358) pixel coordinates
+ANSWER: YES",1821.9557560514659,True,,
+0001168,rule_3,C,True,NO,YES,"(434.8051948051948, 560.2040816326531, 606.6233766233767, 753.0612244897959)",The worker is standing on a partially constructed brick wall without any guardrails or barriers around it.,nan,"REASON: The worker is standing on a partially constructed brick wall without any guardrails or barriers around it.
+REGION: (248, 305, 346, 410)
+ANSWER: YES",1698.3675439842045,True,,
+0001325,rule_4,H,False,YES,YES,"(598.5221674876847, 600.0, 659.1133004926108, 898.469387755102)","The worker is standing too close to the excavator's swing radius, which could be considered a danger zone.",nan,"REASON: The worker is standing too close to the excavator's swing radius, which could be considered a danger zone.
+REGION: (405, 392, 446, 587)
+ANSWER: YES",1792.3704760614783,True,,
+0001523,rule_3,C,True,NO,YES,"(421.1822660098522, 290.81632653061223, 905.9113300492611, 704.0816326530612)","The image shows a construction site with an excavator on a sloped area, which could indicate an unprotected edge where a worker could fall if not properly guarded.",nan,"REASON: The image shows a construction site with an excavator on a sloped area, which could indicate an unprotected edge where a worker could fall if not properly guarded.
+REGION: (285, 190, 613, 460)
+ANSWER: YES",2095.8170439116657,True,,
+0001530,rule_2,H,False,YES,YES,"(543.8423645320197, 375.0, 823.1527093596059, 898.469387755102)",The worker on the scaffolding appears to be working without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker on the scaffolding appears to be working without visible fall protection such as a safety harness or lanyard.
+REGION: (368, 245, 557, 587)
+ANSWER: YES",1852.0677010528743,True,,
+0001554,rule_2,H,True,NO,NO,,The image does not provide enough detail to determine if there are workers at height without fall protection.,nan,"REASON: The image does not provide enough detail to determine if there are workers at height without fall protection.
+REGION: NONE
+ANSWER: NO",1156.1150611378253,True,,
+0001777,rule_1,C,True,NO,NO,,"The image does not show any workers, so it's impossible to determine if they are wearing the required personal protective equipment.",nan,"REASON: The image does not show any workers, so it's impossible to determine if they are wearing the required personal protective equipment.
+REGION: NONE
+ANSWER: NO",1306.7208798602223,True,,
+0001900,rule_2,H,False,YES,YES,"(389.484126984127, 432.3913043478261, 427.8333333333333, 555.9316770186335)",The worker in the red outfit appears to be working at height without visible fall protection.,nan,"REASON: The worker in the red outfit appears to be working at height without visible fall protection.
+REGION: (325, 364, 357, 468)
+ANSWER: YES",1635.3122459258884,True,,
+0002062,rule_4,H,True,NO,YES,"(648.7684729064039, 439.2857142857143, 747.7832512315271, 535.7142857142857)","A worker is near the excavator, which could be considered a danger zone for heavy machinery operation.",nan,"REASON: A worker is near the excavator, which could be considered a danger zone for heavy machinery operation.
+REGION: (439, 287, 506, 350)
+ANSWER: YES",1732.040702831,True,,
+0002198,rule_3,H,True,NO,YES,"(394.5812807881773, 310.7142857142857, 759.6059113300493, 655.1020408163265)",The workers are working near an open trench without any visible guardrails or barriers.,nan,"REASON: The workers are working near an open trench without any visible guardrails or barriers.
+REGION: (267, 203, 514, 428)
+ANSWER: YES",1610.1779090240598,True,,
+0002265,rule_3,H,True,NO,YES,"(273.3990147783251, 102.55102040816325, 1198.5221674876848, 661.2244897959183)",The image shows a construction site where workers are near a stone wall that appears to be under construction or repair. There is no visible guardrail or barrier at the unprotected edge where the workers are standing.,nan,"REASON: The image shows a construction site where workers are near a stone wall that appears to be under construction or repair. There is no visible guardrail or barrier at the unprotected edge where the workers are standing.
+REGION: (185, 67, 811, 432)
+ANSWER: YES",2306.565983919427,True,,
+0002815,rule_2,H,False,YES,YES,"(503.1818181818182, 464.6938775510204, 585.5844155844156, 677.7551020408164)",The worker on the upper level appears to be working without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker on the upper level appears to be working without visible fall protection such as a safety harness or lanyard.
+REGION: (287, 253, 334, 369)
+ANSWER: YES",1850.6683548912406,True,,
+0003088,rule_4,H,False,YES,YES,"(144.82758620689654, 632.1428571428571, 209.85221674876846, 780.6122448979592)","The worker on the left appears to be standing too close to the excavator's swing radius, which could pose a danger if the machine were to move suddenly.",nan,"REASON: The worker on the left appears to be standing too close to the excavator's swing radius, which could pose a danger if the machine were to move suddenly.
+REGION: (98, 413, 142, 510)
+ANSWER: YES",2063.666915986687,True,,
+0003191,rule_1,C,True,NO,YES,"(594.0886699507389, 518.8775510204082, 613.3004926108374, 578.5714285714286)",The worker on the right side of the image appears to be missing a hard hat.,nan,"REASON: The worker on the right side of the image appears to be missing a hard hat.
+REGION: (402, 339, 415, 378)
+ANSWER: YES",1639.1238970682025,True,,
+0003241,rule_4,H,True,NO,YES,"(870.4433497536945, 647.4489795918367, 897.0443349753695, 766.8367346938775)","A person is standing near the excavator, which could be considered a danger zone for heavy machinery operation.",nan,"REASON: A person is standing near the excavator, which could be considered a danger zone for heavy machinery operation.
+REGION: (589, 423, 607, 501)
+ANSWER: YES",1760.807512095198,True,,
+0003357,rule_2,C,True,NO,YES,"(781.7733990147783, 0.0, 965.0246305418719, 502.0408163265306)",The worker on the right appears to be working at a significant height without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker on the right appears to be working at a significant height without visible fall protection such as a safety harness or lanyard.
+REGION: (529, 0, 653, 328)
+ANSWER: YES",1882.028072141111,True,,
+0003597,rule_3,C,True,NO,YES,"(435.2678571428571, 527.2727272727273, 675.0, 1024.6753246753246)","The image shows a dirt road with exposed edges and debris, indicating potential hazards for workers without proper safety measures.",nan,"REASON: The image shows a dirt road with exposed edges and debris, indicating potential hazards for workers without proper safety measures.
+REGION: (325, 406, 504, 789)
+ANSWER: YES",1792.3590058926493,True,,
+0003743,rule_2,H,True,NO,NO,"(682.7586206896551, 491.3265306122449, 963.5467980295566, 898.469387755102)",The worker in the foreground appears to be standing on the ground without any visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker in the foreground appears to be standing on the ground without any visible fall protection such as a safety harness or lanyard.
+REGION: (462, 321, 652, 587)
+ANSWER: NO",1951.7792309634387,True,,
+0004032,rule_3,H,False,YES,YES,"(351.7241379310345, 296.93877551020404, 1198.5221674876848, 898.469387755102)",The workers on the right side of the image are near an excavation without visible guardrails or barriers.,nan,"REASON: The workers on the right side of the image are near an excavation without visible guardrails or barriers.
+REGION: (238, 194, 811, 587)
+ANSWER: YES",1736.0751451924443,True,,
+0004121,rule_2,C,True,NO,NO,,The image does not show any workers at height without fall protection.,nan,"REASON: The image does not show any workers at height without fall protection.
+REGION: NONE
+ANSWER: NO",976.7545331269503,True,,
+0004196,rule_4,H,False,YES,YES,"(76.84729064039409, 636.734693877551, 128.57142857142856, 785.204081632653)","The worker on the left appears to be near the excavator's swing radius, which could pose a risk if the machine were to move suddenly.",nan,"REASON: The worker on the left appears to be near the excavator's swing radius, which could pose a risk if the machine were to move suddenly.
+REGION: (52, 416, 87, 513)
+ANSWER: YES",1944.0686129964888,True,,
+0004235,rule_2,H,False,YES,YES,"(132.41379310344828, 196.36363636363637, 457.14285714285717, 707.5324675324675)",The worker on the left appears to be working at height without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker on the left appears to be working at height without visible fall protection such as a safety harness or lanyard.
+REGION: (42, 63, 145, 227)
+ANSWER: YES",1829.6003139112145,True,,
+0004638,rule_3,H,True,NO,NO,,"The image shows a construction site with a bulldozer and exposed earth, but no visible guardrails or barriers around the edges where workers might be present.",nan,"REASON: The image shows a construction site with a bulldozer and exposed earth, but no visible guardrails or barriers around the edges where workers might be present.
+REGION: NONE
+ANSWER: NO",1524.077575886622,True,,
+0004987,rule_4,H,True,NO,YES,"(270.4433497536946, 529.5918367346939, 362.0689655172414, 760.7142857142857)","The worker is standing close to the excavator's swing radius, which could pose a risk if the machine were to move suddenly.",nan,"REASON: The worker is standing close to the excavator's swing radius, which could pose a risk if the machine were to move suddenly.
+REGION: (183, 346, 245, 497)
+ANSWER: YES",1919.9969151522964,True,,
+0005007,rule_4,C,True,NO,NO,,There are no visible workers inside the danger zone or blind spot of the operating excavator.,nan,"REASON: There are no visible workers inside the danger zone or blind spot of the operating excavator.
+REGION: NONE
+ANSWER: NO",1126.345075899735,True,,
+0005283,rule_1,H,True,NO,NO,"(667.9802955665025, 448.469387755102, 762.5615763546798, 531.1224489795918)",The workers in the image appear to be wearing high-visibility clothing but not hard hats or adequate body covering.,nan,"REASON: The workers in the image appear to be wearing high-visibility clothing but not hard hats or adequate body covering.
+REGION: (452, 293, 516, 347)
+ANSWER: NO",1792.4862161744386,True,,
+0005538,rule_3,H,False,YES,YES,"(351.7241379310345, 68.87755102040816, 1176.3546798029556, 520.4081632653061)",The workers near the excavation lack guardrails or barriers.,nan,"REASON: The workers near the excavation lack guardrails or barriers.
+REGION: (238, 45, 796, 340)
+ANSWER: YES",1428.6350028123707,True,,
+0005594,rule_3,H,True,NO,YES,"(386.2068965517241, 617.1428571428571, 1278.423645320197, 960.0)",The image shows a construction site with a crane and workers near a steep slope without any visible guardrails or barriers.,nan,"REASON: The image shows a construction site with a crane and workers near a steep slope without any visible guardrails or barriers.
+REGION: (245, 378, 811, 588)
+ANSWER: YES",1823.0503778904676,True,,
+0005675,rule_2,H,True,NO,YES,"(289.61038961038963, 328.125, 423.3766233766234, 558.4821428571428)",The worker in the orange shirt appears to be standing near the edge of the trench without visible fall protection.,nan,"REASON: The worker in the orange shirt appears to be standing near the edge of the trench without visible fall protection.
+REGION: (223, 245, 326, 417)
+ANSWER: YES",1756.9588269107044,True,,
+0005753,rule_1,H,True,NO,NO,"(1043.3497536945813, 18.36734693877551, 1200.0, 329.0816326530612)",The worker on the right is wearing a hard hat but not high-visibility clothing or adequate body covering.,nan,"REASON: The worker on the right is wearing a hard hat but not high-visibility clothing or adequate body covering.
+REGION: (706, 12, 812, 215)
+ANSWER: NO",1732.1851179003716,True,,
+0005837,rule_1,H,True,NO,YES,"(336.328125, 347.8984962406015, 486.328125, 650.312030075188)",The worker is wearing a hard hat but not high-visibility clothing or adequate body covering.,nan,"REASON: The worker is wearing a hard hat but not high-visibility clothing or adequate body covering.
+REGION: (287, 283, 415, 529)
+ANSWER: YES",1663.4639408439398,True,,
+0005944,rule_3,H,False,YES,YES,"(2.955665024630542, 205.1020408163265, 1198.5221674876848, 898.469387755102)","The image shows a construction site with a concrete wall where a worker is standing on a ladder near the top. There appears to be no guardrail or barrier at the edge of the wall, which poses a risk of falling.",nan,"REASON: The image shows a construction site with a concrete wall where a worker is standing on a ladder near the top. There appears to be no guardrail or barrier at the edge of the wall, which poses a risk of falling.
+REGION: (2, 134, 811, 587)
+ANSWER: YES",2429.3858089949936,True,,
+0006144,rule_4,H,True,NO,NO,,The image does not show any workers inside the danger zone or blind spot of the operating excavator.,nan,"REASON: The image does not show any workers inside the danger zone or blind spot of the operating excavator.
+REGION: NONE
+ANSWER: NO",1172.3992060869932,True,,
+0006164,rule_4,H,True,NO,YES,"(356.44897959183675, 263.89610389610385, 391.2244897959184, 310.6493506493506)","A person is standing near the excavator, which could be considered a danger zone for heavy machinery operation.",nan,"REASON: A person is standing near the excavator, which could be considered a danger zone for heavy machinery operation.
+REGION: (328, 254, 360, 299)
+ANSWER: YES",1756.8873011041433,True,,
+0006290,rule_1,H,False,YES,YES,"(933.9901477832512, 456.1224489795918, 1041.871921182266, 834.1836734693877)",The worker on the right appears to be missing a hard hat and high-visibility clothing.,nan,"REASON: The worker on the right appears to be missing a hard hat and high-visibility clothing.
+REGION: (632, 298, 705, 545)
+ANSWER: YES",1671.3846400380135,True,,
+0006348,rule_4,C,True,NO,YES,"(592.2077922077922, 76.33928571428571, 640.2597402597403, 198.2142857142857)","The worker in the blue shirt appears to be standing very close to the edge of the excavation, which could be considered a danger zone for the excavator's bucket.",nan,"REASON: The worker in the blue shirt appears to be standing very close to the edge of the excavation, which could be considered a danger zone for the excavator's bucket.
+REGION: (456, 57, 493, 148)
+ANSWER: YES",2089.728210121393,True,,
+0006399,rule_1,H,True,NO,YES,"(854.1871921182266, 771.4285714285714, 874.8768472906404, 835.7142857142857)",The worker on the far right appears to be missing a hard hat.,nan,"REASON: The worker on the far right appears to be missing a hard hat.
+REGION: (578, 504, 592, 546)
+ANSWER: YES",1549.8646418564022,True,,
+0006724,rule_4,C,True,NO,NO,,There is no visible worker inside the danger zone or blind spot of the operating excavator.,nan,"REASON: There is no visible worker inside the danger zone or blind spot of the operating excavator.
+REGION: NONE
+ANSWER: NO",1122.3796629346907,True,,
+0006845,rule_3,C,True,NO,YES,"(232.54658385093168, 85.71428571428571, 364.72049689440996, 321.68067226890753)","The workers are standing on rocks near a hole filled with concrete, which lacks proper guardrails or barriers.",nan,"REASON: The workers are standing on rocks near a hole filled with concrete, which lacks proper guardrails or barriers.
+REGION: (234, 85, 367, 319)
+ANSWER: YES",1664.8234880995005,True,,
+0006984,rule_1,C,True,NO,NO,"(675.3694581280788, 249.48979591836732, 765.5172413793103, 350.51020408163265)",The worker is wearing a hard hat but not high-visibility clothing or adequate body covering.,nan,"REASON: The worker is wearing a hard hat but not high-visibility clothing or adequate body covering.
+REGION: (457, 163, 518, 229)
+ANSWER: NO",1671.3069139514118,True,,
+0007075,rule_4,C,True,NO,YES,"(29.41468253968254, 190.52941176470588, 85.89087301587301, 241.64705882352942)","The worker on the left side of the image appears to be near the excavator's swing radius, which could pose a risk if the machine were to move suddenly.",nan,"REASON: The worker on the left side of the image appears to be near the excavator's swing radius, which could pose a risk if the machine were to move suddenly.
+REGION: (25, 164, 73, 208)
+ANSWER: YES",2063.8048299588263,True,,
+0007611,rule_1,H,False,YES,YES,"(806.8965517241379, 425.51020408163265, 861.576354679803, 580.1020408163265)",The worker on the right side of the excavator is not wearing a hard hat or high-visibility clothing.,nan,"REASON: The worker on the right side of the excavator is not wearing a hard hat or high-visibility clothing.
+REGION: (546, 278, 583, 379)
+ANSWER: YES",1792.7425049711019,True,,
+0007613,rule_4,H,False,YES,YES,"(528.695652173913, 298.48739495798316, 640.0, 444.70588235294116)",The person sitting on the ground near the excavator's arm is in the danger zone of the excavator's operation.,nan,"REASON: The person sitting on the ground near the excavator's arm is in the danger zone of the excavator's operation.
+REGION: (532, 296, 644, 441)
+ANSWER: YES",1780.9473760426044,True,,
+0007648,rule_4,H,True,NO,YES,"(509.85221674876846, 707.1428571428571, 537.9310344827586, 779.0816326530612)","A worker near the excavator appears to be too close to the machine's swing radius, which could pose a danger if the excavator were to move suddenly.",nan,"REASON: A worker near the excavator appears to be too close to the machine's swing radius, which could pose a danger if the excavator were to move suddenly.
+REGION: (345, 462, 364, 509)
+ANSWER: YES",2093.4093210380524,True,,
+0007734,rule_1,H,False,YES,YES,"(1488.0788177339903, 723.1168831168832, 1828.5714285714287, 1421.2987012987014)",The worker on the right side of the image is not wearing a hard hat.,nan,"REASON: The worker on the right side of the image is not wearing a hard hat.
+REGION: (472, 232, 580, 456)
+ANSWER: YES",1610.4470829013735,True,,
+0008370,rule_3,H,True,NO,YES,"(600.0, 174.10714285714283, 750.6493506493506, 320.08928571428567)",The workers near the excavator appear to be working without proper barriers around the excavation site.,nan,"REASON: The workers near the excavator appear to be working without proper barriers around the excavation site.
+REGION: (462, 130, 578, 239)
+ANSWER: YES",1666.6085028555244,True,,
+0008587,rule_2,C,True,NO,NO,,"The workers appear to be working on a lower level of the structure, not at height where fall protection would be necessary.",nan,"REASON: The workers appear to be working on a lower level of the structure, not at height where fall protection would be necessary.
+REGION: NONE
+ANSWER: NO",1301.786143798381,True,,
+0008887,rule_4,C,True,NO,NO,"(560.0, 305.7142857142857, 811.4285714285714, 397.14285714285717)","The worker in the center foreground appears to be near the edge of the excavator's potential swing radius, which could pose a risk if the machine were to move suddenly.",nan,"REASON: The worker in the center foreground appears to be near the edge of the excavator's potential swing radius, which could pose a risk if the machine were to move suddenly.
+REGION: (392, 214, 568, 278)
+ANSWER: NO",2143.884233897552,True,,
+0008895,rule_1,C,True,NO,YES,"(455.17241379310343, 665.8163265306122, 682.7586206896551, 898.469387755102)",The worker in the foreground appears to be missing a hard hat.,nan,"REASON: The worker in the foreground appears to be missing a hard hat.
+REGION: (308, 435, 462, 587)
+ANSWER: YES",1518.2291220407933,True,,
+0008965,rule_2,H,False,YES,YES,"(261.54232804232805, 597.5077639751553, 307.13227513227514, 721.0481366459628)",The worker on the left side of the image appears to be working at height without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker on the left side of the image appears to be working at height without visible fall protection such as a safety harness or lanyard.
+REGION: (218, 503, 256, 607)
+ANSWER: YES",2000.9922019671649,True,,
+0009062,rule_3,H,True,NO,YES,"(0.0, 707.1428571428571, 1080.0, 1440.0)",The construction site lacks guardrails or barriers around the excavation area where workers are present.,nan,"REASON: The construction site lacks guardrails or barriers around the excavation area where workers are present.
+REGION: (0, 385, 644, 812)
+ANSWER: YES",1574.4873429648578,False,,
+0009395,rule_4,C,True,NO,NO,,There is no visible worker inside the danger zone or blind spot of the operating excavator.,nan,"REASON: There is no visible worker inside the danger zone or blind spot of the operating excavator.
+REGION: NONE
+ANSWER: NO",1124.4859318248928,True,,
+0009435,rule_1,H,True,NO,YES,"(165.51724137931035, 480.61224489795916, 246.79802955665025, 681.1224489795918)",The worker on the left appears to be missing a hard hat.,nan,"REASON: The worker on the left appears to be missing a hard hat.
+REGION: (112, 314, 167, 445)
+ANSWER: YES",1517.513589002192,True,,
+0009494,rule_2,C,True,NO,NO,,The image does not provide enough detail to determine if there are workers at height without fall protection.,nan,"REASON: The image does not provide enough detail to determine if there are workers at height without fall protection.
+REGION: NONE
+ANSWER: NO",1153.8674880284816,True,,
+0009775,rule_3,H,False,YES,YES,"(388.66995073891627, 191.32653061224488, 1198.5221674876848, 572.4489795918367)",The workers on the slope appear to be working near an unprotected edge where they could potentially fall if not properly secured.,nan,"REASON: The workers on the slope appear to be working near an unprotected edge where they could potentially fall if not properly secured.
+REGION: (263, 125, 811, 374)
+ANSWER: YES",1820.6284740008414,True,,
+0009832,rule_3,C,True,NO,YES,"(0.0, 364.2857142857143, 1198.5221674876848, 898.469387755102)",The workers near the circular structure lack guardrails or barriers around the excavation.,nan,"REASON: The workers near the circular structure lack guardrails or barriers around the excavation.
+REGION: (0, 238, 811, 587)
+ANSWER: YES",1517.3338081222028,True,,
+0009992,rule_1,H,False,YES,YES,"(373.89162561576353, 333.67346938775506, 449.26108374384233, 580.1020408163265)",The worker on the left appears to be missing a hard hat.,nan,"REASON: The worker on the left appears to be missing a hard hat.
+REGION: (253, 218, 304, 379)
+ANSWER: YES",1519.3547930102795,True,,
+0010086,rule_3,H,False,YES,YES,"(0.0, 698.7755102040817, 1278.423645320197, 960.0)",The worker on the left appears to be standing near an unprotected edge where a fall could occur.,nan,"REASON: The worker on the left appears to be standing near an unprotected edge where a fall could occur.
+REGION: (0, 428, 811, 588)
+ANSWER: YES",1639.6417408250272,True,,
+0010111,rule_1,H,False,YES,YES,"(122.07792207792208, 329.46428571428567, 146.75324675324674, 368.3035714285714)",The worker on the left side of the image appears to be missing a hard hat and high-visibility clothing.,nan,"REASON: The worker on the left side of the image appears to be missing a hard hat and high-visibility clothing.
+REGION: (94, 246, 113, 275)
+ANSWER: YES",1755.5161830969155,True,,
+0010166,rule_2,C,True,NO,NO,,The image does not provide enough detail to determine if there are workers at height without fall protection.,nan,"REASON: The image does not provide enough detail to determine if there are workers at height without fall protection.
+REGION: NONE
+ANSWER: NO",1143.9458469394594,True,,
+0010218,rule_1,C,True,NO,YES,"(478.81773399014776, 436.7091836734694, 511.33004926108373, 531.7125850340136)",The worker in the center of the image appears to be missing a hard hat.,nan,"REASON: The worker in the center of the image appears to be missing a hard hat.
+REGION: (324, 285, 346, 347)
+ANSWER: YES",1608.3050658926368,True,,
+0010604,rule_4,H,False,YES,YES,"(811.3300492610837, 453.0612244897959, 867.487684729064, 573.9795918367347)","The worker is standing close to the excavator, which could be considered a danger zone for heavy machinery operation.",nan,"REASON: The worker is standing close to the excavator, which could be considered a danger zone for heavy machinery operation.
+REGION: (549, 296, 587, 375)
+ANSWER: YES",1789.4910010509193,True,,
+0010748,rule_2,H,False,YES,YES,"(692.8571428571429, 560.0, 895.7142857142858, 602.8571428571429)",The worker on the right side of the image appears to be working at height without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker on the right side of the image appears to be working at height without visible fall protection such as a safety harness or lanyard.
+REGION: (485, 392, 627, 422) pixel coordinates
+ANSWER: YES",2097.9399168863893,True,,
+0010827,rule_2,C,True,NO,NO,,The image does not provide enough detail to determine if any workers are working at height without fall protection.,nan,"REASON: The image does not provide enough detail to determine if any workers are working at height without fall protection.
+REGION: NONE
+ANSWER: NO",1186.8160860612988,True,,
+0010846,rule_2,H,True,NO,YES,"(201.77339901477833, 249.79591836734696, 234.8768472906404, 320.0)",The workers appear to be sitting on the edge of the excavation without visible fall protection.,nan,"REASON: The workers appear to be sitting on the edge of the excavation without visible fall protection.
+REGION: (128, 153, 149, 196)
+ANSWER: YES",1637.9860611632466,True,,
+0010897,rule_1,H,False,YES,YES,"(617.1428571428571, 464.2857142857143, 642.8571428571429, 508.57142857142856)",The worker near the center of the image appears to be missing a hard hat and high-visibility clothing.,nan,"REASON: The worker near the center of the image appears to be missing a hard hat and high-visibility clothing.
+REGION: (432, 325, 450, 356)
+ANSWER: YES",1749.278879025951,True,,
+0010897,rule_4,H,True,NO,YES,"(617.1428571428571, 464.2857142857143, 642.8571428571429, 514.2857142857143)","A person is standing near the excavator, which could be considered a danger zone for heavy machinery operation.",nan,"REASON: A person is standing near the excavator, which could be considered a danger zone for heavy machinery operation.
+REGION: (432, 325, 450, 360) pixel coordinates
+ANSWER: YES",1842.3304411116987,True,,
+0011064,rule_4,C,True,NO,NO,,"The operator of the excavator is visible but not in direct contact with the machinery's moving parts, which could be considered a safe distance for operation.",nan,"REASON: The operator of the excavator is visible but not in direct contact with the machinery's moving parts, which could be considered a safe distance for operation.
+REGION: NONE
+ANSWER: NO",1487.056865124032,True,,
+0011167,rule_4,H,False,YES,YES,"(957.6354679802955, 378.0612244897959, 982.7586206896551, 448.469387755102)","The worker on the right side near the tunnel appears to be close to the excavator's swing radius, which could pose a danger if the excavator were to move suddenly.",nan,"REASON: The worker on the right side near the tunnel appears to be close to the excavator's swing radius, which could pose a danger if the excavator were to move suddenly.
+REGION: (648, 247, 665, 293)
+ANSWER: YES",2183.136862004176,True,,
+0011276,rule_3,H,False,YES,YES,"(0.0, 419.5918367346939, 1278.423645320197, 960.0)",The construction site has exposed concrete edges without any visible guardrails or barriers.,nan,"REASON: The construction site has exposed concrete edges without any visible guardrails or barriers.
+REGION: (0, 257, 811, 588)
+ANSWER: YES",1517.6972029730678,True,,
+0011356,rule_2,H,True,NO,NO,,The image does not show any workers at height without fall protection such as a safety harness or lanyard.,nan,"REASON: The image does not show any workers at height without fall protection such as a safety harness or lanyard.
+REGION: NONE
+ANSWER: NO",1244.8295881040394,True,,
+0011365,rule_2,C,True,NO,YES,"(248.27586206896552, 417.85714285714283, 316.25615763546796, 558.6734693877551)",The worker near the excavator appears to be working at a height without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker near the excavator appears to be working at a height without visible fall protection such as a safety harness or lanyard.
+REGION: (168, 273, 214, 365)
+ANSWER: YES",1942.8287709597498,True,,
+0011548,rule_4,H,True,NO,YES,"(194.52551020408163, 367.79220779220776, 234.73469387755102, 458.18181818181813)","The person standing near the excavator appears to be in close proximity to the machine's swing radius, which could pose a risk if the operator were to move the arm suddenly.",nan,"REASON: The person standing near the excavator appears to be in close proximity to the machine's swing radius, which could pose a risk if the operator were to move the arm suddenly.
+REGION: (179, 354, 216, 441)
+ANSWER: YES",2181.1131651047617,True,,
+0011656,rule_3,C,True,NO,YES,"(419.7044334975369, 604.5918367346939, 734.4827586206897, 743.8775510204081)",The image shows an excavator on a construction site with no visible guardrails or barriers around the edges where workers might be present.,nan,"REASON: The image shows an excavator on a construction site with no visible guardrails or barriers around the edges where workers might be present.
+REGION: (284, 395, 497, 486)
+ANSWER: YES",1913.436132017523,True,,
+0011683,rule_2,H,False,YES,YES,"(378.32512315270935, 532.6530612244898, 1167.487684729064, 900.0)",The workers on the roof appear to be working without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The workers on the roof appear to be working without visible fall protection such as a safety harness or lanyard.
+REGION: (256, 348, 790, 588)
+ANSWER: YES",1819.682895904407,True,,
+0011838,rule_3,H,False,YES,YES,"(0.0, 388.7755102040816, 942.8571428571429, 794.3877551020407)",The workers on the left side of the image are near an open excavation without any visible guardrails or barriers.,nan,"REASON: The workers on the left side of the image are near an open excavation without any visible guardrails or barriers.
+REGION: (0, 254, 638, 519)
+ANSWER: YES",1729.5926520600915,True,,
+0011930,rule_3,C,True,NO,YES,"(345.8128078817734, 436.2244897959184, 897.0443349753695, 855.6122448979592)",The image shows workers near an excavation without visible guardrails or barriers.,nan,"REASON: The image shows workers near an excavation without visible guardrails or barriers.
+REGION: (234, 285, 607, 559)
+ANSWER: YES",1547.8366271127015,True,,
+0012576,rule_1,C,True,NO,NO,,"The image does not show any workers, so it's impossible to determine if they are wearing the required personal protective equipment.",nan,"REASON: The image does not show any workers, so it's impossible to determine if they are wearing the required personal protective equipment.
+REGION: NONE
+ANSWER: NO",1306.3285029493272,True,,
+0012906,rule_3,C,True,NO,YES,"(243.47826086956522, 3.0252100840336134, 425.3416149068323, 308.57142857142856)",The workers are near a large rock face without any visible guardrails or barriers to prevent them from falling.,nan,"REASON: The workers are near a large rock face without any visible guardrails or barriers to prevent them from falling.
+REGION: (245, 3, 428, 306)
+ANSWER: YES",1629.5669730752707,True,,
+0013033,rule_3,H,False,YES,YES,"(0.0, 485.51724137931035, 803.265306122449, 1004.1379310344828)","The workers are near a concrete wall with no visible guardrails or barriers, which could pose a fall hazard.",nan,"REASON: The workers are near a concrete wall with no visible guardrails or barriers, which could pose a fall hazard.
+REGION: (0, 308, 492, 637)
+ANSWER: YES",1730.042955139652,True,,
+0013033,rule_1,H,True,NO,YES,"(0.0, 291.6256157635468, 32.6530612244898, 466.6009852216749)",The worker on the far left appears to be missing a hard hat.,nan,"REASON: The worker on the far left appears to be missing a hard hat.
+REGION: (0, 185, 20, 296)
+ANSWER: YES",1457.6799650676548,True,,
+0013059,rule_2,C,True,NO,YES,"(602.9556650246305, 402.55102040816325, 645.8128078817734, 466.83673469387753)",The worker in the yellow hard hat near the center of the image appears to be working at height without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The worker in the yellow hard hat near the center of the image appears to be working at height without visible fall protection such as a safety harness or lanyard.
+REGION: (408, 263, 437, 305)
+ANSWER: YES",2124.3104320019484,True,,
+0013344,rule_3,H,True,NO,YES,"(388.66995073891627, 260.2040816326531, 1100.9852216748768, 627.5510204081633)",The worker is handling rebar near a body of water without any visible safety barriers or guardrails.,nan,"REASON: The worker is handling rebar near a body of water without any visible safety barriers or guardrails.
+REGION: (263, 170, 745, 410)
+ANSWER: YES",1729.5290308538824,True,,
+0013363,rule_1,H,False,YES,YES,"(421.31868131868134, 34.285714285714285, 451.978021978022, 126.36734693877551)",The worker in the background appears to be missing a hard hat and high-visibility clothing.,nan,"REASON: The worker in the background appears to be missing a hard hat and high-visibility clothing.
+REGION: (426, 35, 457, 129)
+ANSWER: YES",1623.3765401411802,True,,
+0013384,rule_2,H,True,NO,YES,"(387.4795918367347, 466.9950738916256, 759.704081632653, 601.4778325123152)",The workers appear to be working on a high platform without visible fall protection such as a safety harness or lanyard.,nan,"REASON: The workers appear to be working on a high platform without visible fall protection such as a safety harness or lanyard.
+REGION: (254, 316, 498, 407)
+ANSWER: YES",1849.6856400743127,True,,
+0013709,rule_3,H,True,NO,YES,"(0.0, 225.0, 1200.0, 900.0)","The worker on the left appears to be working near an unprotected edge, which could lead to a fall if there are no guardrails or barriers in place.",nan,"REASON: The worker on the left appears to be working near an unprotected edge, which could lead to a fall if there are no guardrails or barriers in place.
+REGION: (0, 147, 812, 588)
+ANSWER: YES",2002.3527347948402,True,,
+0013849,rule_1,H,False,YES,YES,"(792.1182266009852, 592.3469387755101, 815.7635467980296, 656.6326530612245)",The worker near the bulldozer appears to be missing a hard hat.,nan,"REASON: The worker near the bulldozer appears to be missing a hard hat.
+REGION: (536, 387, 552, 429)
+ANSWER: YES",1578.4346859436482,True,,
+0014069,rule_2,H,True,NO,NO,,The image does not show any workers at height without fall protection.,nan,"REASON: The image does not show any workers at height without fall protection.
+REGION: NONE
+ANSWER: NO",973.0767449364066,True,,

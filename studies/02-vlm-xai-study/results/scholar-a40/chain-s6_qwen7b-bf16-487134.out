@@ -1,0 +1,23 @@
+== chain s6 link 1  job 487134  successor 487221  host scholar-j000.rcac.purdue.edu
+== commit 9eae23513ca0a5c9be7ecd18b24854bb71f85624  model qwen7b-bf16  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40
+NVIDIA A40, 46068 MiB
+-- stage6: start 2026-11-10T18:44:45-05:00  (budget 12900s)
+stability subset: 800 rows (400 YES, 400 NO), seed 42
+calls: 4000 (5 reruns/row, temperature=0.7)
+loading qwen7b-bf16 ...
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:03<00:15,  3.85s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:07<00:11,  3.79s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:11<00:07,  3.76s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:15<00:03,  3.81s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:16<00:00,  2.90s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:16<00:00,  3.30s/it]
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+Traceback (most recent call last):
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/scripts/06_stability.py", line 290, in <module>
+    sys.exit(main())
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/scripts/06_stability.py", line 268, in main
+    summary = run(
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/scripts/06_stability.py", line 187, in run
+    return run_stage(
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/src/xai_vlm/runner.py", line 323, in run_stage
+    guards.check()
+  File "/scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/src/xai_vlm/runner.py", line 224, in check
+    raise GuardTripped(
+xai_vlm.runner.GuardTripped: parse rate 90.0% is below the pre-registered floor of 95% over 100 rows. The prompt is degrading; every further row would be unusable. Fix the prompt, then start a fresh output file.
+-- stage6: rc=1  2026-11-10T19:02:50-05:00
+chain s6 failed rc=1 in job 487134

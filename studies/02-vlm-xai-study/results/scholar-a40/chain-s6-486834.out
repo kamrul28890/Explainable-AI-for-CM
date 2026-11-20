@@ -1,0 +1,32 @@
+== chain s6 link 1  job 486834  successor 486953  host scholar-j001.rcac.purdue.edu
+== commit 44b409e877c763c47de3f41f3302395fb6ef7a4a  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40
+NVIDIA A40, 46068 MiB
+-- stage6: start 2026-11-09T23:44:23-05:00  (budget 12900s)
+stability subset: 799 rows (400 YES, 399 NO), seed 42
+calls: 3995 (5 reruns/row, temperature=0.7)
+loading qwen7b-4bit ...
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:10<00:40, 10.19s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:16<00:23,  7.81s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:22<00:13,  6.93s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:28<00:06,  6.48s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:29<00:00,  4.68s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:29<00:00,  5.90s/it]
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+     100 done       0 skipped     0 errors  |  median 12.0s
+     200 done       0 skipped     0 errors  |  median 12.2s
+     300 done       0 skipped     0 errors  |  median 12.3s
+/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:957: UserWarning: inner dimension (3420) is not aligned for fast kernel with blocksize=64, falling back to slower implementation.
+  warn(
+     400 done       0 skipped     0 errors  |  median 12.2s
+     500 done       0 skipped     0 errors  |  median 12.2s
+     600 done       0 skipped     0 errors  |  median 12.2s
+     700 done       0 skipped     0 errors  |  median 12.2s
+
+done=799  skipped=0  errors=0
+peak VRAM: 7.06 GB
+
+==================================================================
+agreement rate  median 100.0%  p25 60.0%  p75 100.0%  (n=799)
+flickering regions : 304/799 (38.0%)
+  present in some reruns and absent in others -- worse than a
+  consistently missing region, because it is unpredictable
+errors : 0
+==================================================================
+-- stage6: rc=0  2026-11-10T02:20:11-05:00
+== chain s6 DONE
+submitted final: 486974

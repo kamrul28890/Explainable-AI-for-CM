@@ -1,0 +1,58 @@
+% Stage 2 - baseline
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+sensitivity & 86.1\% & [84.3, 87.9] & 1327 \\
+specificity & 23.2\% & [21.5, 24.8] & 2555 \\
+false-alarm rate & 76.8\% & [75.1, 78.4] & 2555 \\
+YES share & 80.0\% & [78.7, 81.2] & 3882 \\
+parse rate & 99.5\% & [99.2, 99.7] & 3882 \\
+\bottomrule
+\end{tabular}
+
+% Stage 2 - sensitivity by rule
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+rule\_1 & 83.9\% & [81.6, 86.2] & 1001 \\
+rule\_2 & 100.0\% & [100.0, 100.0] & 84 \\
+rule\_3 & 93.6\% & [89.5, 97.1] & 172 \\
+rule\_4 & 82.9\% & [72.9, 91.4] & 70 \\
+\bottomrule
+\end{tabular}
+
+% Stage 3 - regions
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+no-region rate (all) & 100.0\% & [100.0, 100.0] & 3882 \\
+no-region rate (YES only) & 100.0\% & [100.0, 100.0] & 3105 \\
+\bottomrule
+\end{tabular}
+
+% Stage 6 - stability
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+verdict unanimous (all reruns) & 40.6\% & [37.2, 43.9] & 799 \\
+flickering region & 0.0\% & [0.0, 0.0] & 799 \\
+unreadable reply & 4.0\% & [3.4, 4.6] & 3995 \\
+majority overturns baseline & 27.3\% & [24.2, 30.4] & 799 \\
+\bottomrule
+\end{tabular}
+
+% Stage 6 - unanimity by baseline verdict
+\begin{tabular}{lrrr}
+\toprule
+Metric & Estimate & 95\% CI & $n$ \\
+\midrule
+baseline YES & 50.6\% & [45.6, 55.6] & 399 \\
+baseline NO & 30.5\% & [26.0, 35.2] & 400 \\
+\bottomrule
+\end{tabular}
+
+% $\dagger$ below the reporting floor of n=30; illustrative only

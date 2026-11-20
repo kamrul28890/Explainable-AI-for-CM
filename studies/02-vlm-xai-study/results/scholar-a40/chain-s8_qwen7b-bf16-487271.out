@@ -1,0 +1,32 @@
+== chain s8 link 2  job 487271  successor 487340  host scholar-j000.rcac.purdue.edu
+== commit 9eae23513ca0a5c9be7ecd18b24854bb71f85624  model qwen7b-bf16  results /scratch/scholar/mkamrul/xai/repo/studies/02-vlm-xai-study/results/scholar-a40
+NVIDIA A40, 46068 MiB
+-- stage8: start 2026-11-11T00:56:38-05:00  (budget 12900s)
+robustness subset: 1599 rows (800 YES, 799 NO), seed 42
+calls: 7995  strengths: {'blur_sigma_frac_long_side': 0.01, 'low_light_ev': -2.0, 'occlusion_frac_w': 0.5, 'occlusion_frac_h': 0.5, 'contrast_factor': 0.4, 'desaturate': 'ITU-R 601-2 luma'}
+loading qwen7b-bf16 ...
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:03<00:14,  3.61s/it]Loading checkpoint shards:  40%|████      | 2/5 [00:07<00:10,  3.53s/it]Loading checkpoint shards:  60%|██████    | 3/5 [00:10<00:07,  3.53s/it]Loading checkpoint shards:  80%|████████  | 4/5 [00:14<00:03,  3.52s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:15<00:00,  2.66s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:15<00:00,  3.05s/it]
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.48, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+/scratch/scholar/mkamrul/xai/env/lib/python3.10/site-packages/transformers/generation/configuration_utils.py:629: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `1e-06` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+     100 done    1285 skipped     0 errors  |  median 9.8s
+     200 done    1285 skipped     0 errors  |  median 10.1s
+     300 done    1285 skipped     0 errors  |  median 10.1s
+
+done=314  skipped=1285  errors=0
+peak VRAM: 17.73 GB
+
+======================================================================
+ROBUSTNESS  (n=1599, greedy, one perturbation at a time)
+              survived  YES->NO  NO->YES  drifted  med drift
+blur             68.8%      377      122    42.6%      0.075
+low_light        90.9%       56       89    14.6%      0.004
+occlusion        79.4%      220      110    34.2%      0.048
+contrast         89.4%       71       99    13.8%      0.004
+desaturate       86.0%       82      142    18.5%      0.010
+  occlusion, hazard >=10% hidden : survived 70.8% (n=271)
+  occlusion, hazard <10% hidden  : survived 81.2% (n=133)
+errors : 0
+======================================================================
+-- stage8: rc=0  2026-11-11T01:50:23-05:00
+== chain s8 DONE

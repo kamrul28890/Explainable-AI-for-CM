@@ -1,0 +1,10 @@
+{
+  "attention_impl_for_reading": "eager",
+  "baseline_sha256": "043d7954d701969127288f04fafa9737510f828d4baba0da95c747b1bc14f8b5",
+  "compute_dtype": "bfloat16",
+  "manifest_sha256": "af91ed280cd22bfc6cdb27cc6645f448d137bb29b4ec77fc504cddfa3ac166c9",
+  "max_pixels": 501760,
+  "model": "qwen7b-4bit",
+  "regions_sha256": "d6b18b092f17f503625943e80e3d977c2e9429c5b6095fc3e3f0315d0e66d85f",
+  "seed": 42
+}

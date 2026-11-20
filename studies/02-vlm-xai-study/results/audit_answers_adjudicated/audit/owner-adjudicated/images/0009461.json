@@ -1,0 +1,19 @@
+{
+  "image_id": "0009461",
+  "blind": {
+    "rule_1": "no",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "yes"
+  },
+  "blind_note": "r4: helmeted worker stands right beside the cab and tracks of the left excavator while both machines dig.",
+  "boxes": {
+    "rule_4": "yes"
+  },
+  "note": "",
+  "auditor": "claude-opus-5-5",
+  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+  "saved_at": "2026-11-12T03:30:41+00:00",
+  "first_saved_at": "2026-11-12T03:28:36+00:00",
+  "source": "first reader, not reviewed"
+}

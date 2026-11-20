@@ -1,0 +1,17 @@
+{
+  "claude": {
+    "rule_1": "yes",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "yes"
+  },
+  "final": {
+    "rule_1": "yes",
+    "rule_2": "no",
+    "rule_3": "no",
+    "rule_4": "no"
+  },
+  "image_id": "0010538",
+  "note": "even if it looks like the person is in the radius, i think he's not. its because of the perspective, it looks like that. i think he is outside of the radius.",
+  "reviewed_at": "2026-11-12T04:22:00.326Z"
+}

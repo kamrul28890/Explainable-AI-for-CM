@@ -1,0 +1,16 @@
+{
+  "image_id": "0010595",
+  "blind": {
+    "rule_1": "unsure",
+    "rule_2": "no",
+    "rule_3": "no"
+  },
+  "blind_note": "r1: the paving crew is too far away to judge headwear for everyone; some wear hard hats.",
+  "boxes": {},
+  "note": "",
+  "auditor": "claude-opus-5-5",
+  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+  "saved_at": "2026-11-12T03:28:36+00:00",
+  "first_saved_at": "2026-11-12T03:28:36+00:00",
+  "source": "owner"
+}

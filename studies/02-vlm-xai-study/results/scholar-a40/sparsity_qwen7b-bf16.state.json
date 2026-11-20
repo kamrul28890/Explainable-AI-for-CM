@@ -1,0 +1,11 @@
+{
+  "attention_impl_for_reading": "eager",
+  "baseline_sha256": "669bcacb1f046297142de1688c42606edbd2351c863ed8005b0c2ca44f47ba5a",
+  "compute_dtype": "bfloat16",
+  "device": "NVIDIA A40",
+  "manifest_sha256": "af91ed280cd22bfc6cdb27cc6645f448d137bb29b4ec77fc504cddfa3ac166c9",
+  "max_pixels": 501760,
+  "model": "qwen7b-bf16",
+  "regions_sha256": "56d04084a51595b2f9079d60003dc16bf720e5de65d1b47ef75dafeb75356c17",
+  "seed": 42
+}

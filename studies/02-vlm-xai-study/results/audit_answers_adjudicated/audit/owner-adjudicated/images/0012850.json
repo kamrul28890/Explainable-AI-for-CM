@@ -1,0 +1,16 @@
+{
+  "image_id": "0012850",
+  "blind": {
+    "rule_1": "no",
+    "rule_2": "unsure",
+    "rule_3": "no"
+  },
+  "blind_note": "r2: two workers on a tall rebar cage; the one on the plank seems to wear harness straps, the one on the right is not visibly tied off. All helmeted.",
+  "boxes": {},
+  "note": "",
+  "auditor": "claude-opus-5-5",
+  "standard": "dataset rule text (pilot/data/constructionsite/README.md)",
+  "saved_at": "2026-11-12T03:28:36+00:00",
+  "first_saved_at": "2026-11-12T03:28:36+00:00",
+  "source": "owner"
+}

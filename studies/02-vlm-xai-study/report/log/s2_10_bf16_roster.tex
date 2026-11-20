@@ -1,0 +1,155 @@
+\chapter{The bf16 Arm: Three Qwen Sizes and Llama~3.2}
+\label{chap:s2-10}
+
+\section{Goal}
+
+The precision order set on 2026-11-14 is: every roster model in bf16 first, then every model in 8-bit,
+4-bit last. This chapter reports the first models through the shared backend of
+Chapter~\ref{chap:s2-9}: Qwen2.5-VL at three sizes (3B, 7B, 32B) with the full battery, and
+Llama~3.2-11B-Vision verdict-only. The question for the Qwen arm is what model size changes when the
+family, the prompt, the precision and the harness are all held fixed.
+
+\section{What Was Done}
+
+\textbf{Runs.} All four tiers ran on Scholar A40s into one results tree,
+\texttt{results/scholar-a40-rf/}, with \texttt{XAI\_REGION\_FRAME=rescaled}, on the same 3,882
+(image, rule) pairs as every earlier tier.
+\begin{itemize}
+\item \texttt{qwen3b-bf16}: full battery, one A40, 2.25~s per call.
+\item \texttt{qwen7b-bf16}: the tier of Chapter~\ref{chap:s2-8}, unchanged; listed here for comparison.
+Its Stage~2 also ran on the 7,457 compliant images outside the sample, so both 7B tiers now have a
+verdict for every one of the 10,013 images.
+\item \texttt{qwen32b-bf16}: full battery split over two A40s (33.2~GB on the first), 7.08~s per call.
+Stages~4, 5, 6 and 8 took nearly three days of wall time, including a 19-hour stall (below), because
+each job holds both GPUs the account may use and so they ran one at a time.
+\item \texttt{llama32v-11b}: verdict-only chain (Stages 0--3, 6, 7), one A40, 3.65~s per call.
+Its image tokens enter through cross-attention and form no grid over the image, so Stages~4, 5, 8, 9
+and 10 do not apply (roster D4). It is asked for no region.
+\end{itemize}
+
+\textbf{Copy-back.} The tree was copied back as a tar, not through git, and all 191 data files were
+checked by sha256 against Scholar. The Stage~5 attention grids (3,882 files per tier for 3B and 32B) are
+committed with it. The 32B report regenerates locally byte for byte from the copied files. The verdict-only
+chain does not run Stage~11, so the Llama report was produced locally by the same script.
+
+\textbf{Environment B.} The parity run of \texttt{qwen7b-bf16} in environment B (\texttt{transformers}
+5.20.2) on 96 rows agreed on the verdict in 94 (97.9\%), gave byte-identical replies in 48 (50.0\%), and
+gave regions with median IoU 0.996 where both replies had one. This is the same order of disagreement as
+two machines in environment A (96.9\% verdicts, 42.7\% replies; Chapter~\ref{chap:s2-1}). Models that
+need environment B can be compared with the environment A tiers at the verdict level.
+
+\section{Results}
+
+\begin{table}[tbp]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{metric} & \textbf{3B} & \textbf{7B} & \textbf{32B} & \textbf{Llama 11B} \\
+\midrule
+\multicolumn{5}{l}{\emph{Stage 2 --- verdicts}} \\
+sensitivity                         & 86.7 & 93.8 & 99.8 & 86.1 \\
+specificity                         & 12.3 & 36.0 & 15.8 & 23.2 \\
+YES share                           & 85.5 & 74.2 & 89.5 & 80.0 \\
+\multicolumn{5}{l}{\emph{Stages 3, 9, 10 --- the stated explanation}} \\
+no region stated                    & 30.3 & 20.5 & 8.8 & --- \\
+explanation correct                 & 24.7 & 33.8 & 47.6 & --- \\
+\quad IoU $\geq$ 0.30               & 48.5 & 55.8 & 65.2 & --- \\
+\quad right answer, wrong reason    & 75.3 & 66.2 & 52.4 & --- \\
+explanation supported (attention)   & 68.3 & 77.6 & 80.0 & --- \\
+\multicolumn{5}{l}{\emph{Stages 4, 5 --- does the model use the region?}} \\
+flip, region blacked out            & 14.4 & 27.9 & 15.7 & --- \\
+\quad artefact floor (NO$\to$YES)   & 55.3 & 33.8 & 32.8$^{*}$ & --- \\
+attention beats area null           & 97.9 & 97.6 & 87.8 & --- \\
+\multicolumn{5}{l}{\emph{Stages 6, 8 --- stability and robustness}} \\
+verdict unanimous over 5 reruns     & 10.4 & 47.0 & 72.9 & 40.6 \\
+majority overturns greedy verdict   & 40.4 & 17.4 & 7.5 & 27.3 \\
+verdict survives blur               & 62.0 & 68.8 & 73.5 & --- \\
+verdict survives occlusion          & 69.1 & 79.4 & 83.2 & --- \\
+\bottomrule
+\end{tabular}
+\caption{The bf16 arm, all rates in percent. Bootstrap 95\% intervals are in the per-tier reports
+(\texttt{results/scholar-a40-rf/report\_<tier>.txt}); intervals on the Stage~2 and Stage~10 rows are at
+most $\pm$3.5 points. $^{*}$ $n=64$: the 32B model answers NO to so few rows that its floor is loose
+(95\% CI 21.9--45.3). Stage~8 samples per tier from the tier's own verdicts, so its $n$ differs (3B 1,288;
+7B 1,599; 32B 1,206); every planned call ran.}
+\label{tab:s210}
+\end{table}
+
+\textbf{Specificity does not improve with size.} Sensitivity rises with size
+(86.7, 93.8, 99.8\%) but specificity peaks at 7B (12.3, 36.0, 15.8\%). The 32B model answers YES to 89.5\%
+of all questions and misses 3 of 1,327 hazard pairs. A higher sensitivity bought by saying YES more often is
+not better detection, so the false-alarm rate stays a headline number for every tier (arch doc §5.3).
+Llama~3.2 is level with the 3B model on sensitivity (86.1\%) and between 3B and 7B on specificity
+(23.2\%).
+
+\textbf{The stated explanation improves steadily with size.} Explanation correct rises from 24.7 to 33.8
+to 47.6\%, and every component moves the same way: the region is stated more often, overlaps the annotated
+box more often, and is more often backed by attention (Stage~9). ``Right answer, wrong reason'' falls from
+three in four to one in two. As in every earlier tier, explanations are more often correct on poor-info
+images than on rich-info ones (32B: 53.6 vs.\ 43.6\%).
+
+\textbf{Black masking says little at any size.} In no bf16 tier does the pooled flip rate clear its
+artefact floor: blacking out a patch on an image the model called compliant turns the verdict to YES at
+least as often as blacking out the stated region turns YES to NO. For 32B the flip rate is half the floor.
+Rule~4 is the one rule whose flip rate cleared the floor at 7B (54.6\%); at 32B it is level with the floor
+(32.0\%). Stage~4 cannot separate ``the model uses its region'' from ``the model ignores edits'' for
+these tiers (F4).
+
+\textbf{Attention lands in the stated region at every size, with one exception.} The 3B and 7B models beat
+the area null on 97--98\% of rows. The 32B model beats it on 87.8\%, and the whole drop is rule~3 (59.6\%,
+against 92.5\% at 7B). Rules~1, 2 and 4 stay at 99\%. This is the first rule-specific attention failure in
+the study and is not yet explained; a look at the rule~3 grids is the next check.
+
+\textbf{Larger models are far more stable.} At temperature 0.7, the five reruns all agree on 10.4\% of rows
+for 3B, 47.0\% for 7B and 72.9\% for 32B, and the majority overturns the greedy verdict on 40.4, 17.4 and
+7.5\%. The 3B model is unstable enough that its greedy verdicts should be read as one draw, not as the
+model's answer. Robustness to blur and occlusion also improves with size, by about 10 points from 3B to
+32B.
+
+\section{Problems and Solutions}
+
+\begin{itemize}
+\item \textbf{The 32B Stage~6 latency guard tripped on a healthy run.} The guard compared a 25~s ceiling
+with the time per row, and a Stage~6 row is five calls (36.5~s at 7.3~s per call). The chains stopped for
+about 19 hours. The guard now reads each call's own time (\texttt{reply\_latency\_s}, commit
+\texttt{4ba671f}); Stage~8 got the same fix. Stage~4 still sums its two calls, which is safe at 14~s for
+32B but may trip on slower 8-bit tiers.
+\item \textbf{The 3B Stage~8 parse guard tripped on 1.4\% of replies.} The guard was per row, so one
+unreadable reply among six failed the row. It is now per reply, as Stage~6 has been since
+Chapter~\ref{chap:s2-5} (commit \texttt{d40875b}).
+\item \textbf{Llama sampled with its own top-$p$.} The checkpoint's generation config sets
+\texttt{top\_p=0.9}, so Llama's Stage~6 was not sampling the same way as Qwen's. Stage~6 now pins
+\texttt{top\_p=1.0} and \texttt{top\_k=50} for every tier (Qwen unchanged), and Llama's Stage~6 was rerun.
+The first file is kept in \texttt{superseded/}.
+\item \textbf{A two-GPU job never starts behind one-GPU jobs.} The account may hold two GPUs. While
+one-GPU jobs kept queueing, the 32B sizing job waited indefinitely; pending one-GPU jobs were held behind
+it with a dependency.
+\end{itemize}
+
+\section{Standard vs.\ Non-Standard Choices}
+
+\textbf{Standard.} Comparing sizes within one model family at one precision is how scaling is usually
+measured. Multi-GPU sharding of the 32B model (\texttt{device\_map=auto}) is the stock \texttt{accelerate}
+path.
+
+\textbf{Non-standard, and stated in the paper.}
+\begin{itemize}
+\item Explanation metrics are computed only on the rows where a model gives the explanation (Stage~10 on
+hazard pairs answered YES; Stages~4, 5, 9 on rows with a region). A model with a stronger YES bias is
+scored on more rows. The $n$ is reported beside every rate for this reason.
+\item Qwen keeps its checkpoint's \texttt{repetition\_penalty} of 1.05 under greedy decoding; Llama's is
+1.0. This is each model's shipped default and is not pinned; it is documented, not equalised.
+\end{itemize}
+
+\section{Implications}
+
+\begin{itemize}
+\item Within one family, size buys explanation quality and stability, not specificity. A paper claim of
+the form ``larger models explain better'' holds here; ``larger models detect better'' does not.
+\item The 32B tier gives the clearest case of a model that is right for the stated reason most of the time
+(47.6\% correct, 80\% attention-supported) while flagging 84\% of compliant images. Explanation quality and
+verdict accuracy have to be reported side by side.
+\item Next: the rule~3 attention grids at 32B, then the remaining roster models in bf16 (adapters and
+Stage~0 sizing per model), then the 8-bit arm.
+\end{itemize}

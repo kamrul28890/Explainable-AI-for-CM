@@ -1,0 +1,271 @@
+<title>Annotation Audit Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the audit page's clipboard, turned into a sign-off sheet. Sticky tally strip;
+   photo left, rule-by-rule comparison right; stacks on phones. Amber marks the annotation. */
+:root {
+  --bg: #eeece7; --panel: #fbfaf7; --ink: #1f2124; --muted: #5d6066; --line: #d6d2c8;
+  --accent: #d98e04; --accent-ink: #1f2124; --accent-soft: #f6e3b4;
+  --yes: #b3261e; --yes-soft: #f7dcd8; --no: #2c6e49; --no-soft: #d6eadc;
+  --unsure: #5b5f97; --unsure-soft: #e1e2f2; --ann: #d98e04;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17181a; --panel: #212226; --ink: #ecebe6; --muted: #a3a49f; --line: #393a3f;
+  --accent: #f2a91c; --accent-ink: #17181a; --accent-soft: #3d3218;
+  --yes: #ef7d73; --yes-soft: #42221f; --no: #74c495; --no-soft: #1d3527;
+  --unsure: #a6a9e0; --unsure-soft: #2b2c45; --ann: #f2a91c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #17181a; --panel: #212226; --ink: #ecebe6; --muted: #a3a49f; --line: #393a3f;
+  --accent: #f2a91c; --accent-ink: #17181a; --accent-soft: #3d3218;
+  --yes: #ef7d73; --yes-soft: #42221f; --no: #74c495; --no-soft: #1d3527;
+  --unsure: #a6a9e0; --unsure-soft: #2b2c45; --ann: #f2a91c; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel) }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line) }
+header .wrap { padding-block: 12px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; max-width: 1280px; margin: 0 auto }
+h1 { font: 800 1.15rem/1.2 var(--display); margin: 0; text-wrap: balance }
+h1 small { display: block; font: 500 .72rem/1.3 var(--body); color: var(--muted); letter-spacing: .06em; text-transform: uppercase }
+.progress { flex: 1 1 200px; min-width: 0; display: grid; gap: 4px }
+.bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden }
+.bar i { display: block; height: 100%; background: var(--accent); width: 0 }
+.progress span { font: 500 .8rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.filters { display: flex; gap: 6px; flex-wrap: wrap }
+.chip { font: 500 .8rem var(--body); border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 4px 10px; border-radius: 999px; cursor: pointer; font-variant-numeric: tabular-nums }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink) }
+.intro { max-width: 1280px; margin: 0 auto; padding-block: 16px 0; color: var(--muted); font-size: .9rem }
+.intro p { max-width: 75ch; margin: 0 }
+main.wrap { max-width: 1280px; margin: 0 auto; padding-block: 16px 48px; display: grid; gap: 20px; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start }
+@media (max-width: 860px) { main.wrap { grid-template-columns: minmax(0, 1fr) } }
+.status { grid-column: 1 / -1; font-size: .88rem; color: var(--muted); padding: 10px 14px; border: 1px dashed var(--line); border-radius: 6px }
+.status[data-kind="warn"] { color: var(--yes); border-color: var(--yes) }
+.figure { position: relative; background: #000; border-radius: 6px; overflow: hidden; max-width: 100% }
+.figure img { display: block; width: 100%; height: auto }
+.figure svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font: .8rem var(--mono); color: var(--muted) }
+.meta b { color: var(--ink); font-weight: 500 }
+.legend { margin-top: 6px; font-size: .8rem; color: var(--muted) }
+.legend i { display: inline-block; width: 18px; border-top: 3px solid var(--ann); vertical-align: middle; margin-right: 6px }
+.nav { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; align-items: center }
+button.btn { font: 600 .9rem var(--body); padding: 9px 16px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer }
+button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent) }
+button.btn:disabled { opacity: .45; cursor: not-allowed }
+button:focus-visible, .seg input:focus-visible + span, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: grid; gap: 14px; min-width: 0 }
+.card h2 { font: 700 1rem/1.3 var(--display); margin: 0 }
+.summary { font-size: .9rem; margin: 0; color: var(--muted) }
+.rule { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 8px }
+.rule[data-dis="1"] { border-top: 3px solid var(--yes) }
+.rule h3 { font: 600 .92rem var(--body); margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap }
+.flag { font: 500 .7rem var(--mono); letter-spacing: .05em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: var(--yes-soft); color: var(--yes) }
+.flag.u { background: var(--unsure-soft); color: var(--unsure) }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px }
+@media (max-width: 420px) { .pair { grid-template-columns: minmax(0, 1fr) } }
+.side { border-radius: 6px; padding: 8px 10px; font-size: .85rem; background: var(--bg); min-width: 0 }
+.side .k { font: 500 .7rem var(--mono); color: var(--muted); letter-spacing: .05em; text-transform: uppercase }
+.side.ann { box-shadow: inset 3px 0 0 var(--ann) }
+.v { font-weight: 600 } .v.yes { color: var(--yes) } .v.no { color: var(--no) } .v.unsure { color: var(--unsure) }
+.why { font-size: .85rem; color: var(--muted); margin: 0 }
+.seg { display: flex; gap: 6px; flex-wrap: wrap }
+.seg label { cursor: pointer }
+.seg input { position: absolute; opacity: 0; pointer-events: none }
+.seg span { display: inline-block; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); font: 500 .85rem var(--body) }
+.seg input:checked + span { color: var(--panel); background: var(--ink); border-color: var(--ink) }
+.seg input[value="yes"]:checked + span { background: var(--yes); border-color: var(--yes) }
+.seg input[value="no"]:checked + span { background: var(--no); border-color: var(--no) }
+.seg input[value="unsure"]:checked + span { background: var(--unsure); border-color: var(--unsure) }
+.seg input:disabled + span { opacity: .5; cursor: not-allowed }
+.q { font-size: .8rem; color: var(--muted); margin: 0 }
+textarea { width: 100%; min-height: 64px; font: .88rem var(--body); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); resize: vertical }
+.saved { font: .8rem var(--mono); color: var(--muted) }
+.strip { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px }
+.strip button { font: 500 .72rem var(--mono); padding: 3px 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; font-variant-numeric: tabular-nums }
+.strip button[data-dis="1"] { border-color: var(--yes); color: var(--yes) }
+.strip button[data-done="1"] { background: var(--no-soft); color: var(--no); border-color: var(--no) }
+.strip button[aria-current="true"] { outline: 2px solid var(--accent); outline-offset: 1px }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<header><div class="wrap">
+  <h1><small>§5.5 audit · second reader</small>Annotation Audit Review</h1>
+  <div class="progress"><div class="bar"><i id="bar"></i></div><span id="count">0 / 100 reviewed</span></div>
+  <div class="filters" role="group" aria-label="Show">
+    <button class="chip" data-f="dis" aria-pressed="true" id="f-dis">Disagreements</button>
+    <button class="chip" data-f="uns" aria-pressed="false" id="f-uns">Can't tell</button>
+    <button class="chip" data-f="all" aria-pressed="false" id="f-all">All 100</button>
+  </div>
+</div></header>
+<div class="intro wrap"><p>Claude (Opus 5.5) answered each rule from the photograph alone, against the dataset's own rule text, before opening any annotation; those answers were committed first. Here the annotation sits beside each answer. For every rule, give the answer you would sign off on. Red marks a rule where Claude and the annotation disagree.</p></div>
+<main class="wrap">
+  <div class="status" id="status" hidden></div>
+  <section>
+    <div class="figure" id="fig"></div>
+    <div class="meta" id="meta"></div>
+    <div class="legend"><i></i>dataset annotation box</div>
+    <div class="nav">
+      <button class="btn" id="prev">← Previous</button>
+      <button class="btn" id="next">Next →</button>
+      <button class="btn" id="nexttodo">Next not reviewed</button>
+    </div>
+  </section>
+  <section class="card" id="card"></section>
+  <nav class="strip" id="strip" aria-label="Images"></nav>
+</main>
+
+<script>
+const ITEMS = __ITEMS__;
+const RULES = { rule_1: "PPE", rule_2: "Fall protection", rule_3: "Edge protection", rule_4: "Plant proximity" };
+const Q = {
+  rule_1: "Basic PPE on foot: hard hat, clothes covering shoulders and legs, toe-covering shoes, hi-vis at night, eye/face protection when cutting or grinding.",
+  rule_2: "Harness when working from 3 m or more at an edge without edge protection.",
+  rule_3: "Guardrail, fence or edge warning at a 3 m deep excavation with a steep wall where people stand.",
+  rule_4: "A worker in the blind spot or operating radius of an excavator in operation, or with its operator inside.",
+};
+const WORD = { yes: "Violation", no: "No violation", unsure: "Can't tell" };
+const $ = (id) => document.getElementById(id);
+const el = (t, p = {}, ...kids) => { const e = Object.assign(document.createElement(t), p); e.append(...kids); return e; };
+const state = { i: 0, filter: "dis", reviews: {}, drafts: {}, db: null, canWrite: false };
+
+function visible() {
+  return ITEMS.map((it, i) => ({ it, i })).filter(({ it }) =>
+    state.filter === "all" || (state.filter === "dis" ? it.dis.length : it.uns.length && !it.dis.length));
+}
+function status(msg, kind) { const s = $("status"); s.hidden = !msg; s.textContent = msg || ""; s.dataset.kind = kind || ""; }
+
+function figure(it) {
+  const f = $("fig"); f.replaceChildren();
+  const img = el("img", { src: `img/${it.id}.jpg`, alt: `Site photo ${it.id}` });
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 1 1"); svg.setAttribute("preserveAspectRatio", "none");
+  const stroke = getComputedStyle(document.documentElement).getPropertyValue("--ann").trim();
+  for (const a of Object.values(it.ann)) for (const b of a.boxes) {
+    const r = document.createElementNS(svg.namespaceURI, "rect");
+    r.setAttribute("x", b[0]); r.setAttribute("y", b[1]); r.setAttribute("width", b[2] - b[0]); r.setAttribute("height", b[3] - b[1]);
+    r.setAttribute("fill", "none"); r.setAttribute("stroke", stroke); r.setAttribute("stroke-width", "3"); r.setAttribute("vector-effect", "non-scaling-stroke");
+    svg.append(r);
+  }
+  f.append(img, svg);
+  $("meta").replaceChildren(el("span", {}, "image ", el("b", { textContent: it.id })),
+    el("span", {}, "tier ", el("b", { textContent: it.tier })), el("span", {}, el("b", { textContent: it.light })));
+}
+
+function seg(name, value, disabled, onChange) {
+  const g = el("div", { className: "seg", role: "radiogroup" });
+  for (const [v, label] of [["yes", "Violation"], ["no", "No violation"], ["unsure", "Can't tell"]]) {
+    const inp = el("input", { type: "radio", name, value: v, id: `${name}-${v}`, checked: value === v, disabled });
+    inp.addEventListener("change", () => onChange(v));
+    g.append(el("label", { htmlFor: `${name}-${v}` }, inp, el("span", { textContent: label })));
+  }
+  return g;
+}
+
+function draft(it) {
+  if (!state.drafts[it.id]) {
+    const saved = state.reviews[it.id];
+    state.drafts[it.id] = { final: { ...(saved?.final || {}) }, note: saved?.note || "", touched: false };
+  }
+  return state.drafts[it.id];
+}
+
+function render() {
+  const it = ITEMS[state.i], d = draft(it), saved = state.reviews[it.id];
+  figure(it);
+  const card = $("card"); card.replaceChildren();
+  const marked = Object.keys(it.ann);
+  card.append(el("h2", { textContent: it.dis.length ? `Claude and the annotation disagree on ${it.dis.map((r) => RULES[r]).join(", ")}` : "Claude and the annotation agree" }),
+    el("p", { className: "summary", textContent: marked.length ? `Annotated: ${marked.map((r) => RULES[r]).join(", ")}.` : "No violation annotated." }));
+  for (const r of it.app) {
+    const ann = it.ann[r], c = it.c[r], dis = it.dis.includes(r);
+    const box = el("div", { className: "rule" }); box.dataset.dis = dis ? "1" : "0";
+    const h = el("h3", { textContent: RULES[r] });
+    if (dis) h.append(el("span", { className: "flag", textContent: "disagree" }));
+    else if (c === "unsure") h.append(el("span", { className: "flag u", textContent: "Claude can't tell" }));
+    box.append(h, el("p", { className: "q", textContent: Q[r] }));
+    const annSide = el("div", { className: "side ann" }, el("div", { className: "k", textContent: "Annotation" }),
+      el("div", { className: `v ${ann ? "yes" : "no"}`, textContent: ann ? "Violation" : "Not marked" }));
+    if (ann) annSide.append(el("div", { textContent: ann.reason }));
+    if (ann && it.cb[r]) annSide.append(el("div", { className: "why", textContent: `Claude on the box: ${it.cb[r] === "yes" ? "on the hazard" : it.cb[r] === "partly" ? "partly on it" : "off it"}` }));
+    const cSide = el("div", { className: "side" }, el("div", { className: "k", textContent: "Claude, blind" }),
+      el("div", { className: `v ${c}`, textContent: WORD[c] }));
+    box.append(el("div", { className: "pair" }, annSide, cSide));
+    box.append(el("p", { className: "q", textContent: "Your answer" }),
+      seg(`${it.id}-${r}`, d.final[r], !state.canWrite, (v) => { d.final[r] = v; d.touched = true; sync(); }));
+    card.append(box);
+  }
+  card.append(el("div", { className: "side" }, el("div", { className: "k", textContent: "Claude's reasoning, written blind" }), el("div", { textContent: it.cn })));
+  if (it.cbn) card.append(el("div", { className: "side" }, el("div", { className: "k", textContent: "Claude's note after the reveal" }), el("div", { textContent: it.cbn })));
+  const note = el("textarea", { id: `note-${it.id}`, placeholder: "Your note (optional)", value: d.note });
+  note.addEventListener("input", () => { d.note = note.value; d.touched = true; sync(); });
+  card.append(note);
+  const allBtn = el("button", { className: "btn", id: "agree", textContent: "Take Claude's answers" });
+  allBtn.disabled = !state.canWrite;
+  allBtn.addEventListener("click", () => { for (const r of it.app) d.final[r] = it.c[r]; d.touched = true; render(); });
+  const saveBtn = el("button", { className: "btn primary", id: "save", textContent: saved ? "Save changes" : "Save review" });
+  const savedNote = el("span", { className: "saved", textContent: saved ? `saved ${new Date(saved.reviewed_at).toLocaleString()}` : "" });
+  function sync() { saveBtn.disabled = !state.canWrite || !it.app.every((r) => d.final[r]) || (saved && !d.touched); }
+  saveBtn.addEventListener("click", () => save(it, d, saveBtn));
+  sync();
+  card.append(el("div", { className: "nav" }, allBtn, saveBtn, savedNote));
+
+  const done = ITEMS.filter((x) => state.reviews[x.id]).length;
+  $("count").textContent = `${done} / ${ITEMS.length} reviewed`;
+  $("bar").style.width = `${(100 * done) / ITEMS.length}%`;
+  $("f-dis").textContent = `Disagreements ${ITEMS.filter((x) => x.dis.length).length}`;
+  $("f-uns").textContent = `Can't tell ${ITEMS.filter((x) => x.uns.length && !x.dis.length).length}`;
+  const strip = $("strip"); strip.replaceChildren();
+  for (const { it: x, i } of visible()) {
+    const b = el("button", { textContent: x.id });
+    b.dataset.done = state.reviews[x.id] ? "1" : "0"; b.dataset.dis = x.dis.length ? "1" : "0";
+    if (i === state.i) b.setAttribute("aria-current", "true");
+    b.addEventListener("click", () => go(i)); strip.append(b);
+  }
+}
+
+async function save(it, d, btn) {
+  if (!state.db) { status("Reviews can be saved only when the page is opened signed in to claude.ai.", "warn"); return; }
+  btn.disabled = true; btn.textContent = "Saving…";
+  const body = { image_id: it.id, final: Object.fromEntries(it.app.map((r) => [r, d.final[r]])), note: d.note,
+    claude: it.c, reviewed_at: new Date().toISOString() };
+  try {
+    await state.db.doc(`review/${it.id}`).set(body);
+    state.reviews[it.id] = body; d.touched = false; status(""); render();
+  } catch (e) {
+    status("Couldn't save. Check your connection and press Save again.", "warn"); btn.disabled = false; btn.textContent = "Save review";
+  }
+}
+
+function go(i) { state.i = Math.max(0, Math.min(ITEMS.length - 1, i)); try { localStorage.setItem("review-i", String(state.i)); } catch {} render(); window.scrollTo({ top: 0 }); }
+function step(k) { const v = visible().map(({ i }) => i); const p = v.indexOf(state.i); if (p < 0) { if (v.length) go(v[0]); return; } go(v[Math.max(0, Math.min(v.length - 1, p + k))]); }
+$("prev").onclick = () => step(-1);
+$("next").onclick = () => step(1);
+$("nexttodo").onclick = () => { const v = visible().map(({ i }) => i); const n = v.find((j) => j > state.i && !state.reviews[ITEMS[j].id]) ?? v.find((j) => !state.reviews[ITEMS[j].id]); if (n !== undefined) go(n); };
+for (const c of document.querySelectorAll(".chip")) c.onclick = () => {
+  state.filter = c.dataset.f; for (const o of document.querySelectorAll(".chip")) o.setAttribute("aria-pressed", String(o === c));
+  const v = visible(); if (v.length && !v.some(({ i }) => i === state.i)) state.i = v[0].i; render();
+};
+document.addEventListener("keydown", (e) => { if (e.target.closest("textarea")) return; if (e.key === "ArrowRight") step(1); if (e.key === "ArrowLeft") step(-1); });
+
+try { const s = parseInt(localStorage.getItem("review-i"), 10); if (s >= 0 && s < ITEMS.length) state.i = s; } catch {}
+if (!ITEMS[state.i].dis.length) state.i = ITEMS.findIndex((x) => x.dis.length);
+render();
+status("Connecting to the review store…");
+
+(async () => {
+  const db = (await window.claude?.use?.("db")) ?? null;
+  if (!db) { status("Reviews can be saved only when the page is opened signed in to claude.ai. You can still look through the images.", "warn"); render(); return; }
+  state.db = db; state.canWrite = true; render();
+  const timer = setTimeout(() => status("The review store isn't answering yet. Earlier reviews may be missing until it does.", "warn"), 10000);
+  db.collection("review").onSnapshot((snap) => {
+    clearTimeout(timer); status("");
+    const next = {}; for (const doc of snap.docs) next[doc.id] = doc.data(); state.reviews = next;
+    for (const id of Object.keys(state.drafts)) if (!state.drafts[id].touched) delete state.drafts[id];
+    render();
+  }, () => { clearTimeout(timer); status("Lost the connection to the review store. Reload the page to reconnect.", "warn"); });
+})();
+</script>
