@@ -236,6 +236,15 @@ MODEL_TIERS: dict[str, ModelSpec] = {
         notes="roster 4 at full precision: ~66 GB, split over two A40s (NGPU=2)",
         weights="qwen32b",
     ),
+    "qwen2-2b": ModelSpec(
+        name="qwen2-2b",
+        repo_id="Qwen/Qwen2-VL-2B-Instruct",
+        quantization="none",
+        supports_attention=True,
+        notes="roster 5: prior generation; used on this dataset (Sahraoui)",
+        family="qwen2_vl",
+        box_convention="norm1000",
+    ),
     "llama32v-11b": ModelSpec(
         name="llama32v-11b",
         repo_id="meta-llama/Llama-3.2-11B-Vision-Instruct",

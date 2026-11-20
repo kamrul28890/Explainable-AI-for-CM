@@ -97,6 +97,7 @@ class Qwen25VLAdapter(Adapter):
     resized input frame. Every method is the frozen QwenBackend's, moved here."""
 
     family = "qwen2_5_vl"
+    model_class = "Qwen2_5_VLForConditionalGeneration"
 
     def prepare_image(self, image):
         # Identity: the processor applies the same budget itself (min/max_pixels),
@@ -104,8 +105,9 @@ class Qwen25VLAdapter(Adapter):
         return image
 
     def load(self, source, *, dtype, quantization_config, attn_implementation):
-        from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
-        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        import transformers
+        from transformers import AutoProcessor
+        self.model = getattr(transformers, self.model_class).from_pretrained(
             source,
             quantization_config=quantization_config,
             **dtype_kwarg(dtype),
@@ -190,6 +192,15 @@ class Qwen25VLAdapter(Adapter):
         return self.model.get_input_embeddings()
 
 
+class Qwen2VLAdapter(Qwen25VLAdapter):
+    """Qwen2-VL: Qwen2.5-VL's processor, 14 px patches merged 2x2 and image tokens,
+    so everything is inherited but the model class. Boxes come in 0-1000 over the
+    image (the tier's box_convention), so input_size is never read."""
+
+    family = "qwen2_vl"
+    model_class = "Qwen2VLForConditionalGeneration"
+
+
 class MllamaAdapter(Adapter):
     """Llama 3.2 Vision. The image enters through cross-attention layers, not as
     tokens in the sequence, so there is no image-token grid: attention and token
@@ -230,5 +241,6 @@ class MllamaAdapter(Adapter):
 
 ADAPTERS: dict[str, type[Adapter]] = {
     Qwen25VLAdapter.family: Qwen25VLAdapter,
+    Qwen2VLAdapter.family: Qwen2VLAdapter,
     MllamaAdapter.family: MllamaAdapter,
 }

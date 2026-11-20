@@ -112,7 +112,8 @@ def test_frozen_tiers_keep_their_old_defaults():
 
 @pytest.mark.parametrize("tier,repo", [("qwen3b-bf16", "Qwen/Qwen2.5-VL-3B-Instruct"),
                                        ("qwen32b-4bit", "Qwen/Qwen2.5-VL-32B-Instruct"),
-                                       ("qwen32b-bf16", "Qwen/Qwen2.5-VL-32B-Instruct")])
+                                       ("qwen32b-bf16", "Qwen/Qwen2.5-VL-32B-Instruct"),
+                                       ("qwen2-2b", "Qwen/Qwen2-VL-2B-Instruct")])
 def test_new_size_arms_are_registered_and_pinned(tier, repo):
     s = MODEL_TIERS[tier]
     assert s.repo_id == repo and not s.legacy_region_frame
@@ -299,3 +300,22 @@ def test_llama_is_registered_as_verdict_only():
     assert b.adapter.grid({}) is None                  # attention, ablation: not applicable
     p = b._parse(_reply("(406, 294, 609, 441)"), IMG, {})
     assert p.verdict == "YES" and p.region is None
+
+
+# ------------------------------------------------------------------ Qwen2-VL
+def test_qwen2_vl_shares_qwen25s_inputs_and_grid_but_answers_in_0_to_1000():
+    """Roster 5. Same processor, 14 px patches merged 2x2 and <|image_pad|> tokens
+    as Qwen2.5-VL, so the token grid, ablation and attention code is inherited;
+    only the model class and the box convention differ."""
+    from xai_vlm.backends.families import Qwen25VLAdapter, Qwen2VLAdapter
+    s = MODEL_TIERS["qwen2-2b"]
+    assert (s.family, s.box_convention, s.supports_attention, s.env) ==         ("qwen2_vl", "norm1000", True, "A")
+    assert issubclass(Qwen2VLAdapter, Qwen25VLAdapter)
+    assert Qwen2VLAdapter.model_class == "Qwen2VLForConditionalGeneration"
+    assert Qwen25VLAdapter.model_class == "Qwen2_5_VLForConditionalGeneration"
+    img = Image.new("RGB", (1200, 900))
+    assert Qwen2VLAdapter(s).prepare_image(img) is img    # processor applies the budget
+    from xai_vlm.backends.hf import HFVLMBackend
+    b = HFVLMBackend.for_testing("qwen2-2b", model=SimpleNamespace(config=None))
+    assert "0 to 1000" in b._prompt("rule_1")
+    assert b._parse(_reply("(500, 500, 750, 750)"), IMG, {}).region == pytest.approx(TRUE, abs=0.75)
